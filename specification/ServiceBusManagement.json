@@ -1,0 +1,106 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "version": "2017-04",
+    "title": "ServiceBusManagementClient",
+    "description": "The Azure ServiceBus Management API."
+  },
+  "schemes": [
+    "https"
+  ],
+  "produces": [
+    "application/xml"
+  ],
+  "consumes": [
+    "application/xml"
+  ],
+  "x-ms-parameterized-host": {
+    "hostTemplate": "{namespaceName}.servicebus.windows.net",
+    "parameters": [
+      {
+        "name": "namespaceName",
+        "description": "The name of the ServiceBus namespace to send requests to.",
+        "required": true,
+        "type": "string",
+        "in": "path",
+        "x-ms-skip-url-encoding": true
+      }
+    ]
+  },
+  "paths": {
+    "/{queuePath}/": {
+      "get": {
+        "tags": [
+          "Queues"
+        ],
+        "operationId": "Queue_Get",
+        "description": "Get the details about the queue found at the provided queuePath.",
+        "parameters": [
+          {
+            "$ref": "#/parameters/QueuePathParameter"
+          },
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/EnrichFalseParameter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK -- Get Queue operation completed successfully.",
+            "schema": {
+              "$ref": "#/definitions/GetQueueResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "GetQueueResponse": {
+      "description": "The response from a GetQueue operation",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The ID Of the Queue",
+          "type": "string",
+          "xml": {
+            "name": "id"
+          }
+        }
+      },
+      "xml": {
+        "name": "entry",
+        "namespace": "http://www.w3.org/2005/Atom"
+      }
+    }
+  },
+  "parameters": {
+    "ApiVersionParameter": {
+      "name": "api-version",
+      "in": "query",
+      "required": true,
+      "type": "string",
+      "description": "The API version to use for this operation.",
+      "minLength": 1
+    },
+    "QueuePathParameter": {
+      "name": "queuePath",
+      "in": "path",
+      "required": true,
+      "type": "string",
+      "description": "The path to the queue relative to the ServiceBus namespace.",
+      "minLength": 1,
+      "x-ms-parameter-location": "method"
+    },
+    "EnrichFalseParameter": {
+      "name": "enrich",
+      "in": "query",
+      "required": true,
+      "type": "string",
+      "description": "A constant query parameter that sets \"enrich=False\".",
+      "x-ms-parameter-location": "method"
+    }
+  }
+}

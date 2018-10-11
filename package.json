@@ -11,6 +11,8 @@
     "debug": "^3.1.0",
     "is-buffer": "2.0.2",
     "ms-rest-azure": "^2.5.9",
+    "ms-rest-azure-js": "file:C:/Users/daschult/Sources/ms-rest-azure-js",
+    "ms-rest-js": "file:C:/Users/daschult/Sources/ms-rest-js",
     "rhea-promise": "^0.1.6",
     "tslib": "^1.9.3",
     "uuid": "^3.3.2"
@@ -41,7 +43,8 @@
     "build": "npm run tslint && npm run tsc",
     "test": "npm run build",
     "unit": "nyc --reporter=lcov --reporter=text-lcov mocha -r ts-node/register -t 50000 test/**/*.spec.ts",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "generate": "autorest ./specification/readme.md --typescript --output-folder=./lib/management"
   },
   "homepage": "http://github.com/azure/azure-servcie-bus-node",
   "repository": {
