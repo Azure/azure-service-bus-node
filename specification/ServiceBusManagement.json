@@ -64,9 +64,195 @@
       "properties": {
         "id": {
           "description": "The ID Of the Queue",
-          "type": "string",
-          "xml": {
-            "name": "id"
+          "type": "string"
+        },
+        "title": {
+          "description": "The name of the resource",
+          "type": "string"
+        },
+        "published": {
+          "description": "The timestamp for when this resource was published",
+          "type": "string"
+        },
+        "updated": {
+          "description": "The timestamp for when this resource was last updated",
+          "type": "string"
+        },
+        "author": {
+          "description": "The author that created this resource",
+          "type": "object",
+          "properties": {
+            "name": {
+              "description": "The name of the author that created this resource",
+              "type": "string"
+            }
+          }
+        },
+        "link": {
+          "description": "TODO: Add description",
+          "type": "object",
+          "properties": {
+            "rel": {
+              "description": "TODO: Add description",
+              "type": "string",
+              "xml": {
+                "attribute": true
+              }
+            },
+            "href": {
+              "description": "TODO: Add description",
+              "type": "string",
+              "xml": {
+                "attribute": true
+              }
+            }
+          }
+        },
+        "content": {
+          "description": "TODO: Add description",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "TODO: Add description",
+              "type": "string",
+              "xml": {
+                "attribute": true
+              }
+            },
+            "QueueDescription": {
+              "description": "TODO: Add description",
+              "type": "object",
+              "properties": {
+                "LockDuration": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "MaxSizeInMegabytes": {
+                  "description": "TODO: Add description",
+                  "type": "number"
+                },
+                "RequiresDuplicateDetection": {
+                  "description": "TODO: Add description",
+                  "type": "boolean"
+                },
+                "RequiresSession": {
+                  "description": "TODO: Add description",
+                  "type": "boolean"
+                },
+                "DefaultMessageTimeToLive": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "DeadLetteringOnMessageExpiration": {
+                  "description": "TODO: Add description",
+                  "type": "boolean"
+                },
+                "DuplicateDetectionHistoryTimeWindow": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "MaxDeliveryCount": {
+                  "description": "TODO: Add description",
+                  "type": "integer"
+                },
+                "EnableBatchedOperations": {
+                  "description": "TODO: Add description",
+                  "type": "boolean"
+                },
+                "SizeInBytes": {
+                  "description": "TODO: Add description",
+                  "type": "integer"
+                },
+                "MessageCount": {
+                  "description": "TODO: Add description",
+                  "type": "integer"
+                },
+                "IsAnonymousAccessible": {
+                  "description": "TODO: Add description",
+                  "type": "boolean"
+                },
+                "Status": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "CreatedAt": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "UpdatedAt": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "AccessedAt": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "SupportOrdering": {
+                  "description": "TODO: Add description",
+                  "type": "boolean"
+                },
+                "CountDetails": {
+                  "description": "TODO: Add description",
+                  "type": "object",
+                  "properties": {
+                    "ActiveMessageCount": {
+                      "description": "TODO: Add description",
+                      "type": "integer",
+                      "xml": {
+                        "prefix": "d2p1"
+                      }
+                    },
+                    "DeadLetterMessageCount": {
+                      "description": "TODO: Add description",
+                      "type": "integer",
+                      "xml": {
+                        "prefix": "d2p1"
+                      }
+                    },
+                    "ScheduledMessageCount": {
+                      "description": "TODO: Add description",
+                      "type": "integer",
+                      "xml": {
+                        "prefix": "d2p1"
+                      }
+                    },
+                    "TransferMessageCount": {
+                      "description": "TODO: Add description",
+                      "type": "integer",
+                      "xml": {
+                        "prefix": "d2p1"
+                      }
+                    },
+                    "TransferDeadLetterMessageCount": {
+                      "description": "TODO: Add description",
+                      "type": "integer",
+                      "xml": {
+                        "prefix": "d2p1"
+                      }
+                    }
+                  }
+                },
+                "AutoDeleteOnIdle": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "EnablePartitioning": {
+                  "description": "TODO: Add description",
+                  "type": "boolean"
+                },
+                "EntityAvailabilityStatus": {
+                  "description": "TODO: Add description",
+                  "type": "string"
+                },
+                "EnableExpress": {
+                  "description": "TODO: Add description",
+                  "type": "boolean"
+                }
+              },
+              "xml": {
+                "namespace": "http://schemas.microsoft.com/netservices/2010/10/servicebus/connect"
+              }
+            }
           }
         }
       },

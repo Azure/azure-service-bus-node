@@ -6,6 +6,11 @@
 
 export {
   GetQueueResponse,
+  GetQueueResponseAuthor,
+  GetQueueResponseLink,
+  GetQueueResponseContent,
+  GetQueueResponseContentQueueDescription,
+  GetQueueResponseContentQueueDescriptionCountDetails,
   CloudError
 } from "../models/mappers";
 

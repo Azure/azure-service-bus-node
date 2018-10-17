@@ -10,6 +10,285 @@ import * as msRest from "ms-rest-js";
 export const CloudError = CloudErrorMapper;
 export const BaseResource = BaseResourceMapper;
 
+export const GetQueueResponseAuthor: msRest.CompositeMapper = {
+  serializedName: "GetQueueResponse_author",
+  type: {
+    name: "Composite",
+    className: "GetQueueResponseAuthor",
+    modelProperties: {
+      name: {
+        xmlName: "name",
+        serializedName: "name",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const GetQueueResponseLink: msRest.CompositeMapper = {
+  serializedName: "GetQueueResponse_link",
+  type: {
+    name: "Composite",
+    className: "GetQueueResponseLink",
+    modelProperties: {
+      rel: {
+        xmlIsAttribute: true,
+        xmlName: "rel",
+        serializedName: "rel",
+        type: {
+          name: "String"
+        }
+      },
+      href: {
+        xmlIsAttribute: true,
+        xmlName: "href",
+        serializedName: "href",
+        type: {
+          name: "String"
+        }
+      }
+    }
+  }
+};
+
+export const GetQueueResponseContentQueueDescriptionCountDetails: msRest.CompositeMapper = {
+  serializedName: "GetQueueResponse_content_QueueDescription_CountDetails",
+  type: {
+    name: "Composite",
+    className: "GetQueueResponseContentQueueDescriptionCountDetails",
+    modelProperties: {
+      activeMessageCount: {
+        xmlName: "ActiveMessageCount",
+        serializedName: "ActiveMessageCount",
+        type: {
+          name: "Number"
+        }
+      },
+      deadLetterMessageCount: {
+        xmlName: "DeadLetterMessageCount",
+        serializedName: "DeadLetterMessageCount",
+        type: {
+          name: "Number"
+        }
+      },
+      scheduledMessageCount: {
+        xmlName: "ScheduledMessageCount",
+        serializedName: "ScheduledMessageCount",
+        type: {
+          name: "Number"
+        }
+      },
+      transferMessageCount: {
+        xmlName: "TransferMessageCount",
+        serializedName: "TransferMessageCount",
+        type: {
+          name: "Number"
+        }
+      },
+      transferDeadLetterMessageCount: {
+        xmlName: "TransferDeadLetterMessageCount",
+        serializedName: "TransferDeadLetterMessageCount",
+        type: {
+          name: "Number"
+        }
+      }
+    }
+  }
+};
+
+export const GetQueueResponseContentQueueDescription: msRest.CompositeMapper = {
+  serializedName: "GetQueueResponse_content_QueueDescription",
+  type: {
+    name: "Composite",
+    className: "GetQueueResponseContentQueueDescription",
+    modelProperties: {
+      lockDuration: {
+        xmlName: "LockDuration",
+        serializedName: "LockDuration",
+        type: {
+          name: "String"
+        }
+      },
+      maxSizeInMegabytes: {
+        xmlName: "MaxSizeInMegabytes",
+        serializedName: "MaxSizeInMegabytes",
+        type: {
+          name: "Number"
+        }
+      },
+      requiresDuplicateDetection: {
+        xmlName: "RequiresDuplicateDetection",
+        serializedName: "RequiresDuplicateDetection",
+        type: {
+          name: "Boolean"
+        }
+      },
+      requiresSession: {
+        xmlName: "RequiresSession",
+        serializedName: "RequiresSession",
+        type: {
+          name: "Boolean"
+        }
+      },
+      defaultMessageTimeToLive: {
+        xmlName: "DefaultMessageTimeToLive",
+        serializedName: "DefaultMessageTimeToLive",
+        type: {
+          name: "String"
+        }
+      },
+      deadLetteringOnMessageExpiration: {
+        xmlName: "DeadLetteringOnMessageExpiration",
+        serializedName: "DeadLetteringOnMessageExpiration",
+        type: {
+          name: "Boolean"
+        }
+      },
+      duplicateDetectionHistoryTimeWindow: {
+        xmlName: "DuplicateDetectionHistoryTimeWindow",
+        serializedName: "DuplicateDetectionHistoryTimeWindow",
+        type: {
+          name: "String"
+        }
+      },
+      maxDeliveryCount: {
+        xmlName: "MaxDeliveryCount",
+        serializedName: "MaxDeliveryCount",
+        type: {
+          name: "Number"
+        }
+      },
+      enableBatchedOperations: {
+        xmlName: "EnableBatchedOperations",
+        serializedName: "EnableBatchedOperations",
+        type: {
+          name: "Boolean"
+        }
+      },
+      sizeInBytes: {
+        xmlName: "SizeInBytes",
+        serializedName: "SizeInBytes",
+        type: {
+          name: "Number"
+        }
+      },
+      messageCount: {
+        xmlName: "MessageCount",
+        serializedName: "MessageCount",
+        type: {
+          name: "Number"
+        }
+      },
+      isAnonymousAccessible: {
+        xmlName: "IsAnonymousAccessible",
+        serializedName: "IsAnonymousAccessible",
+        type: {
+          name: "Boolean"
+        }
+      },
+      status: {
+        xmlName: "Status",
+        serializedName: "Status",
+        type: {
+          name: "String"
+        }
+      },
+      createdAt: {
+        xmlName: "CreatedAt",
+        serializedName: "CreatedAt",
+        type: {
+          name: "String"
+        }
+      },
+      updatedAt: {
+        xmlName: "UpdatedAt",
+        serializedName: "UpdatedAt",
+        type: {
+          name: "String"
+        }
+      },
+      accessedAt: {
+        xmlName: "AccessedAt",
+        serializedName: "AccessedAt",
+        type: {
+          name: "String"
+        }
+      },
+      supportOrdering: {
+        xmlName: "SupportOrdering",
+        serializedName: "SupportOrdering",
+        type: {
+          name: "Boolean"
+        }
+      },
+      countDetails: {
+        xmlName: "CountDetails",
+        serializedName: "CountDetails",
+        type: {
+          name: "Composite",
+          className: "GetQueueResponseContentQueueDescriptionCountDetails"
+        }
+      },
+      autoDeleteOnIdle: {
+        xmlName: "AutoDeleteOnIdle",
+        serializedName: "AutoDeleteOnIdle",
+        type: {
+          name: "String"
+        }
+      },
+      enablePartitioning: {
+        xmlName: "EnablePartitioning",
+        serializedName: "EnablePartitioning",
+        type: {
+          name: "Boolean"
+        }
+      },
+      entityAvailabilityStatus: {
+        xmlName: "EntityAvailabilityStatus",
+        serializedName: "EntityAvailabilityStatus",
+        type: {
+          name: "String"
+        }
+      },
+      enableExpress: {
+        xmlName: "EnableExpress",
+        serializedName: "EnableExpress",
+        type: {
+          name: "Boolean"
+        }
+      }
+    }
+  }
+};
+
+export const GetQueueResponseContent: msRest.CompositeMapper = {
+  serializedName: "GetQueueResponse_content",
+  type: {
+    name: "Composite",
+    className: "GetQueueResponseContent",
+    modelProperties: {
+      type: {
+        xmlIsAttribute: true,
+        xmlName: "type",
+        serializedName: "type",
+        type: {
+          name: "String"
+        }
+      },
+      queueDescription: {
+        xmlName: "QueueDescription",
+        serializedName: "QueueDescription",
+        type: {
+          name: "Composite",
+          className: "GetQueueResponseContentQueueDescription"
+        }
+      }
+    }
+  }
+};
+
 export const GetQueueResponse: msRest.CompositeMapper = {
   xmlName: "entry",
   serializedName: "GetQueueResponse",
@@ -22,6 +301,51 @@ export const GetQueueResponse: msRest.CompositeMapper = {
         serializedName: "id",
         type: {
           name: "String"
+        }
+      },
+      title: {
+        xmlName: "title",
+        serializedName: "title",
+        type: {
+          name: "String"
+        }
+      },
+      published: {
+        xmlName: "published",
+        serializedName: "published",
+        type: {
+          name: "String"
+        }
+      },
+      updated: {
+        xmlName: "updated",
+        serializedName: "updated",
+        type: {
+          name: "String"
+        }
+      },
+      author: {
+        xmlName: "author",
+        serializedName: "author",
+        type: {
+          name: "Composite",
+          className: "GetQueueResponseAuthor"
+        }
+      },
+      link: {
+        xmlName: "link",
+        serializedName: "link",
+        type: {
+          name: "Composite",
+          className: "GetQueueResponseLink"
+        }
+      },
+      content: {
+        xmlName: "content",
+        serializedName: "content",
+        type: {
+          name: "Composite",
+          className: "GetQueueResponseContent"
         }
       }
     }

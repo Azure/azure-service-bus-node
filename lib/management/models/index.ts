@@ -12,6 +12,182 @@ export { BaseResource, CloudError };
 
 /**
  * @interface
+ * An interface representing GetQueueResponseAuthor.
+ * The author that created this resource
+ *
+ */
+export interface GetQueueResponseAuthor {
+  /**
+   * @member {string} [name] The name of the author that created this resource
+   */
+  name?: string;
+}
+
+/**
+ * @interface
+ * An interface representing GetQueueResponseLink.
+ * TODO: Add description
+ *
+ */
+export interface GetQueueResponseLink {
+  /**
+   * @member {string} [rel] TODO: Add description
+   */
+  rel?: string;
+  /**
+   * @member {string} [href] TODO: Add description
+   */
+  href?: string;
+}
+
+/**
+ * @interface
+ * An interface representing GetQueueResponseContentQueueDescriptionCountDetails.
+ * TODO: Add description
+ *
+ */
+export interface GetQueueResponseContentQueueDescriptionCountDetails {
+  /**
+   * @member {number} [activeMessageCount] TODO: Add description
+   */
+  activeMessageCount?: number;
+  /**
+   * @member {number} [deadLetterMessageCount] TODO: Add description
+   */
+  deadLetterMessageCount?: number;
+  /**
+   * @member {number} [scheduledMessageCount] TODO: Add description
+   */
+  scheduledMessageCount?: number;
+  /**
+   * @member {number} [transferMessageCount] TODO: Add description
+   */
+  transferMessageCount?: number;
+  /**
+   * @member {number} [transferDeadLetterMessageCount] TODO: Add description
+   */
+  transferDeadLetterMessageCount?: number;
+}
+
+/**
+ * @interface
+ * An interface representing GetQueueResponseContentQueueDescription.
+ * TODO: Add description
+ *
+ */
+export interface GetQueueResponseContentQueueDescription {
+  /**
+   * @member {string} [lockDuration] TODO: Add description
+   */
+  lockDuration?: string;
+  /**
+   * @member {number} [maxSizeInMegabytes] TODO: Add description
+   */
+  maxSizeInMegabytes?: number;
+  /**
+   * @member {boolean} [requiresDuplicateDetection] TODO: Add description
+   */
+  requiresDuplicateDetection?: boolean;
+  /**
+   * @member {boolean} [requiresSession] TODO: Add description
+   */
+  requiresSession?: boolean;
+  /**
+   * @member {string} [defaultMessageTimeToLive] TODO: Add description
+   */
+  defaultMessageTimeToLive?: string;
+  /**
+   * @member {boolean} [deadLetteringOnMessageExpiration] TODO: Add description
+   */
+  deadLetteringOnMessageExpiration?: boolean;
+  /**
+   * @member {string} [duplicateDetectionHistoryTimeWindow] TODO: Add
+   * description
+   */
+  duplicateDetectionHistoryTimeWindow?: string;
+  /**
+   * @member {number} [maxDeliveryCount] TODO: Add description
+   */
+  maxDeliveryCount?: number;
+  /**
+   * @member {boolean} [enableBatchedOperations] TODO: Add description
+   */
+  enableBatchedOperations?: boolean;
+  /**
+   * @member {number} [sizeInBytes] TODO: Add description
+   */
+  sizeInBytes?: number;
+  /**
+   * @member {number} [messageCount] TODO: Add description
+   */
+  messageCount?: number;
+  /**
+   * @member {boolean} [isAnonymousAccessible] TODO: Add description
+   */
+  isAnonymousAccessible?: boolean;
+  /**
+   * @member {string} [status] TODO: Add description
+   */
+  status?: string;
+  /**
+   * @member {string} [createdAt] TODO: Add description
+   */
+  createdAt?: string;
+  /**
+   * @member {string} [updatedAt] TODO: Add description
+   */
+  updatedAt?: string;
+  /**
+   * @member {string} [accessedAt] TODO: Add description
+   */
+  accessedAt?: string;
+  /**
+   * @member {boolean} [supportOrdering] TODO: Add description
+   */
+  supportOrdering?: boolean;
+  /**
+   * @member {GetQueueResponseContentQueueDescriptionCountDetails}
+   * [countDetails] TODO: Add description
+   */
+  countDetails?: GetQueueResponseContentQueueDescriptionCountDetails;
+  /**
+   * @member {string} [autoDeleteOnIdle] TODO: Add description
+   */
+  autoDeleteOnIdle?: string;
+  /**
+   * @member {boolean} [enablePartitioning] TODO: Add description
+   */
+  enablePartitioning?: boolean;
+  /**
+   * @member {string} [entityAvailabilityStatus] TODO: Add description
+   */
+  entityAvailabilityStatus?: string;
+  /**
+   * @member {boolean} [enableExpress] TODO: Add description
+   */
+  enableExpress?: boolean;
+}
+
+/**
+ * @interface
+ * An interface representing GetQueueResponseContent.
+ * TODO: Add description
+ *
+ */
+export interface GetQueueResponseContent {
+  /**
+   * @member {string} [type] TODO: Add description
+   */
+  type?: string;
+  /**
+   * @member {GetQueueResponseContentQueueDescription} [queueDescription] TODO:
+   * Add description
+   */
+  queueDescription?: GetQueueResponseContentQueueDescription;
+}
+
+/**
+ * @interface
  * An interface representing GetQueueResponse.
  * The response from a GetQueue operation
  *
@@ -21,6 +197,33 @@ export interface GetQueueResponse {
    * @member {string} [id] The ID Of the Queue
    */
   id?: string;
+  /**
+   * @member {string} [title] The name of the resource
+   */
+  title?: string;
+  /**
+   * @member {string} [published] The timestamp for when this resource was
+   * published
+   */
+  published?: string;
+  /**
+   * @member {string} [updated] The timestamp for when this resource was last
+   * updated
+   */
+  updated?: string;
+  /**
+   * @member {GetQueueResponseAuthor} [author] The author that created this
+   * resource
+   */
+  author?: GetQueueResponseAuthor;
+  /**
+   * @member {GetQueueResponseLink} [link] TODO: Add description
+   */
+  link?: GetQueueResponseLink;
+  /**
+   * @member {GetQueueResponseContent} [content] TODO: Add description
+   */
+  content?: GetQueueResponseContent;
 }
 
 

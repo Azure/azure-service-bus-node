@@ -71,7 +71,55 @@ describe("ServiceBusManagementClient", () => {
       assert(authorizationHeader!.endsWith("&skn=RootManageSharedAccessKey"));
 
       assert.strictEqual(response.id, "https://daschulttest1.servicebus.windows.net/testQueuePath/?api-version=2017-04&enrich=False");
-      assert.strictEqual(response._response.bodyAsText, "spam");
+      assert.strictEqual(response.title, "testQueuePath");
+      assert.strictEqual(response.published, "2018-10-09T19:56:34Z");
+      assert.strictEqual(response.updated, "2018-10-09T19:56:35Z");
+
+      const author = response.author!;
+      assert(author);
+      assert.strictEqual(author.name, "daschulttest1");
+
+      const link = response.link!;
+      assert(link);
+      assert.strictEqual(link.rel, "self");
+      assert.strictEqual(link.href, "https://daschulttest1.servicebus.windows.net/testQueuePath/?api-version=2017-04&enrich=False");
+
+      const content = response.content!;
+      assert(content);
+      assert.strictEqual(content.type, "application/xml");
+
+      const queueDescription = content.queueDescription!;
+      assert(queueDescription);
+      assert.strictEqual(queueDescription.lockDuration, "PT1M");
+      assert.strictEqual(queueDescription.maxSizeInMegabytes, 1024);
+      assert.strictEqual(queueDescription.requiresDuplicateDetection, false);
+      assert.strictEqual(queueDescription.requiresSession, false);
+      assert.strictEqual(queueDescription.defaultMessageTimeToLive, "P14D");
+      assert.strictEqual(queueDescription.deadLetteringOnMessageExpiration, false);
+      assert.strictEqual(queueDescription.duplicateDetectionHistoryTimeWindow, "PT10M");
+      assert.strictEqual(queueDescription.maxDeliveryCount, 10);
+      assert.strictEqual(queueDescription.enableBatchedOperations, true);
+      assert.strictEqual(queueDescription.sizeInBytes, 0);
+      assert.strictEqual(queueDescription.messageCount, 0);
+      assert.strictEqual(queueDescription.isAnonymousAccessible, false);
+      assert.strictEqual(queueDescription.status, "Active");
+      assert.strictEqual(queueDescription.createdAt, "2018-10-09T19:56:34.903Z");
+      assert.strictEqual(queueDescription.updatedAt, "2018-10-09T19:56:35.013Z");
+      assert.strictEqual(queueDescription.accessedAt, "0001-01-01T00:00:00Z");
+      assert.strictEqual(queueDescription.supportOrdering, true);
+
+      const countDetails = queueDescription.countDetails!;
+      assert(countDetails);
+      assert.strictEqual(countDetails.activeMessageCount, 0);
+      assert.strictEqual(countDetails.deadLetterMessageCount, 0);
+      assert.strictEqual(countDetails.scheduledMessageCount, 0);
+      assert.strictEqual(countDetails.transferMessageCount, 0);
+      assert.strictEqual(countDetails.transferDeadLetterMessageCount, 0);
+
+      assert.strictEqual(queueDescription.autoDeleteOnIdle, "P10675199DT2H48M5.4775807S");
+      assert.strictEqual(queueDescription.enablePartitioning, false);
+      assert.strictEqual(queueDescription.entityAvailabilityStatus, "Available");
+      assert.strictEqual(queueDescription.enableExpress, false);
     });
   });
 });
