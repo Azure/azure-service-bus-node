@@ -53,16 +53,20 @@ describe("ServiceBusManagementClient", function () {
   describe("queue", function () {
     describe("get()", function () {
       it("when namespaceName doesn't exist", async function () {
-        const client = getClient((request: WebResource) => { throw new Error("getaddrinfo ENOTFOUND nonexistingnamespace.servicebus.windows.net nonexistingnamespace.servicebus.windows.net:443"); });
-
         const namespaceName = "nonExistingNamespace";
         const queuePath = "nonExistingTestQueuePath";
+
+        const client = getClient((request: WebResource) => { throw new Error(`getaddrinfo ENOTFOUND nonexistingnamespace.servicebus.windows.net nonexistingnamespace.servicebus.windows.net:443`); });
+
         const error: Error = await msAssert.throwsAsync(client.queue.get(namespaceName, queuePath));
         assert.strictEqual(error.name, "Error");
         assert.strictEqual(error.message, "getaddrinfo ENOTFOUND nonexistingnamespace.servicebus.windows.net nonexistingnamespace.servicebus.windows.net:443");
       });
 
       it("when queuePath doesn't exist", async function () {
+        const namespaceName = "daschulttest1";
+        const queuePath = "nonExistingTestQueuePath";
+
         const client: ServiceBusManagementClient = getClient((httpRequest: WebResource) => {
           return {
             request: httpRequest,
@@ -87,11 +91,10 @@ describe("ServiceBusManagementClient", function () {
           };
         });
 
-        const queuePath = "nonExistingTestQueuePath";
-        const response: QueueGetResponse = await client.queue.get("daschulttest1", queuePath);
+        const response: QueueGetResponse = await client.queue.get(namespaceName, queuePath);
 
         const request: WebResource = response._response.request;
-        assert.deepEqual(request.url, `https://daschulttest1.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorect request URL");
+        assert.deepEqual(request.url, `https://${namespaceName}.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorect request URL");
         assert.deepEqual(request.method, "GET");
         assert.deepEqual(request.body, undefined);
         assert.deepEqual(request.query, undefined);
@@ -113,6 +116,9 @@ describe("ServiceBusManagementClient", function () {
       });
 
       it("when queue exists", async function () {
+        const namespaceName = "daschulttest1";
+        const queuePath = "testQueuePath";
+
         const client = getClient((request: WebResource) => {
           return {
             request: request,
@@ -127,14 +133,14 @@ describe("ServiceBusManagementClient", function () {
             bodyAsText:
               `
 <entry xmlns="http://www.w3.org/2005/Atom">
-  <id>https://daschulttest1.servicebus.windows.net/testQueuePath/?api-version=2017-04&amp;enrich=False</id>
+  <id>https://${namespaceName}.servicebus.windows.net/testQueuePath/?api-version=2017-04&amp;enrich=False</id>
   <title type="text">testQueuePath</title>
   <published>2018-10-09T19:56:34Z</published>
   <updated>2018-10-09T19:56:35Z</updated>
   <author>
-    <name>daschulttest1</name>
+    <name>${namespaceName}</name>
   </author>
-  <link rel="self" href="https://daschulttest1.servicebus.windows.net/testQueuePath/?api-version=2017-04&amp;enrich=False"/>
+  <link rel="self" href="https://${namespaceName}.servicebus.windows.net/testQueuePath/?api-version=2017-04&amp;enrich=False"/>
   <content type="application/xml">
     <QueueDescription xmlns="http://schemas.microsoft.com/netservices/2010/10/servicebus/connect" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
       <LockDuration>PT1M</LockDuration>
@@ -172,11 +178,10 @@ describe("ServiceBusManagementClient", function () {
           };
         });
 
-        const queuePath = "testQueuePath";
-        const response: QueueGetResponse = await client.queue.get("daschulttest1", queuePath);
+        const response: QueueGetResponse = await client.queue.get(namespaceName, queuePath);
 
         const request: WebResource = response._response.request;
-        assert.deepEqual(request.url, `https://daschulttest1.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorect request URL");
+        assert.deepEqual(request.url, `https://${namespaceName}.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorect request URL");
         assert.deepEqual(request.method, "GET");
         assert.deepEqual(request.body, undefined);
         assert.deepEqual(request.query, undefined);
@@ -185,19 +190,168 @@ describe("ServiceBusManagementClient", function () {
         const authorizationHeader: string | undefined = requestHeaders.get("Authorization");
         assert(authorizationHeader);
 
-        assert.strictEqual(response.id, `https://daschulttest1.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorrect response ID");
+        assert.strictEqual(response.id, `https://${namespaceName}.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorrect response ID");
         assert.strictEqual(response.title, "testQueuePath");
         assert(response.published);
         assert(response.updated);
 
         const author = response.author!;
         assert(author);
-        assert.strictEqual(author.name, "daschulttest1");
+        assert.strictEqual(author.name, namespaceName);
 
         const link = response.link!;
         assert(link);
         assert.strictEqual(link.rel, "self");
-        assert.strictEqual(link.href, `https://daschulttest1.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorrect response link href");
+        assert.strictEqual(link.href, `https://${namespaceName}.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorrect response link href");
+
+        const content = response.content!;
+        assert(content);
+        assert.strictEqual(content.type, "application/xml");
+
+        const queueDescription = content.queueDescription!;
+        assert(queueDescription);
+        assert.strictEqual(queueDescription.lockDuration, "PT1M");
+        assert.strictEqual(queueDescription.maxSizeInMegabytes, 1024);
+        assert.strictEqual(queueDescription.requiresDuplicateDetection, false);
+        assert.strictEqual(queueDescription.requiresSession, false);
+        assert.strictEqual(queueDescription.defaultMessageTimeToLive, "P14D");
+        assert.strictEqual(queueDescription.deadLetteringOnMessageExpiration, false);
+        assert.strictEqual(queueDescription.duplicateDetectionHistoryTimeWindow, "PT10M");
+        assert.strictEqual(queueDescription.maxDeliveryCount, 10);
+        assert.strictEqual(queueDescription.enableBatchedOperations, true);
+        assert.strictEqual(queueDescription.sizeInBytes, 0);
+        assert.strictEqual(queueDescription.messageCount, 0);
+        assert.strictEqual(queueDescription.isAnonymousAccessible, false);
+        assert.strictEqual(queueDescription.status, "Active");
+        assert(queueDescription.createdAt);
+        assert(queueDescription.updatedAt);
+        assert.strictEqual(queueDescription.accessedAt, "0001-01-01T00:00:00Z");
+        assert.strictEqual(queueDescription.supportOrdering, true);
+
+        const countDetails = queueDescription.countDetails!;
+        assert(countDetails);
+        assert.strictEqual(countDetails.activeMessageCount, 0);
+        assert.strictEqual(countDetails.deadLetterMessageCount, 0);
+        assert.strictEqual(countDetails.scheduledMessageCount, 0);
+        assert.strictEqual(countDetails.transferMessageCount, 0);
+        assert.strictEqual(countDetails.transferDeadLetterMessageCount, 0);
+
+        assert.strictEqual(queueDescription.autoDeleteOnIdle, "P10675199DT2H48M5.4775807S");
+        assert.strictEqual(queueDescription.enablePartitioning, false);
+        assert.strictEqual(queueDescription.entityAvailabilityStatus, "Available");
+        assert.strictEqual(queueDescription.enableExpress, false);
+      });
+    });
+
+    describe("create()", function () {
+      it("when namespaceName doesn't exist", async function () {
+        const client = getClient((request: WebResource) => { throw new Error("getaddrinfo ENOTFOUND nonexistingnamespace.servicebus.windows.net nonexistingnamespace.servicebus.windows.net:443"); });
+
+        const namespaceName = "nonExistingNamespace";
+        const queuePath = "nonExistingTestQueuePath";
+        const error: Error = await msAssert.throwsAsync(client.queue.create(namespaceName, queuePath));
+        assert.strictEqual(error.name, "Error");
+        assert.strictEqual(error.message, "getaddrinfo ENOTFOUND nonexistingnamespace.servicebus.windows.net nonexistingnamespace.servicebus.windows.net:443");
+      });
+
+      it("when queuePath doesn't exist", async function () {
+        const namespaceName = "daschulttest1";
+        const queuePath = "nonExistingTestQueuePath";
+
+        const client: ServiceBusManagementClient = getClient((httpRequest: WebResource) => {
+          return {
+            request: httpRequest,
+            status: 200,
+            headers: new HttpHeaders({
+              "Transfer-Encoding": "chunked",
+              "Content-Type": "application/atom+xml;type=feed;charset=utf-8",
+              "Server": "Microsoft-HTTPAPI/2.0",
+              "Strict-Transport-Security": "max-age=31536000",
+              "Date": "Wed, 17 Oct 2018 21:56:16 GMT"
+            }),
+            bodyAsText:
+              `
+<entry xmlns="http://www.w3.org/2005/Atom">
+  <id>https://${namespaceName}.servicebus.windows.net/testQueuePath?api-version=2017-04</id>
+  <title type="text">testQueuePath</title>
+  <published>2018-10-17T20:45:50Z</published>
+  <updated>2018-10-17T20:45:50Z</updated>
+  <author>
+    <name>${namespaceName}</name>
+  </author>
+  <link rel="self" href="https://${namespaceName}.servicebus.windows.net/testQueuePath?api-version=2017-04"/>
+  <content type="application/xml">
+    <QueueDescription xmlns="http://schemas.microsoft.com/netservices/2010/10/servicebus/connect" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+      <LockDuration>PT1M</LockDuration>
+      <MaxSizeInMegabytes>1024</MaxSizeInMegabytes>
+      <RequiresDuplicateDetection>false</RequiresDuplicateDetection>
+      <RequiresSession>false</RequiresSession>
+      <DefaultMessageTimeToLive>P14D</DefaultMessageTimeToLive>
+      <DeadLetteringOnMessageExpiration>false</DeadLetteringOnMessageExpiration>
+      <DuplicateDetectionHistoryTimeWindow>PT10M</DuplicateDetectionHistoryTimeWindow>
+      <MaxDeliveryCount>10</MaxDeliveryCount>
+      <EnableBatchedOperations>true</EnableBatchedOperations>
+      <SizeInBytes>0</SizeInBytes>
+      <MessageCount>0</MessageCount>
+      <IsAnonymousAccessible>false</IsAnonymousAccessible>
+      <AuthorizationRules/>
+      <Status>Active</Status>
+      <CreatedAt>2018-10-17T20:45:50.48Z</CreatedAt>
+      <UpdatedAt>2018-10-17T20:45:50.73Z</UpdatedAt>
+      <SupportOrdering>true</SupportOrdering>
+      <AutoDeleteOnIdle>P10675199DT2H48M5.4775807S</AutoDeleteOnIdle>
+      <EnablePartitioning>false</EnablePartitioning>
+      <EntityAvailabilityStatus>Available</EntityAvailabilityStatus>
+      <EnableExpress>false</EnableExpress>
+    </QueueDescription>
+  </content>
+</entry>
+`.trim()
+          };
+        });
+
+        const response: QueueGetResponse = await client.queue.get(namespaceName, queuePath);
+
+        const request: WebResource = response._response.request;
+        assert.deepEqual(request.url, `https://${namespaceName}.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorect request URL");
+        assert.deepEqual(request.method, "PUT");
+        assert.deepEqual(request.body, `
+<entry xmlns="http://www.w3.org/2005/Atom">
+  <content type="application/xml">
+    <QueueDescription xmlns="http://schemas.microsoft.com/netservices/2010/10/servicebus/connect">
+      <LockDuration>PT1M</LockDuration>
+      <MaxSizeInMegabytes>1024</MaxSizeInMegabytes>
+      <RequiresDuplicateDetection>false</RequiresDuplicateDetection>
+      <RequiresSession>false</RequiresSession>
+      <DeadLetteringOnMessageExpiration>false</DeadLetteringOnMessageExpiration>
+      <MaxDeliveryCount>10</MaxDeliveryCount>
+      <EnableBatchedOperations>true</EnableBatchedOperations>
+      <AuthorizationRules />
+      <Status>Active</Status>
+      <EnablePartitioning>false</EnablePartitioning>
+    </QueueDescription>
+  </content>
+</entry>
+`.trim());
+        assert.deepEqual(request.query, undefined);
+
+        const requestHeaders: HttpHeaders = request.headers;
+        const authorizationHeader: string | undefined = requestHeaders.get("Authorization");
+        assert(authorizationHeader);
+
+        assert.strictEqual(response.id, `https://${namespaceName}.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorrect response ID");
+        assert.strictEqual(response.title, "testQueuePath");
+        assert(response.published);
+        assert(response.updated);
+
+        const author = response.author!;
+        assert(author);
+        assert.strictEqual(author.name, namespaceName);
+
+        const link = response.link!;
+        assert(link);
+        assert.strictEqual(link.rel, "self");
+        assert.strictEqual(link.href, `https://${namespaceName}.servicebus.windows.net/${queuePath}/?api-version=2017-04&enrich=False`, "Incorrect response link href");
 
         const content = response.content!;
         assert(content);

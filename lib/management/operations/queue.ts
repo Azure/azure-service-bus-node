@@ -58,32 +58,28 @@ export class Queue {
    * Create a new queue at the provided queuePath
    * @param namespaceName The name of the ServiceBus namespace to send requests to.
    * @param queuePath The path to the queue relative to the ServiceBus namespace.
-   * @param parameters The parameters required to create a new queue.
    * @param [options] The optional parameters
    * @returns Promise<Models.QueueCreateResponse>
    */
-  create(namespaceName: string, queuePath: string, parameters: Models.CreateQueueBody, options?: msRest.RequestOptionsBase): Promise<Models.QueueCreateResponse>;
+  create(namespaceName: string, queuePath: string, options?: Models.QueueCreateOptionalParams): Promise<Models.QueueCreateResponse>;
   /**
    * @param namespaceName The name of the ServiceBus namespace to send requests to.
    * @param queuePath The path to the queue relative to the ServiceBus namespace.
-   * @param parameters The parameters required to create a new queue.
    * @param callback The callback
    */
-  create(namespaceName: string, queuePath: string, parameters: Models.CreateQueueBody, callback: msRest.ServiceCallback<Models.GetQueueResponse>): void;
+  create(namespaceName: string, queuePath: string, callback: msRest.ServiceCallback<Models.GetQueueResponse>): void;
   /**
    * @param namespaceName The name of the ServiceBus namespace to send requests to.
    * @param queuePath The path to the queue relative to the ServiceBus namespace.
-   * @param parameters The parameters required to create a new queue.
    * @param options The optional parameters
    * @param callback The callback
    */
-  create(namespaceName: string, queuePath: string, parameters: Models.CreateQueueBody, options: msRest.RequestOptionsBase, callback: msRest.ServiceCallback<Models.GetQueueResponse>): void;
-  create(namespaceName: string, queuePath: string, parameters: Models.CreateQueueBody, options?: msRest.RequestOptionsBase, callback?: msRest.ServiceCallback<Models.GetQueueResponse>): Promise<Models.QueueCreateResponse> {
+  create(namespaceName: string, queuePath: string, options: Models.QueueCreateOptionalParams, callback: msRest.ServiceCallback<Models.GetQueueResponse>): void;
+  create(namespaceName: string, queuePath: string, options?: Models.QueueCreateOptionalParams, callback?: msRest.ServiceCallback<Models.GetQueueResponse>): Promise<Models.QueueCreateResponse> {
     return this.client.sendOperationRequest(
       {
         namespaceName,
         queuePath,
-        parameters,
         options
       },
       createOperationSpec,
@@ -133,11 +129,11 @@ const createOperationSpec: msRest.OperationSpec = {
     Parameters.acceptLanguage
   ],
   requestBody: {
-    parameterPath: "parameters",
-    mapper: {
-      ...Mappers.CreateQueueBody,
-      required: true
-    }
+    parameterPath: [
+      "options",
+      "parameters"
+    ],
+    mapper: Mappers.CreateQueueBody
   },
   contentType: "application/xml; charset=utf-8",
   responses: {

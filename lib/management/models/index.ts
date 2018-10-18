@@ -310,6 +310,21 @@ export interface CreateQueueBody {
   content?: CreateQueueBodyContent;
 }
 
+/**
+ * @interface
+ * An interface representing QueueCreateOptionalParams.
+ * Optional Parameters.
+ *
+ * @extends RequestOptionsBase
+ */
+export interface QueueCreateOptionalParams extends msRest.RequestOptionsBase {
+  /**
+   * @member {CreateQueueBody} [parameters] The parameters required to create a
+   * new queue.
+   */
+  parameters?: CreateQueueBody;
+}
+
 
 /**
  * Contains response data for the get operation.

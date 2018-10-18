@@ -405,7 +405,7 @@
       "schema": {
         "$ref": "#/definitions/CreateQueueBody"
       },
-      "required": true,
+      "required": false,
       "description": "The parameters required to create a new queue.",
       "x-ms-parameter-location": "method"
     }
