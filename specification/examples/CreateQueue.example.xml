@@ -1,0 +1,67 @@
+PUT https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04 HTTP/1.1
+Authorization: SharedAccessSignature sr=https%3A%2F%2Fdaschulttest1.servicebus.windows.net%2FtestQueuePath%2F&sig=bCEWzr1DOgXB5XCeNjWJU2zfhH1%2F%2Fca56gVNovbPPUY%3D&se=1539812750&skn=RootManageSharedAccessKey
+UserAgent: SERVICEBUS/2017-04(api-origin=.NETStandard,Version=v2.0;os=Microsoft Windows 10.0.17763 ;version=3.1.1.0;product=Microsoft.Azure.ServiceBus)
+Content-Type: application/atom+xml; charset=utf-8
+Content-Length: 747
+Host: daschulttest1.servicebus.windows.net
+
+<entry xmlns="http://www.w3.org/2005/Atom">
+  <content type="application/xml">
+    <QueueDescription xmlns="http://schemas.microsoft.com/netservices/2010/10/servicebus/connect">
+      <LockDuration>PT1M</LockDuration>
+      <MaxSizeInMegabytes>1024</MaxSizeInMegabytes>
+      <RequiresDuplicateDetection>false</RequiresDuplicateDetection>
+      <RequiresSession>false</RequiresSession>
+      <DeadLetteringOnMessageExpiration>false</DeadLetteringOnMessageExpiration>
+      <MaxDeliveryCount>10</MaxDeliveryCount>
+      <EnableBatchedOperations>true</EnableBatchedOperations>
+      <AuthorizationRules />
+      <Status>Active</Status>
+      <EnablePartitioning>false</EnablePartitioning>
+    </QueueDescription>
+  </content>
+</entry>
+
+HTTP/1.1 201 Created
+Transfer-Encoding: chunked
+Content-Type: application/atom+xml;type=entry;charset=utf-8
+Server: Microsoft-HTTPAPI/2.0
+Strict-Transport-Security: max-age=31536000
+Date: Wed, 17 Oct 2018 20:45:50 GMT
+
+<entry xmlns="http://www.w3.org/2005/Atom">
+  <id>https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04</id>
+  <title type="text">testQueuePath</title>
+  <published>2018-10-17T20:45:50Z</published>
+  <updated>2018-10-17T20:45:50Z</updated>
+  <author>
+    <name>daschulttest1</name>
+  </author>
+  <link rel="self" href="https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04"/>
+  <content type="application/xml">
+    <QueueDescription xmlns="http://schemas.microsoft.com/netservices/2010/10/servicebus/connect" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
+      <LockDuration>PT1M</LockDuration>
+      <MaxSizeInMegabytes>1024</MaxSizeInMegabytes>
+      <RequiresDuplicateDetection>false</RequiresDuplicateDetection>
+      <RequiresSession>false</RequiresSession>
+      <DefaultMessageTimeToLive>P14D</DefaultMessageTimeToLive>
+      <DeadLetteringOnMessageExpiration>false</DeadLetteringOnMessageExpiration>
+      <DuplicateDetectionHistoryTimeWindow>PT10M</DuplicateDetectionHistoryTimeWindow>
+      <MaxDeliveryCount>10</MaxDeliveryCount>
+      <EnableBatchedOperations>true</EnableBatchedOperations>
+      <SizeInBytes>0</SizeInBytes>
+      <MessageCount>0</MessageCount>
+      <IsAnonymousAccessible>false</IsAnonymousAccessible>
+      <AuthorizationRules/>
+      <Status>Active</Status>
+      <CreatedAt>2018-10-17T20:45:50.48Z</CreatedAt>
+      <UpdatedAt>2018-10-17T20:45:50.73Z</UpdatedAt>
+      <SupportOrdering>true</SupportOrdering>
+      <AutoDeleteOnIdle>P10675199DT2H48M5.4775807S</AutoDeleteOnIdle>
+      <EnablePartitioning>false</EnablePartitioning>
+      <EntityAvailabilityStatus>Available</EntityAvailabilityStatus>
+      <EnableExpress>false</EnableExpress>
+    </QueueDescription>
+  </content>
+</entry>
+

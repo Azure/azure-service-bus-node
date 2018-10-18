@@ -51,9 +51,12 @@ packages
 *.user
 .ntvs_analysis.dat
 obj/*
-.env
+*.env
 typings/
 dist/
 out/
 output/
 typedoc
+bin/
+obj/
+.vs/

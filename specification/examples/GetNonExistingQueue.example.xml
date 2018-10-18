@@ -1,0 +1,19 @@
+GET https://daschulttest1.servicebus.windows.net/testQueuePathNonExisting?api-version=2017-04&enrich=False HTTP/1.1
+Authorization: SharedAccessSignature sr=https%3A%2F%2Fdaschulttest1.servicebus.windows.net%2FtestQueuePathNonExisting%2F&sig=A6Rxd1An%2BlsTcKIPF7RLy1IZ2bsuATEq02h%2FuWuMMi0%3D&se=1539816976&skn=RootManageSharedAccessKey
+UserAgent: SERVICEBUS/2017-04(api-origin=.NETStandard,Version=v2.0;os=Microsoft Windows 10.0.17763 ;version=3.1.1.0;product=Microsoft.Azure.ServiceBus)
+Host: daschulttest1.servicebus.windows.net
+
+HTTP/1.1 200 OK
+Content-Type: application/atom+xml;type=feed;charset=utf-8
+Server: Microsoft-HTTPAPI/2.0
+Strict-Transport-Security: max-age=31536000
+Date: Wed, 17 Oct 2018 21:56:16 GMT
+Content-Length: 335
+
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title type="text">Publicly Listed Services</title>
+  <subtitle type="text">This is the list of publicly-listed services currently available.</subtitle>
+  <id>uuid:a53ad534-d68f-4abe-87a1-3dac57135b1c;id=425328</id>
+  <updated>2018-10-17T21:56:16Z</updated>
+  <generator>Service Bus 1.1</generator>
+</feed>
