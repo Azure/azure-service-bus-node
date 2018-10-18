@@ -33,7 +33,9 @@ export const enrich: msRest.OperationQueryParameter = {
   parameterPath: "enrich",
   mapper: {
     required: true,
+    isConstant: true,
     serializedName: "enrich",
+    defaultValue: 'False',
     type: {
       name: "String"
     }

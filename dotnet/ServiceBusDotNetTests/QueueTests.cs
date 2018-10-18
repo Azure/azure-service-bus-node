@@ -1,3 +1,4 @@
+using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Management;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.IO;
@@ -37,20 +38,27 @@ namespace ServiceBusDotNetTests
         }
 
         [TestMethod]
-        [Ignore]
-        public async Task DeleteQueueAsync()
-        {
-            ManagementClient managementClient = CreateManagementClient();
-            await managementClient.DeleteQueueAsync(queuePath);
-        }
-
-        [TestMethod]
-        public async Task GetQueueAsync()
+        public async Task GetExistingQueueAsync()
         {
             ManagementClient managementClient = CreateManagementClient();
             QueueDescription queueDescription = await managementClient.GetQueueAsync(queuePath);
             Assert.IsNotNull(queueDescription);
             Assert.AreEqual(queuePath, queueDescription.Path);
+        }
+
+        [TestMethod]
+        public async Task GetNonExistingQueueAsync()
+        {
+            ManagementClient managementClient = CreateManagementClient();
+            await Assert.ThrowsExceptionAsync<MessagingEntityNotFoundException>(() => managementClient.GetQueueAsync(queuePath + "NonExisting"));
+        }
+
+        [TestMethod]
+        [Ignore]
+        public async Task DeleteQueueAsync()
+        {
+            ManagementClient managementClient = CreateManagementClient();
+            await managementClient.DeleteQueueAsync(queuePath);
         }
     }
 }

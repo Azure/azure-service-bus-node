@@ -194,36 +194,120 @@ export interface GetQueueResponseContent {
  */
 export interface GetQueueResponse {
   /**
-   * @member {string} [id] The ID Of the Queue
+   * @member {string} id The ID Of the Queue
    */
-  id?: string;
+  id: string;
   /**
    * @member {string} [title] The name of the resource
    */
   title?: string;
   /**
-   * @member {string} [published] The timestamp for when this resource was
+   * @member {string} published The timestamp for when this resource was
    * published
    */
-  published?: string;
+  published: string;
   /**
    * @member {string} [updated] The timestamp for when this resource was last
    * updated
    */
   updated?: string;
   /**
-   * @member {GetQueueResponseAuthor} [author] The author that created this
+   * @member {GetQueueResponseAuthor} author The author that created this
    * resource
    */
-  author?: GetQueueResponseAuthor;
+  author: GetQueueResponseAuthor;
   /**
-   * @member {GetQueueResponseLink} [link] TODO: Add description
+   * @member {GetQueueResponseLink} link TODO: Add description
    */
-  link?: GetQueueResponseLink;
+  link: GetQueueResponseLink;
   /**
-   * @member {GetQueueResponseContent} [content] TODO: Add description
+   * @member {GetQueueResponseContent} content TODO: Add description
    */
-  content?: GetQueueResponseContent;
+  content: GetQueueResponseContent;
+}
+
+/**
+ * @interface
+ * An interface representing CreateQueueBodyContentQueueDescription.
+ * TODO: Add description
+ *
+ */
+export interface CreateQueueBodyContentQueueDescription {
+  /**
+   * @member {string} [lockDuration] TODO: Add description. Default value:
+   * 'PT1M' .
+   */
+  lockDuration?: string;
+  /**
+   * @member {number} [maxSizeInMegabytes] TODO: Add description. Default
+   * value: 1024 .
+   */
+  maxSizeInMegabytes?: number;
+  /**
+   * @member {boolean} [requiresDuplicateDetection] TODO: Add description.
+   * Default value: false .
+   */
+  requiresDuplicateDetection?: boolean;
+  /**
+   * @member {boolean} [requiresSession] TODO: Add description. Default value:
+   * false .
+   */
+  requiresSession?: boolean;
+  /**
+   * @member {boolean} [deadLetteringOnMessageExpiration] TODO: Add
+   * description. Default value: false .
+   */
+  deadLetteringOnMessageExpiration?: boolean;
+  /**
+   * @member {number} [maxDeliveryCount] TODO: Add description. Default value:
+   * 10 .
+   */
+  maxDeliveryCount?: number;
+  /**
+   * @member {boolean} [enableBatchedOperations] TODO: Add description. Default
+   * value: true .
+   */
+  enableBatchedOperations?: boolean;
+  /**
+   * @member {string} [status] TODO: Add description. Default value: 'Active' .
+   */
+  status?: string;
+  /**
+   * @member {boolean} [enablePartitioning] TODO: Add description. Default
+   * value: false .
+   */
+  enablePartitioning?: boolean;
+}
+
+/**
+ * @interface
+ * An interface representing CreateQueueBodyContent.
+ * TODO: Add description
+ *
+ */
+export interface CreateQueueBodyContent {
+  /**
+   * @member {string} [type] TODO: Add description
+   */
+  type?: string;
+  /**
+   * @member {CreateQueueBodyContentQueueDescription} [queueDescription] TODO:
+   * Add description
+   */
+  queueDescription?: CreateQueueBodyContentQueueDescription;
+}
+
+/**
+ * @interface
+ * An interface representing CreateQueueBody.
+ * The response from a CreateQueue operation.
+ *
+ */
+export interface CreateQueueBody {
+  /**
+   * @member {CreateQueueBodyContent} [content] TODO: Add description
+   */
+  content?: CreateQueueBodyContent;
 }
 
 
@@ -231,6 +315,25 @@ export interface GetQueueResponse {
  * Contains response data for the get operation.
  */
 export type QueueGetResponse = GetQueueResponse & {
+  /**
+   * The underlying HTTP response.
+   */
+  _response: msRest.HttpResponse & {
+      /**
+       * The response body as text (string format)
+       */
+      bodyAsText: string;
+      /**
+       * The response body as parsed JSON or XML
+       */
+      parsedBody: GetQueueResponse;
+    };
+};
+
+/**
+ * Contains response data for the create operation.
+ */
+export type QueueCreateResponse = GetQueueResponse & {
   /**
    * The underlying HTTP response.
    */

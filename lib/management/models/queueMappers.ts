@@ -11,6 +11,9 @@ export {
   GetQueueResponseContent,
   GetQueueResponseContentQueueDescription,
   GetQueueResponseContentQueueDescriptionCountDetails,
-  CloudError
+  CloudError,
+  CreateQueueBody,
+  CreateQueueBodyContent,
+  CreateQueueBodyContentQueueDescription
 } from "../models/mappers";
 

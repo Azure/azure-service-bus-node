@@ -60,36 +60,36 @@ export const GetQueueResponseContentQueueDescriptionCountDetails: msRest.Composi
     className: "GetQueueResponseContentQueueDescriptionCountDetails",
     modelProperties: {
       activeMessageCount: {
-        xmlName: "ActiveMessageCount",
-        serializedName: "ActiveMessageCount",
+        xmlName: "d2p1:ActiveMessageCount",
+        serializedName: "d2p1:ActiveMessageCount",
         type: {
           name: "Number"
         }
       },
       deadLetterMessageCount: {
-        xmlName: "DeadLetterMessageCount",
-        serializedName: "DeadLetterMessageCount",
+        xmlName: "d2p1:DeadLetterMessageCount",
+        serializedName: "d2p1:DeadLetterMessageCount",
         type: {
           name: "Number"
         }
       },
       scheduledMessageCount: {
-        xmlName: "ScheduledMessageCount",
-        serializedName: "ScheduledMessageCount",
+        xmlName: "d2p1:ScheduledMessageCount",
+        serializedName: "d2p1:ScheduledMessageCount",
         type: {
           name: "Number"
         }
       },
       transferMessageCount: {
-        xmlName: "TransferMessageCount",
-        serializedName: "TransferMessageCount",
+        xmlName: "d2p1:TransferMessageCount",
+        serializedName: "d2p1:TransferMessageCount",
         type: {
           name: "Number"
         }
       },
       transferDeadLetterMessageCount: {
-        xmlName: "TransferDeadLetterMessageCount",
-        serializedName: "TransferDeadLetterMessageCount",
+        xmlName: "d2p1:TransferDeadLetterMessageCount",
+        serializedName: "d2p1:TransferDeadLetterMessageCount",
         type: {
           name: "Number"
         }
@@ -298,6 +298,7 @@ export const GetQueueResponse: msRest.CompositeMapper = {
     modelProperties: {
       id: {
         xmlName: "id",
+        required: true,
         serializedName: "id",
         type: {
           name: "String"
@@ -312,6 +313,7 @@ export const GetQueueResponse: msRest.CompositeMapper = {
       },
       published: {
         xmlName: "published",
+        required: true,
         serializedName: "published",
         type: {
           name: "String"
@@ -326,6 +328,7 @@ export const GetQueueResponse: msRest.CompositeMapper = {
       },
       author: {
         xmlName: "author",
+        required: true,
         serializedName: "author",
         type: {
           name: "Composite",
@@ -334,6 +337,7 @@ export const GetQueueResponse: msRest.CompositeMapper = {
       },
       link: {
         xmlName: "link",
+        required: true,
         serializedName: "link",
         type: {
           name: "Composite",
@@ -342,10 +346,138 @@ export const GetQueueResponse: msRest.CompositeMapper = {
       },
       content: {
         xmlName: "content",
+        required: true,
         serializedName: "content",
         type: {
           name: "Composite",
           className: "GetQueueResponseContent"
+        }
+      }
+    }
+  }
+};
+
+export const CreateQueueBodyContentQueueDescription: msRest.CompositeMapper = {
+  serializedName: "CreateQueueBody_content_QueueDescription",
+  type: {
+    name: "Composite",
+    className: "CreateQueueBodyContentQueueDescription",
+    modelProperties: {
+      lockDuration: {
+        xmlName: "LockDuration",
+        serializedName: "LockDuration",
+        defaultValue: 'PT1M',
+        type: {
+          name: "String"
+        }
+      },
+      maxSizeInMegabytes: {
+        xmlName: "MaxSizeInMegabytes",
+        serializedName: "MaxSizeInMegabytes",
+        defaultValue: 1024,
+        type: {
+          name: "Number"
+        }
+      },
+      requiresDuplicateDetection: {
+        xmlName: "RequiresDuplicateDetection",
+        serializedName: "RequiresDuplicateDetection",
+        defaultValue: false,
+        type: {
+          name: "Boolean"
+        }
+      },
+      requiresSession: {
+        xmlName: "RequiresSession",
+        serializedName: "RequiresSession",
+        defaultValue: false,
+        type: {
+          name: "Boolean"
+        }
+      },
+      deadLetteringOnMessageExpiration: {
+        xmlName: "DeadLetteringOnMessageExpiration",
+        serializedName: "DeadLetteringOnMessageExpiration",
+        defaultValue: false,
+        type: {
+          name: "Boolean"
+        }
+      },
+      maxDeliveryCount: {
+        xmlName: "MaxDeliveryCount",
+        serializedName: "MaxDeliveryCount",
+        defaultValue: 10,
+        type: {
+          name: "Number"
+        }
+      },
+      enableBatchedOperations: {
+        xmlName: "EnableBatchedOperations",
+        serializedName: "EnableBatchedOperations",
+        defaultValue: true,
+        type: {
+          name: "Boolean"
+        }
+      },
+      status: {
+        xmlName: "Status",
+        serializedName: "Status",
+        defaultValue: 'Active',
+        type: {
+          name: "String"
+        }
+      },
+      enablePartitioning: {
+        xmlName: "EnablePartitioning",
+        serializedName: "EnablePartitioning",
+        defaultValue: false,
+        type: {
+          name: "Boolean"
+        }
+      }
+    }
+  }
+};
+
+export const CreateQueueBodyContent: msRest.CompositeMapper = {
+  serializedName: "CreateQueueBody_content",
+  type: {
+    name: "Composite",
+    className: "CreateQueueBodyContent",
+    modelProperties: {
+      type: {
+        xmlIsAttribute: true,
+        xmlName: "type",
+        serializedName: "type",
+        type: {
+          name: "String"
+        }
+      },
+      queueDescription: {
+        xmlName: "QueueDescription",
+        serializedName: "QueueDescription",
+        type: {
+          name: "Composite",
+          className: "CreateQueueBodyContentQueueDescription"
+        }
+      }
+    }
+  }
+};
+
+export const CreateQueueBody: msRest.CompositeMapper = {
+  xmlName: "entry",
+  serializedName: "CreateQueueBody",
+  type: {
+    name: "Composite",
+    className: "CreateQueueBody",
+    modelProperties: {
+      content: {
+        xmlName: "content",
+        serializedName: "content",
+        type: {
+          name: "Composite",
+          className: "CreateQueueBodyContent"
         }
       }
     }

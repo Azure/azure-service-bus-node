@@ -54,6 +54,32 @@
             }
           }
         }
+      },
+      "put": {
+        "tags": [
+          "Queues"
+        ],
+        "operationId": "Queue_Create",
+        "description": "Create a new queue at the provided queuePath",
+        "parameters": [
+          {
+            "$ref": "#/parameters/QueuePathParameter"
+          },
+          {
+            "$ref": "#/parameters/ApiVersionParameter"
+          },
+          {
+            "$ref": "#/parameters/CreateQueueParameters"
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created -- Create Queue operation completed successfully.",
+            "schema": {
+              "$ref": "#/definitions/GetQueueResponse"
+            }
+          }
+        }
       }
     }
   },
@@ -256,6 +282,88 @@
           }
         }
       },
+      "required": [
+        "id",
+        "published",
+        "created",
+        "author",
+        "link",
+        "content"
+      ],
+      "xml": {
+        "name": "entry",
+        "namespace": "http://www.w3.org/2005/Atom"
+      }
+    },
+    "CreateQueueBody": {
+      "description": "The response from a CreateQueue operation.",
+      "type": "object",
+      "properties": {
+        "content": {
+          "description": "TODO: Add description",
+          "type": "object",
+          "properties": {
+            "type": {
+              "description": "TODO: Add description",
+              "type": "string",
+              "xml": {
+                "attribute": true
+              }
+            },
+            "QueueDescription": {
+              "description": "TODO: Add description",
+              "type": "object",
+              "properties": {
+                "LockDuration": {
+                  "description": "TODO: Add description",
+                  "type": "string",
+                  "default": "PT1M"
+                },
+                "MaxSizeInMegabytes": {
+                  "description": "TODO: Add description",
+                  "type": "number",
+                  "default": 1024
+                },
+                "RequiresDuplicateDetection": {
+                  "description": "TODO: Add description",
+                  "type": "boolean",
+                  "default": false
+                },
+                "RequiresSession": {
+                  "description": "TODO: Add description",
+                  "type": "boolean",
+                  "default": false
+                },
+                "DeadLetteringOnMessageExpiration": {
+                  "description": "TODO: Add description",
+                  "type": "boolean",
+                  "default": false
+                },
+                "MaxDeliveryCount": {
+                  "description": "TODO: Add description",
+                  "type": "integer",
+                  "default": 10
+                },
+                "EnableBatchedOperations": {
+                  "description": "TODO: Add description",
+                  "type": "boolean",
+                  "default": true
+                },
+                "Status": {
+                  "description": "TODO: Add description",
+                  "type": "string",
+                  "default": "Active"
+                },
+                "EnablePartitioning": {
+                  "description": "TODO: Add description",
+                  "type": "boolean",
+                  "default": false
+                }
+              }
+            }
+          }
+        }
+      },
       "xml": {
         "name": "entry",
         "namespace": "http://www.w3.org/2005/Atom"
@@ -285,7 +393,20 @@
       "in": "query",
       "required": true,
       "type": "string",
+      "enum": [
+        "False"
+      ],
       "description": "A constant query parameter that sets \"enrich=False\".",
+      "x-ms-parameter-location": "method"
+    },
+    "CreateQueueParameters": {
+      "name": "parameters",
+      "in": "body",
+      "schema": {
+        "$ref": "#/definitions/CreateQueueBody"
+      },
+      "required": true,
+      "description": "The parameters required to create a new queue.",
       "x-ms-parameter-location": "method"
     }
   }
