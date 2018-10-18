@@ -1,0 +1,36 @@
+PUT https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04 HTTP/1.1
+Authorization: SharedAccessSignature sr=https%3A%2F%2Fdaschulttest1.servicebus.windows.net%2FtestQueuePath%2F&sig=lyoiJOzpAn%2BTFWdujWNk4oRFQ1N3ATcjPt4b9BQ5OkE%3D&se=1539899685&skn=RootManageSharedAccessKey
+UserAgent: SERVICEBUS/2017-04(api-origin=.NETStandard,Version=v2.0;os=Microsoft Windows 10.0.17763 ;version=3.1.1.0;product=Microsoft.Azure.ServiceBus)
+Content-Type: application/atom+xml; charset=utf-8
+Content-Length: 747
+Host: daschulttest1.servicebus.windows.net
+
+<entry xmlns="http://www.w3.org/2005/Atom">
+  <content type="application/xml">
+    <QueueDescription xmlns="http://schemas.microsoft.com/netservices/2010/10/servicebus/connect">
+      <LockDuration>PT1M</LockDuration>
+      <MaxSizeInMegabytes>1024</MaxSizeInMegabytes>
+      <RequiresDuplicateDetection>false</RequiresDuplicateDetection>
+      <RequiresSession>false</RequiresSession>
+      <DeadLetteringOnMessageExpiration>false</DeadLetteringOnMessageExpiration>
+      <MaxDeliveryCount>10</MaxDeliveryCount>
+      <EnableBatchedOperations>true</EnableBatchedOperations>
+      <AuthorizationRules />
+      <Status>Active</Status>
+      <EnablePartitioning>false</EnablePartitioning>
+    </QueueDescription>
+  </content>
+</entry>
+
+HTTP/1.1 409 Conflict
+Content-Type: application/xml; charset=utf-8
+ETag: 636754094229570000
+Server: Microsoft-HTTPAPI/2.0
+Strict-Transport-Security: max-age=31536000
+Date: Thu, 18 Oct 2018 20:54:45 GMT
+Content-Length: 222
+
+<Error>
+  <Code>409</Code>
+  <Detail>SubCode=40900. Conflict. TrackingId:24f89163-0ea5-4ba8-aeed-ce3e1b5de6ed_G2, SystemTracker:daschulttest1.servicebus.windows.net:testQueuePath, Timestamp:10/18/2018 8:54:45 PM</Detail>
+</Error>

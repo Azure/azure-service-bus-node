@@ -1,12 +1,25 @@
+GET https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04&enrich=False HTTP/1.1
+Authorization: SharedAccessSignature sr=https%3A%2F%2Fdaschulttest1.servicebus.windows.net%2FtestQueuePath%2F&sig=mtjyEKsyL6yKMEd5QczsA9l5JFUHDC8vlhF2tiNNMWo%3D&se=1539900430&skn=RootManageSharedAccessKey
+UserAgent: SERVICEBUS/2017-04(api-origin=.NETStandard,Version=v2.0;os=Microsoft Windows 10.0.17763 ;version=3.1.1.0;product=Microsoft.Azure.ServiceBus)
+Host: daschulttest1.servicebus.windows.net
+
+HTTP/1.1 200 OK
+Content-Type: application/atom+xml;type=entry;charset=utf-8
+ETag: 636754936296870000
+Server: Microsoft-HTTPAPI/2.0
+Strict-Transport-Security: max-age=31536000
+Date: Thu, 18 Oct 2018 21:07:09 GMT
+Content-Length: 2096
+
 <entry xmlns="http://www.w3.org/2005/Atom">
-  <id>https://daschulttest1.servicebus.windows.net/testQueuePath/?api-version=2017-04&amp;enrich=False</id>
+  <id>https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04&amp;enrich=False</id>
   <title type="text">testQueuePath</title>
-  <published>2018-10-09T19:56:34Z</published>
-  <updated>2018-10-09T19:56:35Z</updated>
+  <published>2018-10-18T21:07:09Z</published>
+  <updated>2018-10-18T21:07:09Z</updated>
   <author>
     <name>daschulttest1</name>
   </author>
-  <link rel="self" href="https://daschulttest1.servicebus.windows.net/testQueuePath/?api-version=2017-04&amp;enrich=False"/>
+  <link rel="self" href="https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04&amp;enrich=False"/>
   <content type="application/xml">
     <QueueDescription xmlns="http://schemas.microsoft.com/netservices/2010/10/servicebus/connect" xmlns:i="http://www.w3.org/2001/XMLSchema-instance">
       <LockDuration>PT1M</LockDuration>
@@ -23,8 +36,8 @@
       <IsAnonymousAccessible>false</IsAnonymousAccessible>
       <AuthorizationRules/>
       <Status>Active</Status>
-      <CreatedAt>2018-10-09T19:56:34.903Z</CreatedAt>
-      <UpdatedAt>2018-10-09T19:56:35.013Z</UpdatedAt>
+      <CreatedAt>2018-10-18T21:07:09.577Z</CreatedAt>
+      <UpdatedAt>2018-10-18T21:07:09.687Z</UpdatedAt>
       <AccessedAt>0001-01-01T00:00:00Z</AccessedAt>
       <SupportOrdering>true</SupportOrdering>
       <CountDetails xmlns:d2p1="http://schemas.microsoft.com/netservices/2011/06/servicebus">

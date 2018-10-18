@@ -1,0 +1,13 @@
+DELETE https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04 HTTP/1.1
+Authorization: SharedAccessSignature sr=https%3A%2F%2Fdaschulttest1.servicebus.windows.net%2FtestQueuePath%2F&sig=gXHjzjqiElQtuA7UIujHoORf4URU9SjCNIXVr%2FdPskQ%3D&se=1539900256&skn=RootManageSharedAccessKey
+UserAgent: SERVICEBUS/2017-04(api-origin=.NETStandard,Version=v2.0;os=Microsoft Windows 10.0.17763 ;version=3.1.1.0;product=Microsoft.Azure.ServiceBus)
+Content-Length: 0
+Host: daschulttest1.servicebus.windows.net
+
+HTTP/1.1 200 OK
+Content-Length: 0
+ETag: 636754934554770000
+Server: Microsoft-HTTPAPI/2.0
+Strict-Transport-Security: max-age=31536000
+Date: Thu, 18 Oct 2018 21:04:16 GMT
+

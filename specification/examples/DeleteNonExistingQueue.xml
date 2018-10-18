@@ -1,0 +1,17 @@
+DELETE https://daschulttest1.servicebus.windows.net/testQueuePath?api-version=2017-04 HTTP/1.1
+Authorization: SharedAccessSignature sr=https%3A%2F%2Fdaschulttest1.servicebus.windows.net%2FtestQueuePath%2F&sig=IV0D%2Ba1c4VO4u%2B0EEBJuT3xopUFbGRdMHFMdS2CgzcU%3D&se=1539900291&skn=RootManageSharedAccessKey
+UserAgent: SERVICEBUS/2017-04(api-origin=.NETStandard,Version=v2.0;os=Microsoft Windows 10.0.17763 ;version=3.1.1.0;product=Microsoft.Azure.ServiceBus)
+Content-Length: 0
+Host: daschulttest1.servicebus.windows.net
+
+HTTP/1.1 404 Not Found
+Content-Type: application/xml; charset=utf-8
+Server: Microsoft-HTTPAPI/2.0
+Strict-Transport-Security: max-age=31536000
+Date: Thu, 18 Oct 2018 21:04:50 GMT
+Content-Length: 245
+
+<Error>
+  <Code>404</Code>
+  <Detail>No service is hosted at the specified address. TrackingId:c557ef1a-7ace-46e3-bc8e-286a092f7fa8_G52, SystemTracker:daschulttest1.servicebus.windows.net:testQueuePath, Timestamp:10/18/2018 9:04:51 PM</Detail>
+</Error>
