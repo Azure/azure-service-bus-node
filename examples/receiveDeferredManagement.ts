@@ -15,7 +15,7 @@ async function main(): Promise<void> {
   const client = ns.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(">>> Message: ", brokeredMessage);
-    console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : null);
+    console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : undefined);
     const sequenceNumber = brokeredMessage.sequenceNumber!;
     console.log(">>>>>> SequenceNumber: %d", sequenceNumber.toNumber());
     const result = await brokeredMessage.defer();
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
     console.log(">>>>> the lock token is: %s", msg1!.lockToken);
     await msg1!.complete();
     console.log("Comepleted message, successfully...");
-  }
+  };
   const onError: OnError = (err: MessagingError | Error) => {
     console.log(">>>>> Error occurred: ", err);
   };
