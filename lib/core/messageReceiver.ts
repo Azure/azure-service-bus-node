@@ -98,7 +98,8 @@ export interface ReceiveOptions extends MessageHandlerOptions {
    */
   receiveMode?: ReceiveMode;
   /**
-   * @property {string} [name] The name of the receiver. If not provided then we will set a GUID by default.
+   * @property {string} [name] The name of the receiver. If not provided then we will be a
+   * GUID by default.
    */
   name?: string;
 }
@@ -288,7 +289,7 @@ export class MessageReceiver extends LinkEntity {
             // now. Hence we rely on the lockedUntilUtc property on the message set by ServiceBus.
             const amount = calculateRenewAfterDuration(bMessage.lockedUntilUtc!);
             log.receiver("[%s] Sleeping for %d milliseconds while renewing the lock for message " +
-              "with id '%s' is: ", connectionId, amount, bMessage.messageId);
+              "with id '%s'.", connectionId, amount, bMessage.messageId);
             timer = setTimeout(async () => {
               try {
                 log.receiver("[%s] Attempting to renew the lock for message with id '%s'.",

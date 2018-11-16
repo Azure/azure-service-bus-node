@@ -11,6 +11,7 @@ import { TopicClient } from "./topicClient";
 import {
   ConnectionConfig, DataTransformer, TokenProvider, AadTokenProvider
 } from "@azure/amqp-common";
+import { SubscriptionClient, SubscriptionClientOptions } from "./subscriptionClient";
 
 
 /**
@@ -86,12 +87,27 @@ export class Namespace {
    * Creates a TopicClient for the given topic name. It assumes that the topic has already been
    * created.
    * @param {string} topicName The topic name.
-   * @returns QueueClient.
+   * @returns TopicClient.
    */
   createTopicClient(topicName: string): TopicClient {
     const client = new TopicClient(topicName, this._context);
     this._context.clients[client.id] = client;
     log.ns("Created the TopicClient for Topic: %s", topicName);
+    return client;
+  }
+
+  /**
+   * Creates a SubscriptionClient for the given subscription name. It assumes that the subscription
+   * has already been created.
+   * @param {string} topicPath The topic path.
+   * @param {string} subscriptionName The subscription name.
+   * @returns QueueClient.
+   */
+  createSubscriptionClient(topicPath: string, subscriptionName: string, options: SubscriptionClientOptions): SubscriptionClient {
+    const client = new SubscriptionClient(topicPath, subscriptionName, this._context);
+    this._context.clients[client.id] = client;
+    log.ns("Created the SubscriptionClient for Subscription: %s and Topic: %s.",
+      subscriptionName, topicPath);
     return client;
   }
 

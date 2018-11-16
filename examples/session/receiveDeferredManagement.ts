@@ -17,15 +17,21 @@ async function main(): Promise<void> {
   const onMessage: OnSessionMessage = async (messageSession: MessageSession, brokeredMessage: ServiceBusMessage) => {
     console.log(">>> Message: ", brokeredMessage);
     console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : undefined);
-    // await brokeredMessage.complete();
+    const sequenceNumber = brokeredMessage.sequenceNumber!;
+    console.log(">>>>>> SequenceNumber: %d", sequenceNumber.toNumber());
+    const result = await brokeredMessage.defer();
+    console.log(">>>>> Deferred message result: ", result);
+    await delay(2000);
+    const msg = await messageSession.receiveDeferredMessage(sequenceNumber);
+    console.log(">>>>> Received deferred Message: %o", msg);
+    await messageSession.close();
   };
   const onError: OnError = (err: MessagingError | Error) => {
     console.log(">>>>> Error occurred: ", err);
   };
-  const messageSession = await client.acceptSession();
-  messageSession.receive(onMessage, onError, { autoComplete: true });
+  const messageSession = await client.acceptSession({ sessionId: "session-3" });
+  messageSession.receive(onMessage, onError, { autoComplete: false });
   await delay(30000);
-  await messageSession.close();
 }
 
 main().then(() => {
