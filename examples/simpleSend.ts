@@ -4,7 +4,7 @@ dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const path = process.env.QUEUE_NAME || "";
-const numberOfMessages: number = parseInt((process.argv[2] || "1") as string);
+const numberOfMessages: number = parseInt(process.env.MESSAGE_COUNT || "1");
 console.log("str: ", str);
 console.log("path: ", path);
 console.log("Number of messages to send: %d", numberOfMessages);

@@ -240,7 +240,17 @@ export class BatchingReceiver extends MessageReceiver {
         if (reuse) msg += " Receiver link already present, hence reusing it.";
         log.batching(msg, this._context.namespace.connectionId, maxWaitTimeInSeconds, this.name);
         waitTimer = setTimeout(actionAfterWaitTimeout, (maxWaitTimeInSeconds as number) * 1000);
-        resetTimerOnNewMessageReceived();
+        // TODO: Disabling this for now. We would want to give the user a decent chance to receive
+        // the first message and only timeout faster if successive messages from there onwards are
+        // not received quickly. However, it may be possible that there are no pending messages
+        // currently on the queue. In that case waiting for maxWaitTimeInSeconds would be
+        // unnecessary.
+        // There is a management plane API to get runtimeInfo of the Queue which provides
+        // information about active messages on the Queue and it's sub Queues. However, this adds
+        // a little complexity. If the first message was delayed due to network latency then there
+        // are bright chances that the management plane api would receive the same fate.
+        // It would be better to weigh all the options before making a decision.
+        // resetTimerOnNewMessageReceived();
       };
 
       if (!this.isOpen()) {
