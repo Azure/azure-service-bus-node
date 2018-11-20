@@ -4,15 +4,19 @@ dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const path = process.env.QUEUE_NAME || "";
+const numberOfMessages: number = parseInt((process.argv[2] || "1") as string);
 console.log("str: ", str);
 console.log("path: ", path);
+console.log("Number of messages to send: %d", numberOfMessages);
 
 let ns: Namespace;
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
   const client = ns.createQueueClient(path);
-  await client.send({ body: "Hello sb world!!" + new Date().toString(), messageId: generateUuid() });
-  console.log("***********Created sender and sent the message...");
+  for (let i = 0; i < numberOfMessages; i++) {
+    await client.send({ body: "Hello sb world!!" + new Date().toString(), messageId: generateUuid() });
+    console.log(">>>>>> Sent message number: %d", i + 1);
+  }
 }
 
 main().then(() => {
