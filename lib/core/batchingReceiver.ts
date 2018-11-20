@@ -44,10 +44,10 @@ export class BatchingReceiver extends MessageReceiver {
    * @param {number} [maxWaitTimeInSeconds] The maximum wait time in seconds for which the Receiver
    * should wait to receive the said amount of messages. If not provided, it defaults to 60 seconds.
    * @param {number} [maxMessageWaitTimeoutInSeconds] The maximum amount of idle time the Receiver
-   * will wait ater creating the link or after receiving a new message. If no messages are received
+   * will wait after creating the link or after receiving a new message. If no messages are received
    * in that time frame then the batch receive operation ends. It is advised to keep this value at
    * 10% of the lockDuration value.
-   * - **Default**: `3` seconds.
+   * - **Default**: `2` seconds.
    * @returns {Promise<ServiceBusMessage[]>} A promise that resolves with an array of Message objects.
    */
   receive(maxMessageCount: number,
@@ -63,7 +63,7 @@ export class BatchingReceiver extends MessageReceiver {
     }
 
     if (maxMessageWaitTimeoutInSeconds == undefined) {
-      maxMessageWaitTimeoutInSeconds = 3;
+      maxMessageWaitTimeoutInSeconds = 2;
     }
 
     const brokeredMessages: ServiceBusMessage[] = [];
