@@ -196,7 +196,7 @@ export class Namespace {
     return Namespace.createFromTokenProvider(host, tokenProvider, options);
   }
 
-  public static getDeadLetterQueuePathForQueue(queueName: string): string {
+  static getDeadLetterQueuePathForQueue(queueName: string): string {
     return `${queueName}/$DeadLetterQueue`;
   }
 }
