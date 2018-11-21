@@ -195,4 +195,8 @@ export class Namespace {
     const tokenProvider = new AadTokenProvider(credentials);
     return Namespace.createFromTokenProvider(host, tokenProvider, options);
   }
+
+  public static getDeadLetterQueuePathForQueue(queueName: string): string {
+    return `${queueName}/$DeadLetterQueue`;
+  }
 }
