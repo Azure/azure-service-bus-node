@@ -6,7 +6,7 @@ import {
   ConditionErrorNameMapper
 } from "@azure/amqp-common";
 import {
-  Receiver, OnAmqpEvent, EventContext, ReceiverOptions, AmqpError, Delivery, Dictionary
+  Receiver, OnAmqpEvent, EventContext, ReceiverOptions, AmqpError, Dictionary
 } from "rhea-promise";
 import * as log from "../log";
 import { LinkEntity } from "./linkEntity";
@@ -211,7 +211,24 @@ export class MessageReceiver extends LinkEntity {
    * @protected
    */
   protected _onSettled: OnAmqpEvent;
-
+  /**
+   * @property {Map<string, Function>} _messageRenewLockTimers Maintains a map of messages for which
+   * the lock is automatically renewed.
+   * @protected
+   */
+  protected _messageRenewLockTimers: Map<string, Function> = new Map<string, Function>();
+  /**
+   * @property {Function} _clearMessageLockRenewTimer Clears the message lock renew timer for a
+   * specific messageId.
+   * @protected
+   */
+  protected _clearMessageLockRenewTimer: (messageId: string) => void;
+  /**
+   * @property {Function} _clearMessageLockRenewTimer Clears the message lock renew timer for all
+   * the active messages.
+   * @protected
+   */
+  protected _clearAllMessageLockRenewTimers: () => void;
   constructor(context: ClientEntityContext, receiverType: ReceiverType, options?: ReceiveOptions) {
     super(context.entityPath, context, {
       address: context.entityPath,
@@ -227,6 +244,21 @@ export class MessageReceiver extends LinkEntity {
       ? options.maxAutoRenewDurationInSeconds
       : 300;
     this.autoRenewLock = this.maxAutoRenewDurationInSeconds > 0 && this.receiveMode === ReceiveMode.peekLock;
+    this._clearMessageLockRenewTimer = (messageId: string) => {
+      if (this._messageRenewLockTimers.get(messageId)) {
+        this._messageRenewLockTimers.get(messageId)!();
+        log.receiver("[%s] Cleared the message renew lock timer for message with id '%s'.",
+          this._context.namespace.connectionId, messageId);
+        this._messageRenewLockTimers.delete(messageId);
+      }
+    };
+    this._clearAllMessageLockRenewTimers = () => {
+      log.receiver("[%s] Clearing message renew lock timers for all the active messages.",
+        this._context.namespace.connectionId);
+      for (const messageId of this._messageRenewLockTimers.keys()) {
+        this._clearMessageLockRenewTimer(messageId);
+      }
+    };
     // setting all the handlers
     this._onSettled = (context: EventContext) => {
       const connectionId = this._context.namespace.connectionId;
@@ -274,6 +306,7 @@ export class MessageReceiver extends LinkEntity {
         // - This autorenewal needs to happen **NO MORE** than maxAutoRenewDurationInSeconds
         // - We should be able to clear the renewal timer when the user's message handler
         // is done (whether it succeeds or fails).
+        this._messageRenewLockTimers.set(bMessage.messageId as string, clearTimerAndStopExecution);
         continueExecution = true;
         log.receiver("[%s] message with id '%s' is locked until %s.",
           connectionId, bMessage.messageId, bMessage.lockedUntilUtc!.toString());
@@ -315,11 +348,11 @@ export class MessageReceiver extends LinkEntity {
       }
       try {
         await this._onMessage(bMessage);
-        clearTimerAndStopExecution();
+        this._clearMessageLockRenewTimer(bMessage.messageId as string);
       } catch (err) {
         // Do not want renewLock to happen unnecessarily, while abandoning the message. Hence,
         // doing this here. Otherwise, this should be done in finally.
-        clearTimerAndStopExecution();
+        this._clearMessageLockRenewTimer(bMessage.messageId as string);
         const error = translate(err);
         // Nothing much to do if user's message handler throws. Let us try abandoning the message.
         if (error.name !== ConditionErrorNameMapper["com.microsoft:message-lock-lost"] &&
@@ -405,6 +438,7 @@ export class MessageReceiver extends LinkEntity {
           "The associated error is: %O", connectionId, this.name,
           this.address, receiverError);
       }
+      this._clearAllMessageLockRenewTimers();
       if (receiver && !receiver.isClosed()) {
         if (!this.isConnecting) {
           log.error("[%s] 'receiver_close' event occurred on the receiver '%s' with address '%s' " +
@@ -434,7 +468,7 @@ export class MessageReceiver extends LinkEntity {
           "The associated error is: %O", connectionId, this.name,
           this.address, sessionError);
       }
-
+      this._clearAllMessageLockRenewTimers();
       if (receiver && !receiver.isSessionClosed()) {
         if (!this.isConnecting) {
           log.error("[%s] 'session_close' event occurred on the session of receiver '%s' with " +
@@ -545,12 +579,14 @@ export class MessageReceiver extends LinkEntity {
    * @param operation The disposition type.
    * @param [options] optional parameters that can be provided while disposing the message.
    */
-  async settleMessage(delivery: Delivery, operation: DispositionType, options?: DispositionOptions): Promise<any> {
+  async settleMessage(message: ServiceBusMessage, operation: DispositionType, options?: DispositionOptions): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!options) options = {};
       if (operation.match(/^(complete|abandon|defer|deadletter)$/) == undefined) {
         return reject(new Error(`operation: '${operation}' is not a valid operation.`));
       }
+      this._clearMessageLockRenewTimer(message.messageId as string);
+      const delivery = message.delivery;
       const timer = setTimeout(() => {
         this._deliveryDispositionMap.delete(delivery.id);
         log.receiver("[%s] Disposition for delivery id: %d, did not complete in %d milliseconds. " +
