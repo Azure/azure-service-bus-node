@@ -14,7 +14,7 @@ async function main(): Promise<void> {
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(">>> Message: ", brokeredMessage);
     console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : null);
-    await brokeredMessage.abandon();
+    brokeredMessage.abandon();
   }
   const onError: OnError = (err: MessagingError | Error) => {
     console.log(">>>>> Error occurred: ", err);

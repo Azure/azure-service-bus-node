@@ -18,14 +18,13 @@ async function main(): Promise<void> {
     console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : null);
     const sequenceNumber = brokeredMessage.sequenceNumber!;
     console.log(">>>>>> SequenceNumber: %d", sequenceNumber.toNumber());
-    const result = await brokeredMessage.defer();
-    console.log(">>>>> Deferred message result: ", result);
+    brokeredMessage.defer();
   }
   const onError: OnError = (err: MessagingError | Error) => {
     console.log(">>>>> Error occurred: ", err);
   };
   const rcvHandler = client.receive(onMessage, onError, { autoComplete: false });
-  await delay(3000000);
+  await delay(30000);
   await rcvHandler.stop();
 }
 
