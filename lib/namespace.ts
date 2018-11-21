@@ -96,8 +96,8 @@ export class Namespace {
   }
 
   /**
-   * Creates a TopicClient for the given topic name. It assumes that the topic has already been
-   * created.
+   * Creates a SubscriptionClient for the given topic name and subscription.
+   * It assumes that the topic has already been created.
    * @param {string} topicName The topic name.
    * @param {string} subscriptionName The subscription name.
    * @returns SubscriptionClient.
