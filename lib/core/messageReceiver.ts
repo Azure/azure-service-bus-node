@@ -297,6 +297,10 @@ export class MessageReceiver extends LinkEntity {
         // - This autorenewal needs to happen **NO MORE** than maxAutoRenewDurationInSeconds
         // - We should be able to clear the renewal timer when the user's message handler
         // is done (whether it succeeds or fails).
+        // Setting the messageId with undefined value in the _messageRenewockTimers Map because we
+        // track state by checking the presence of messageId in the map. It is removed from the map
+        // when an attempt is made to settle the message (either by the user or by the sdk) OR
+        // when the execution of user's message handler completes.
         this._messageRenewLockTimers.set(bMessage.messageId as string, undefined);
         log.receiver("[%s] message with id '%s' is locked until %s.",
           connectionId, bMessage.messageId, bMessage.lockedUntilUtc!.toString());
@@ -313,6 +317,9 @@ export class MessageReceiver extends LinkEntity {
               const amount = calculateRenewAfterDuration(bMessage.lockedUntilUtc!);
               log.receiver("[%s] Sleeping for %d milliseconds while renewing the lock for " +
                 "message with id '%s' is: ", connectionId, amount, bMessage.messageId);
+              // Setting the value of the messageId to the actual timer. This will be cleared when
+              // an attempt is made to settle the message (either by the user or by the sdk) OR
+              // when the execution of user's message handler completes.
               this._messageRenewLockTimers.set(bMessage.messageId as string,
                 setTimeout(async () => {
                   try {
