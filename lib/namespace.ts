@@ -13,7 +13,6 @@ import {
 } from "@azure/amqp-common";
 import { SubscriptionClient, SubscriptionClientOptions } from "./subscriptionClient";
 
-
 /**
  * Describes the base namesapce options.
  * @interface NamespaceOptionsBase
@@ -97,17 +96,20 @@ export class Namespace {
   }
 
   /**
-   * Creates a SubscriptionClient for the given subscription name. It assumes that the subscription
-   * has already been created.
-   * @param {string} topicPath The topic path.
+   * Creates a SubscriptionClient for the given topic name and subscription.
+   * It assumes that the topic has already been created.
+   * @param {string} topicName The topic name.
    * @param {string} subscriptionName The subscription name.
-   * @returns QueueClient.
+   * @param {SubscriptionClientOptions} [options] Optional parameters that can be provided while
+   * creating a SubscriptionClient.
+   * @returns SubscriptionClient.
    */
-  createSubscriptionClient(topicPath: string, subscriptionName: string, options: SubscriptionClientOptions): SubscriptionClient {
-    const client = new SubscriptionClient(topicPath, subscriptionName, this._context);
+  createSubscriptionClient(topicName: string, subscriptionName: string,
+    options?: SubscriptionClientOptions): SubscriptionClient {
+    const client = new SubscriptionClient(topicName, subscriptionName, this._context, options);
     this._context.clients[client.id] = client;
-    log.ns("Created the SubscriptionClient for Subscription: %s and Topic: %s.",
-      subscriptionName, topicPath);
+    log.ns("Created the SubscriptionClient for Topic: %s and Subscription: %s",
+      topicName, subscriptionName);
     return client;
   }
 
@@ -210,5 +212,9 @@ export class Namespace {
     }
     const tokenProvider = new AadTokenProvider(credentials);
     return Namespace.createFromTokenProvider(host, tokenProvider, options);
+  }
+
+  static getDeadLetterQueuePathForQueue(queueName: string): string {
+    return `${queueName}/$DeadLetterQueue`;
   }
 }

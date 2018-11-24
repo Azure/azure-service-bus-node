@@ -5,7 +5,7 @@ import {
   translate, Constants, ErrorNameConditionMapper, MessagingError, Func
 } from "@azure/amqp-common";
 import {
-  Receiver, OnAmqpEvent, EventContext, ReceiverOptions, ReceiverEvents, Delivery
+  Receiver, OnAmqpEvent, EventContext, ReceiverOptions, ReceiverEvents
 } from "rhea-promise";
 import * as log from "../log";
 import {
@@ -574,16 +574,17 @@ export class MessageSession extends LinkEntity {
 
   /**
    * Settles the message with the specified disposition.
-   * @param delivery Delivery associated with the message.
+   * @param message The ServiceBus Message that needs to be settled.
    * @param operation The disposition type.
-   * @param options optional parameters that can be provided while disposing the message.
+   * @param options Optional parameters that can be provided while disposing the message.
    */
-  async settleMessage(delivery: Delivery, operation: DispositionType, options?: DispositionOptions): Promise<any> {
+  async settleMessage(message: ServiceBusMessage, operation: DispositionType, options?: DispositionOptions): Promise<any> {
     return new Promise((resolve, reject) => {
       if (!options) options = {};
       if (operation.match(/^(complete|abandon|defer|deadletter)$/) == undefined) {
         return reject(new Error(`operation: '${operation}' is not a valid operation.`));
       }
+      const delivery = message.delivery;
       const timer = setTimeout(() => {
         this._deliveryDispositionMap.delete(delivery.id);
         log.receiver("[%s] Disposition for delivery id: %d, did not complete in %d milliseconds. " +
