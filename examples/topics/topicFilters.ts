@@ -4,8 +4,8 @@ dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const topic = process.env.TOPIC_NAME || "";
-const subscription_with_sql_filter = "with-sql-filter";
-const subscription_with_correlation_filter = "with-correlation-filter";
+const subscriptionSqlFilter = "with-sql-filter";
+const subscriptionCorrelationFilter = "with-correlation-filter";
 
 let ns: Namespace;
 let client: SubscriptionClient;
@@ -16,18 +16,18 @@ const yellowSqlRule = {
 const correlationRule = {
   name: "CorrelationRule",
   filter: { label: "Blue Message" }
-}
+};
 
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
 
-  client = ns.createSubscriptionClient(topic, subscription_with_sql_filter);
+  client = ns.createSubscriptionClient(topic, subscriptionSqlFilter);
   await removeAllRules(client);
   await client.addSQLRule(yellowSqlRule.name, yellowSqlRule.expression);
   await testAddedRule(client, yellowSqlRule.name);
   await client.close();
 
-  client = ns.createSubscriptionClient(topic, subscription_with_correlation_filter);
+  client = ns.createSubscriptionClient(topic, subscriptionCorrelationFilter);
   await removeAllRules(client);
   await client.addCorrelationRule(correlationRule.name, correlationRule.filter);
   await testAddedRule(client, correlationRule.name);
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
 }
 
 async function removeAllRules(client: SubscriptionClient): Promise<boolean> {
-  let rules = await client.getRules();
+  const rules = await client.getRules();
   console.log(`${rules.length} rules found for ${client.name}`);
 
   for (let i = 0; i < rules.length; i++) {
