@@ -14,6 +14,8 @@ import { LinkEntity } from "./linkEntity";
 import * as log from "../log";
 import { ReceiveMode } from "./messageReceiver";
 import { reorderLockTokens } from "../util/utils";
+import { Typed } from 'rhea/typings/types';
+import { max32BitNumber } from '../util/constants';
 
 export enum DispositionStatus {
   completed = "completed",
@@ -21,6 +23,28 @@ export enum DispositionStatus {
   suspended = "suspended",
   abandoned = "abandoned",
   renewed = "renewed"
+}
+
+export interface RuleDescription {
+  filter?: SQLExpression | CorrelationFilter;
+  action?: SQLExpression;
+  name: string;
+}
+
+export interface SQLExpression {
+  expression: string;
+}
+
+export interface CorrelationFilter {
+  correlationId?: string;
+  messageId?: string;
+  to?: string;
+  replyTo?: string;
+  label?: string;
+  sessionId?: string;
+  replyToSessionId?: string;
+  contentType?: string;
+  userProperties?: any;
 }
 
 /**
@@ -528,6 +552,186 @@ export class ManagementClient extends LinkEntity {
       const error = translate(err);
       log.error("An error occurred while sending the request to update disposition status to " +
         "$management endpoint: %O", error);
+      throw error;
+    }
+  }
+
+
+  /**
+   * Get all the rules on the Subscription.
+   * @returns Promise<RuleDescription> A list of rules.
+   */
+  async getRules(): Promise<RuleDescription[]> {
+    try {
+      const request: AmqpMessage = {
+        body: {
+          top: types.wrap_int(max32BitNumber),
+          skip: types.wrap_int(0)
+        },
+        reply_to: this.replyTo,
+        application_properties: {
+          operation: Constants.operations.enumerateRules
+        }
+      };
+      request.application_properties![Constants.trackingId] = generate_uuid();
+
+      log.mgmt("[%s] Get rules request body: %O.", this._context.namespace.connectionId,
+        request.body);
+      log.mgmt("[%s] Acquiring lock to get the management req res link.",
+        this._context.namespace.connectionId);
+      await defaultLock.acquire(this.managementLock, () => { return this._init(); });
+
+      const response = await this._mgmtReqResLink!.sendRequest(request);
+      if (response.application_properties!.statusCode === 204 || !response.body || !Array.isArray(response.body.rules)) {
+        return [];
+      }
+
+      // Reference: https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-amqp-request-response#response-11
+      const result: { "rule-description": Typed }[] = response.body.rules || [];
+      const rules: RuleDescription[] = [];
+      result.forEach((x) => {
+        const ruleDescriptor = x['rule-description'];
+        if (!Array.isArray(ruleDescriptor.value) || ruleDescriptor.value.length < 3) {
+          return;
+        }
+        const filtersRawData: Typed = ruleDescriptor.value[0];
+        const actionsRawData: Typed = ruleDescriptor.value[1];
+        const rule: RuleDescription = {
+          name: ruleDescriptor.value[2].value
+        };
+
+        if (filtersRawData.descriptor.value === 83483426822
+          && Array.isArray(filtersRawData.value)
+          && filtersRawData.value.length === 2) {
+          rule.filter = {
+            expression: filtersRawData.value[0] && filtersRawData.value[0].value
+          };
+        } else if (filtersRawData.descriptor.value === 83483426825
+          && Array.isArray(filtersRawData.value)
+          && filtersRawData.value.length === 9) {
+
+          rule.filter = {
+            correlationId: filtersRawData.value[0] && filtersRawData.value[0].value,
+            messageId: filtersRawData.value[1] && filtersRawData.value[1].value,
+            to: filtersRawData.value[2] && filtersRawData.value[2].value,
+            replyTo: filtersRawData.value[3] && filtersRawData.value[3].value,
+            label: filtersRawData.value[4] && filtersRawData.value[4].value,
+            sessionId: filtersRawData.value[5] && filtersRawData.value[5].value,
+            replyToSessionId: filtersRawData.value[6] && filtersRawData.value[6].value,
+            contentType: filtersRawData.value[7] && filtersRawData.value[7].value,
+            userProperties: filtersRawData.value[8] && filtersRawData.value[8].value,
+          };
+        }
+
+        if (actionsRawData.descriptor.value === 1335734829062
+          && Array.isArray(actionsRawData.value)
+          && actionsRawData.value.length) {
+          rule.action = {
+            expression: actionsRawData.value[0] && actionsRawData.value[0].value
+          };
+        }
+
+        rules.push(rule);
+
+      });
+
+      return rules;
+
+    } catch (err) {
+      const error = translate(err);
+      log.error("An error occurred while sending the get rules request to $management " +
+        "endpoint: %O", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Removes the rule on the Subscription identified by the given rule name.
+   * @param ruleName
+   */
+  async removeRule(ruleName: string): Promise<void> {
+    try {
+      const request: AmqpMessage = {
+        body: {
+          "rule-name": types.wrap_string(ruleName)
+        },
+        reply_to: this.replyTo,
+        application_properties: {
+          operation: Constants.operations.removeRule
+        }
+      };
+      request.application_properties![Constants.trackingId] = generate_uuid();
+
+      log.mgmt("[%s] Remove Rule request body: %O.", this._context.namespace.connectionId,
+        request.body);
+      log.mgmt("[%s] Acquiring lock to get the management req res link.",
+        this._context.namespace.connectionId);
+      await defaultLock.acquire(this.managementLock, () => { return this._init(); });
+
+      await this._mgmtReqResLink!.sendRequest(request);
+
+    } catch (err) {
+      const error = translate(err);
+      log.error("An error occurred while sending the remove rule request to $management " +
+        "endpoint: %O", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Adds a rule on the subscription as defined by the given rule name, filter and action
+   * @param ruleName Name of the rule
+   * @param filter A SQL expression or a Correlation filter
+   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
+   */
+  async addRule(ruleName: string, filter: string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
+    try {
+      const ruleDescription: any = {};
+      if (typeof filter === "string") {
+        ruleDescription["sql-filter"] = {
+          expression: filter
+        };
+      } else {
+        ruleDescription["correlation-filter"] = {
+          "correlation-id": filter.correlationId,
+          "message-id": filter.messageId,
+          "to": filter.to,
+          "reply-to": filter.replyTo,
+          "label": filter.label,
+          "session-id": filter.sessionId,
+          "reply-to-session-id": filter.replyToSessionId,
+          "content-type": filter.contentType,
+          "properties": filter.userProperties
+
+        };
+      }
+      if (sqlRuleActionExpression && typeof sqlRuleActionExpression === "string") {
+        ruleDescription["sql-rule-action"] = sqlRuleActionExpression;
+      }
+
+      const request: AmqpMessage = {
+        body: {
+          "rule-name": types.wrap_string(ruleName),
+          "rule-description": types.wrap_map(ruleDescription)
+        },
+        reply_to: this.replyTo,
+        application_properties: {
+          operation: Constants.operations.addRule
+        }
+      };
+      request.application_properties![Constants.trackingId] = generate_uuid();
+
+      log.mgmt("[%s] Add Rule request body: %O.", this._context.namespace.connectionId,
+        request.body);
+      log.mgmt("[%s] Acquiring lock to get the management req res link.",
+        this._context.namespace.connectionId);
+      await defaultLock.acquire(this.managementLock, () => { return this._init(); });
+
+      await this._mgmtReqResLink!.sendRequest(request);
+    } catch (err) {
+      const error = translate(err);
+      log.error("An error occurred while sending the Add rule request to $management " +
+        "endpoint: %O", error);
       throw error;
     }
   }

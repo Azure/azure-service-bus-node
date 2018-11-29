@@ -9,6 +9,7 @@ import { BatchingReceiver } from "./core/batchingReceiver";
 import { ServiceBusMessage, ReceivedMessageInfo } from "./serviceBusMessage";
 import { Client } from "./client";
 import { ReceiveMode } from "./core/messageReceiver";
+import { CorrelationFilter, RuleDescription } from './core/managementClient';
 
 /**
  * Describes the options that can be provided while creating the SubscriptionClient.
@@ -234,4 +235,54 @@ export class SubscriptionClient extends Client {
     return this._context.managementClient!.receiveDeferredMessages(sequenceNumbers,
       this.receiveMode);
   }
+
+  //#region topic-filters
+
+  /**
+   * Get all the rules associated with the subscription
+   */
+  async getRules(): Promise<RuleDescription[]> {
+    return this._context.managementClient!.getRules();
+  }
+
+  /**
+   * Removes the rule on the subscription identified by the given rule name.
+   * @param ruleName
+   */
+  async removeRule(ruleName: string): Promise<void> {
+    return this._context.managementClient!.removeRule(ruleName);
+  }
+
+  /**
+   * Adds a rule on the subscription as defined by the given rule name, filter and action
+   * @param ruleName Name of the rule
+   * @param filter true or false
+   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
+   */
+  async addBooleanRule(ruleName: string, filter: boolean, sqlRuleActionExpression?: string): Promise<void> {
+    const sqlRuleExpression = filter ? "1=1" : "1=0";
+    return this._context.managementClient!.addRule(ruleName, sqlRuleExpression, sqlRuleActionExpression);
+  }
+
+  /**
+   * Adds a rule on the subscription as defined by the given rule name, filter and action
+   * @param ruleName Name of the rule
+   * @param filter SQL expression
+   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
+   */
+  async addSQLRule(ruleName: string, filter: string, sqlRuleActionExpression?: string): Promise<void> {
+    return this._context.managementClient!.addRule(ruleName, filter, sqlRuleActionExpression);
+  }
+
+  /**
+   * Adds a rule on the subscription as defined by the given rule name, filter and action
+   * @param ruleName Name of the rule
+   * @param filter Object representing the CorrelationFilter
+   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
+   */
+  async addCorrelationRule(ruleName: string, filter: CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
+    return this._context.managementClient!.addRule(ruleName, filter, sqlRuleActionExpression);
+  }
+
+  //#endregion
 }
