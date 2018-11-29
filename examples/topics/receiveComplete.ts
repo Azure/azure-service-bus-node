@@ -14,7 +14,6 @@ async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
   const client = ns.createSubscriptionClient(topic, subscription);
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log(">>> Message: ", brokeredMessage);
     console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : null);
     await brokeredMessage.complete();
   }
@@ -22,7 +21,7 @@ async function main(): Promise<void> {
     console.log(">>>>> Error occurred: ", err);
   };
   const rcvHandler = client.receive(onMessage, onError, { autoComplete: false });
-  await delay(30000);
+  await delay(5000);
   await rcvHandler.stop();
 }
 
