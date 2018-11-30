@@ -685,6 +685,15 @@ export class ManagementClient extends LinkEntity {
    * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
    */
   async addRule(ruleName: string, filter: string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
+    if (!ruleName || typeof ruleName !== "string") {
+      throw new Error("Cannot add rule. Rule name is missing or is not a string.");
+    }
+    if (!filter) {
+      throw new Error("Cannot add rule. Filter is missing.");
+    }
+    if (sqlRuleActionExpression && typeof sqlRuleActionExpression !== "string") {
+      throw new Error("Cannot add rule. Given action expression is not a string.");
+    }
     try {
       const ruleDescription: any = {};
       if (typeof filter === "string") {

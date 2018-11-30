@@ -260,6 +260,9 @@ export class SubscriptionClient extends Client {
    * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
    */
   async addBooleanRule(ruleName: string, filter: boolean, sqlRuleActionExpression?: string): Promise<void> {
+    if (filter && typeof filter !== "boolean") {
+      throw new Error("Cannot add rule. Given boolean filter expression is not a boolean.");
+    }
     const sqlRuleExpression = filter ? "1=1" : "1=0";
     return this._context.managementClient!.addRule(ruleName, sqlRuleExpression, sqlRuleActionExpression);
   }
@@ -271,6 +274,9 @@ export class SubscriptionClient extends Client {
    * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
    */
   async addSQLRule(ruleName: string, filter: string, sqlRuleActionExpression?: string): Promise<void> {
+    if (filter && typeof filter !== "string") {
+      throw new Error("Cannot add rule. Given sql filter expression is not a string.");
+    }
     return this._context.managementClient!.addRule(ruleName, filter, sqlRuleActionExpression);
   }
 
