@@ -14,9 +14,9 @@ async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
   const client = ns.createSubscriptionClient(topic, subscription);
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : null);
+    console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : undefined);
     await brokeredMessage.complete();
-  }
+  };
   const onError: OnError = (err: MessagingError | Error) => {
     console.log(">>>>> Error occurred: ", err);
   };

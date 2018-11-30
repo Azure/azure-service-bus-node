@@ -100,7 +100,7 @@ async function removeAllRules(client: SubscriptionClient): Promise<boolean> {
 }
 
 async function testAddedRule(client: SubscriptionClient, ruleName: string): Promise<boolean> {
-  let rules = await client.getRules();
+  const rules = await client.getRules();
   if (rules.find((rule) => rule.name === ruleName)) {
     console.log(`Rule ${ruleName} has been added`);
   } else {
