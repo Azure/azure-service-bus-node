@@ -1,14 +1,15 @@
-import { Namespace, SubscriptionClient } from "../../lib";
+import { Namespace, SubscriptionClient, generateUuid } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const topic = process.env.TOPIC_NAME || "";
-const subscriptionSqlFilter = "with-sql-filter";
-const subscriptionCorrelationFilter = "with-correlation-filter";
+const subscriptionDefaultFilter = process.env.SUBSCRIPTION_NAME_DEFAULT_FILTER || "";
+const subscriptionSqlFilter = process.env.SUBSCRIPTION_NAME_SQL_FILTER || "";
+const subscriptionCorrelationFilter = process.env.SUBSCRIPTION_NAME_CORRELATION_FILTER || "";
 
 let ns: Namespace;
-let client: SubscriptionClient;
+
 const yellowSqlRule = {
   name: "YellowSqlRule",
   expression: "Color = 'Yellow'"
@@ -18,24 +19,63 @@ const correlationRule = {
   filter: { label: "Blue Message" }
 };
 
+const redMessage = {
+  messageId: "RedMessageId" + generateUuid(),
+  body: "Red Message",
+  label: "Red Message",
+  userProperties: {
+    "Color": "Red"
+  }
+};
+
+const blueMessage = {
+  messageId: "BlueMessageId" + generateUuid(),
+  body: "Blue Message",
+  label: "Blue Message",
+  userProperties: {
+    "Color": "Blue"
+  }
+};
+
+const yellowMessage = {
+  messageId: "YelloMessageId" + generateUuid(),
+  body: "Yellow Message",
+  label: "Yellow Message",
+  userProperties: {
+    "Color": "Yellow"
+  }
+};
+
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
 
-  client = ns.createSubscriptionClient(topic, subscriptionSqlFilter);
-  await removeAllRules(client);
-  await client.addSQLRule(yellowSqlRule.name, yellowSqlRule.expression);
-  await testAddedRule(client, yellowSqlRule.name);
-  await client.close();
+  const subscriptionClientNoFilter = ns.createSubscriptionClient(topic, subscriptionDefaultFilter);
+  await removeAllRules(subscriptionClientNoFilter);
+  await subscriptionClientNoFilter.addBooleanRule("$DEFAULT", true);
+  await testAddedRule(subscriptionClientNoFilter, "$DEFAULT");
 
-  client = ns.createSubscriptionClient(topic, subscriptionCorrelationFilter);
-  await removeAllRules(client);
-  await client.addCorrelationRule(correlationRule.name, correlationRule.filter);
-  await testAddedRule(client, correlationRule.name);
-  await client.close();
+  const subscriptionClientSqlFilter = ns.createSubscriptionClient(topic, subscriptionSqlFilter);
+  await removeAllRules(subscriptionClientSqlFilter);
+  await subscriptionClientSqlFilter.addSQLRule(yellowSqlRule.name, yellowSqlRule.expression);
+  await testAddedRule(subscriptionClientSqlFilter, yellowSqlRule.name);
+
+  const subscriptionClientCorrelationFilter = ns.createSubscriptionClient(topic, subscriptionCorrelationFilter);
+  await removeAllRules(subscriptionClientCorrelationFilter);
+  await subscriptionClientCorrelationFilter.addCorrelationRule(correlationRule.name, correlationRule.filter);
+  await testAddedRule(subscriptionClientCorrelationFilter, correlationRule.name);
+
+  await subscriptionClientNoFilter.close();
+  await subscriptionClientSqlFilter.close();
+  await subscriptionClientCorrelationFilter.close();
+
+  const topicClient = ns.createTopicClient(topic);
+  await topicClient.sendBatch([redMessage, blueMessage, yellowMessage]);
+  await topicClient.close();
+
 }
 
 async function removeAllRules(client: SubscriptionClient): Promise<boolean> {
-  const rules = await client.getRules();
+  let rules = await client.getRules();
   console.log(`${rules.length} rules found for ${client.name}`);
 
   for (let i = 0; i < rules.length; i++) {
