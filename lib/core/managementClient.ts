@@ -600,27 +600,41 @@ export class ManagementClient extends LinkEntity {
           name: ruleDescriptor.value[2].value
         };
 
-        if (filtersRawData.descriptor.value === 83483426822
-          && Array.isArray(filtersRawData.value)
-          && filtersRawData.value.length === 2) {
-          rule.filter = {
-            expression: filtersRawData.value[0] && filtersRawData.value[0].value
-          };
-        } else if (filtersRawData.descriptor.value === 83483426825
-          && Array.isArray(filtersRawData.value)
-          && filtersRawData.value.length === 9) {
-
-          rule.filter = {
-            correlationId: filtersRawData.value[0] && filtersRawData.value[0].value,
-            messageId: filtersRawData.value[1] && filtersRawData.value[1].value,
-            to: filtersRawData.value[2] && filtersRawData.value[2].value,
-            replyTo: filtersRawData.value[3] && filtersRawData.value[3].value,
-            label: filtersRawData.value[4] && filtersRawData.value[4].value,
-            sessionId: filtersRawData.value[5] && filtersRawData.value[5].value,
-            replyToSessionId: filtersRawData.value[6] && filtersRawData.value[6].value,
-            contentType: filtersRawData.value[7] && filtersRawData.value[7].value,
-            userProperties: filtersRawData.value[8] && filtersRawData.value[8].value,
-          };
+        switch (filtersRawData.descriptor.value) {
+          case 83483426823:
+            rule.filter = {
+              expression: "1=1"
+            };
+            break;
+          case 83483426824:
+            rule.filter = {
+              expression: "1=0"
+            };
+            break;
+          case 83483426822:
+            if (Array.isArray(filtersRawData.value) && filtersRawData.value.length === 2) {
+              rule.filter = {
+                expression: filtersRawData.value[0] && filtersRawData.value[0].value
+              };
+            }
+            break;
+          case 83483426825:
+            if (Array.isArray(filtersRawData.value) && filtersRawData.value.length === 9) {
+              rule.filter = {
+                correlationId: filtersRawData.value[0] && filtersRawData.value[0].value,
+                messageId: filtersRawData.value[1] && filtersRawData.value[1].value,
+                to: filtersRawData.value[2] && filtersRawData.value[2].value,
+                replyTo: filtersRawData.value[3] && filtersRawData.value[3].value,
+                label: filtersRawData.value[4] && filtersRawData.value[4].value,
+                sessionId: filtersRawData.value[5] && filtersRawData.value[5].value,
+                replyToSessionId: filtersRawData.value[6] && filtersRawData.value[6].value,
+                contentType: filtersRawData.value[7] && filtersRawData.value[7].value,
+                userProperties: filtersRawData.value[8] && filtersRawData.value[8].value,
+              };
+            }
+            break;
+          default:
+            break;
         }
 
         if (actionsRawData.descriptor.value === 1335734829062
