@@ -15,7 +15,7 @@ import * as log from "../log";
 import { ReceiveMode } from "./messageReceiver";
 import { reorderLockTokens } from "../util/utils";
 import { Typed } from 'rhea/typings/types';
-import { max32BitNumber } from '../util/constants';
+import { max32BitNumber, descriptorCodes } from '../util/constants';
 
 export enum DispositionStatus {
   completed = "completed",
@@ -591,9 +591,16 @@ export class ManagementClient extends LinkEntity {
       const rules: RuleDescription[] = [];
       result.forEach((x) => {
         const ruleDescriptor = x['rule-description'];
-        if (!Array.isArray(ruleDescriptor.value) || ruleDescriptor.value.length < 3) {
+
+        // We use the first three elements of the `ruleDescriptor.value` to get filter, action, name
+        if (!ruleDescriptor
+          || !ruleDescriptor.descriptor
+          || ruleDescriptor.descriptor.value !== descriptorCodes.ruleDescriptionList
+          || !Array.isArray(ruleDescriptor.value)
+          || ruleDescriptor.value.length < 3) {
           return;
         }
+
         const filtersRawData: Typed = ruleDescriptor.value[0];
         const actionsRawData: Typed = ruleDescriptor.value[1];
         const rule: RuleDescription = {
@@ -601,24 +608,24 @@ export class ManagementClient extends LinkEntity {
         };
 
         switch (filtersRawData.descriptor.value) {
-          case 83483426823:
+          case descriptorCodes.trueFilterList:
             rule.filter = {
               expression: "1=1"
             };
             break;
-          case 83483426824:
+          case descriptorCodes.falseFilterList:
             rule.filter = {
               expression: "1=0"
             };
             break;
-          case 83483426822:
+          case descriptorCodes.sqlFilterList:
             if (Array.isArray(filtersRawData.value) && filtersRawData.value.length === 2) {
               rule.filter = {
                 expression: filtersRawData.value[0] && filtersRawData.value[0].value
               };
             }
             break;
-          case 83483426825:
+          case descriptorCodes.correlationFilterList:
             if (Array.isArray(filtersRawData.value) && filtersRawData.value.length === 9) {
               rule.filter = {
                 correlationId: filtersRawData.value[0] && filtersRawData.value[0].value,
@@ -637,7 +644,7 @@ export class ManagementClient extends LinkEntity {
             break;
         }
 
-        if (actionsRawData.descriptor.value === 1335734829062
+        if (actionsRawData.descriptor.value === descriptorCodes.sqlRuleActionList
           && Array.isArray(actionsRawData.value)
           && actionsRawData.value.length) {
           rule.action = {
