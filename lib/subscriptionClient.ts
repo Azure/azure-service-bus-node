@@ -253,40 +253,14 @@ export class SubscriptionClient extends Client {
     return this._context.managementClient!.removeRule(ruleName);
   }
 
-  /**
-   * Adds a rule on the subscription as defined by the given rule name, filter and action
-   * @param ruleName Name of the rule
-   * @param filter true or false
-   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
-   */
-  async addBooleanRule(ruleName: string, filter: boolean, sqlRuleActionExpression?: string): Promise<void> {
-    if (filter && typeof filter !== "boolean") {
-      throw new Error("Cannot add rule. Given boolean filter expression is not a boolean.");
-    }
-    const sqlRuleExpression = filter ? "1=1" : "1=0";
-    return this._context.managementClient!.addRule(ruleName, sqlRuleExpression, sqlRuleActionExpression);
-  }
 
   /**
    * Adds a rule on the subscription as defined by the given rule name, filter and action
    * @param ruleName Name of the rule
-   * @param filter SQL expression
+   * @param filter A Boolean, SQL expression or a Correlation filter
    * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
    */
-  async addSQLRule(ruleName: string, filter: string, sqlRuleActionExpression?: string): Promise<void> {
-    if (filter && typeof filter !== "string") {
-      throw new Error("Cannot add rule. Given sql filter expression is not a string.");
-    }
-    return this._context.managementClient!.addRule(ruleName, filter, sqlRuleActionExpression);
-  }
-
-  /**
-   * Adds a rule on the subscription as defined by the given rule name, filter and action
-   * @param ruleName Name of the rule
-   * @param filter Object representing the CorrelationFilter
-   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
-   */
-  async addCorrelationRule(ruleName: string, filter: CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
+  async addRule(ruleName: string, filter: boolean | string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
     return this._context.managementClient!.addRule(ruleName, filter, sqlRuleActionExpression);
   }
 

@@ -702,10 +702,10 @@ export class ManagementClient extends LinkEntity {
   /**
    * Adds a rule on the subscription as defined by the given rule name, filter and action
    * @param ruleName Name of the rule
-   * @param filter A SQL expression or a Correlation filter
+   * @param filter A Boolean, SQL expression or a Correlation filter
    * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
    */
-  async addRule(ruleName: string, filter: string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
+  async addRule(ruleName: string, filter: boolean | string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
     if (!ruleName || typeof ruleName !== "string") {
       throw new Error("Cannot add rule. Rule name is missing or is not a string.");
     }
@@ -717,24 +717,32 @@ export class ManagementClient extends LinkEntity {
     }
     try {
       const ruleDescription: any = {};
-      if (typeof filter === "string") {
-        ruleDescription["sql-filter"] = {
-          expression: filter
-        };
-      } else {
-        ruleDescription["correlation-filter"] = {
-          "correlation-id": filter.correlationId,
-          "message-id": filter.messageId,
-          "to": filter.to,
-          "reply-to": filter.replyTo,
-          "label": filter.label,
-          "session-id": filter.sessionId,
-          "reply-to-session-id": filter.replyToSessionId,
-          "content-type": filter.contentType,
-          "properties": filter.userProperties
-
-        };
+      switch (typeof filter) {
+        case "boolean":
+          ruleDescription["sql-filter"] = {
+            expression: filter ? "1=1" : "1=0"
+          };
+          break;
+        case "string":
+          ruleDescription["sql-filter"] = {
+            expression: filter
+          };
+          break;
+        default:
+          ruleDescription["correlation-filter"] = {
+            "correlation-id": filter.correlationId,
+            "message-id": filter.messageId,
+            "to": filter.to,
+            "reply-to": filter.replyTo,
+            "label": filter.label,
+            "session-id": filter.sessionId,
+            "reply-to-session-id": filter.replyToSessionId,
+            "content-type": filter.contentType,
+            "properties": filter.userProperties
+          };
+          break;
       }
+
       if (sqlRuleActionExpression && typeof sqlRuleActionExpression === "string") {
         ruleDescription["sql-rule-action"] = sqlRuleActionExpression;
       }

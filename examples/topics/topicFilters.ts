@@ -1,5 +1,6 @@
 import { Namespace, SubscriptionClient, generateUuid } from "../../lib";
 import * as dotenv from "dotenv";
+import { CorrelationFilter } from '../../lib/core/managementClient';
 dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
@@ -51,18 +52,15 @@ async function main(): Promise<void> {
 
   const subscriptionClientNoFilter = ns.createSubscriptionClient(topic, subscriptionDefaultFilter);
   await removeAllRules(subscriptionClientNoFilter);
-  await subscriptionClientNoFilter.addBooleanRule("$DEFAULT", true);
-  await testAddedRule(subscriptionClientNoFilter, "$DEFAULT");
+  await testAddedRule(subscriptionClientNoFilter, "$DEFAULT", true);
 
   const subscriptionClientSqlFilter = ns.createSubscriptionClient(topic, subscriptionSqlFilter);
   await removeAllRules(subscriptionClientSqlFilter);
-  await subscriptionClientSqlFilter.addSQLRule(yellowSqlRule.name, yellowSqlRule.expression);
-  await testAddedRule(subscriptionClientSqlFilter, yellowSqlRule.name);
+  await testAddedRule(subscriptionClientSqlFilter, yellowSqlRule.name, yellowSqlRule.expression);
 
   const subscriptionClientCorrelationFilter = ns.createSubscriptionClient(topic, subscriptionCorrelationFilter);
   await removeAllRules(subscriptionClientCorrelationFilter);
-  await subscriptionClientCorrelationFilter.addCorrelationRule(correlationRule.name, correlationRule.filter);
-  await testAddedRule(subscriptionClientCorrelationFilter, correlationRule.name);
+  await testAddedRule(subscriptionClientCorrelationFilter, correlationRule.name, correlationRule.filter);
 
   await subscriptionClientNoFilter.close();
   await subscriptionClientSqlFilter.close();
@@ -99,7 +97,8 @@ async function removeAllRules(client: SubscriptionClient): Promise<boolean> {
   return true;
 }
 
-async function testAddedRule(client: SubscriptionClient, ruleName: string): Promise<boolean> {
+async function testAddedRule(client: SubscriptionClient, ruleName: string, filter: boolean | string | CorrelationFilter): Promise<boolean> {
+  await client.addRule(ruleName, filter);
   const rules = await client.getRules();
   if (rules.find((rule) => rule.name === ruleName)) {
     console.log(`Rule ${ruleName} has been added`);
