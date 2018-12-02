@@ -52,7 +52,7 @@ async function main(): Promise<void> {
 
   const subscriptionClientNoFilter = ns.createSubscriptionClient(topic, subscriptionDefaultFilter);
   await removeAllRules(subscriptionClientNoFilter);
-  await testAddedRule(subscriptionClientNoFilter, "$DEFAULT", true);
+  await testAddedRule(subscriptionClientNoFilter, subscriptionClientNoFilter.defaultRuleName, true);
 
   const subscriptionClientSqlFilter = ns.createSubscriptionClient(topic, subscriptionSqlFilter);
   await removeAllRules(subscriptionClientSqlFilter);

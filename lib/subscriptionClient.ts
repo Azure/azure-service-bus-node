@@ -39,6 +39,11 @@ export class SubscriptionClient extends Client {
   receiveMode: ReceiveMode;
 
   /**
+   * @property {string} defaultRuleName Name of the default rule on the subscription.
+   */
+  readonly defaultRuleName: string = "$Default";
+
+  /**
    * Instantiates a client pointing to the ServiceBus Subscription given by this configuration.
    *
    * @constructor
@@ -255,7 +260,10 @@ export class SubscriptionClient extends Client {
 
 
   /**
-   * Adds a rule on the subscription as defined by the given rule name, filter and action
+   * Adds a rule on the subscription as defined by the given rule name, filter and action.
+   * Remember to remove the default true filter on the subscription before adding a rule,
+   * otherwise, the added rule will have no affect as the true filter will always result in
+   * the subscription receiving all messages.
    * @param ruleName Name of the rule
    * @param filter A Boolean, SQL expression or a Correlation filter
    * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
