@@ -621,22 +621,22 @@ export class ManagementClient extends LinkEntity {
           case descriptorCodes.sqlFilterList:
             if (Array.isArray(filtersRawData.value) && filtersRawData.value.length === 2) {
               rule.filter = {
-                expression: filtersRawData.value[0] && filtersRawData.value[0].value
+                expression: this._safelyGetTypedValue(filtersRawData.value[0])
               };
             }
             break;
           case descriptorCodes.correlationFilterList:
             if (Array.isArray(filtersRawData.value) && filtersRawData.value.length === 9) {
               rule.filter = {
-                correlationId: filtersRawData.value[0] && filtersRawData.value[0].value,
-                messageId: filtersRawData.value[1] && filtersRawData.value[1].value,
-                to: filtersRawData.value[2] && filtersRawData.value[2].value,
-                replyTo: filtersRawData.value[3] && filtersRawData.value[3].value,
-                label: filtersRawData.value[4] && filtersRawData.value[4].value,
-                sessionId: filtersRawData.value[5] && filtersRawData.value[5].value,
-                replyToSessionId: filtersRawData.value[6] && filtersRawData.value[6].value,
-                contentType: filtersRawData.value[7] && filtersRawData.value[7].value,
-                userProperties: filtersRawData.value[8] && filtersRawData.value[8].value,
+                correlationId: this._safelyGetTypedValue(filtersRawData.value[0]),
+                messageId: this._safelyGetTypedValue(filtersRawData.value[1]),
+                to: this._safelyGetTypedValue(filtersRawData.value[2]),
+                replyTo: this._safelyGetTypedValue(filtersRawData.value[3]),
+                label: this._safelyGetTypedValue(filtersRawData.value[4]),
+                sessionId: this._safelyGetTypedValue(filtersRawData.value[5]),
+                replyToSessionId: this._safelyGetTypedValue(filtersRawData.value[6]),
+                contentType: this._safelyGetTypedValue(filtersRawData.value[7]),
+                userProperties: this._safelyGetTypedValue(filtersRawData.value[8]),
               };
             }
             break;
@@ -819,5 +819,9 @@ export class ManagementClient extends LinkEntity {
 
   private _isMgmtRequestResponseLinkOpen(): boolean {
     return this._mgmtReqResLink! && this._mgmtReqResLink!.isOpen();
+  }
+
+  private _safelyGetTypedValue(data: Typed): any {
+    return data && data.value;
   }
 }
