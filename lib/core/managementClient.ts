@@ -648,7 +648,7 @@ export class ManagementClient extends LinkEntity {
           && Array.isArray(actionsRawData.value)
           && actionsRawData.value.length) {
           rule.action = {
-            expression: actionsRawData.value[0] && actionsRawData.value[0].value
+            expression: this._safelyGetTypedValue(actionsRawData.value[0])
           };
         }
 
