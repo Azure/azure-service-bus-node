@@ -68,9 +68,13 @@ export class SubscriptionClient extends Client {
   async close(): Promise<void> {
     try {
       if (this._context.namespace.connection && this._context.namespace.connection.isOpen()) {
-        // Close the receiver.
+        // Close the streaming receiver.
         if (this._context.streamingReceiver) {
           await this._context.streamingReceiver.close();
+        }
+        // Close the batching receiver.
+        if (this._context.batchingReceiver) {
+          await this._context.batchingReceiver.close();
         }
         log.subscriptionClient("Closed the subscription client '%s'.", this.id);
       }
@@ -189,7 +193,9 @@ export class SubscriptionClient extends Client {
    * @returns Promise<ReceivedSBMessage[]>
    */
   async peekBySequenceNumber(fromSequenceNumber: Long, messageCount?: number): Promise<ReceivedMessageInfo[]> {
-    return this._context.managementClient!.peekBySequenceNumber(fromSequenceNumber, messageCount);
+    return this._context.managementClient!.peekBySequenceNumber(fromSequenceNumber, {
+      messageCount: messageCount
+    });
   }
 
   /**
