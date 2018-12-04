@@ -6,4 +6,3 @@ export const packageJsonInfo = {
   version: "0.1.0"
 };
 export const messageDispositionTimeout = 20000;
-export const defaultLastUpdatedTime = 259200000; // 3 * 24 * 3600 * 1000

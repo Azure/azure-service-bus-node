@@ -536,6 +536,7 @@ export class MessageSession extends LinkEntity {
 
       // Action to be performed on the "message" event.
       onReceiveMessage = async (context: EventContext) => {
+        this._resetTimerOnNewMessageReceived();
         const data: ServiceBusMessage = new ServiceBusMessage(this._context,
           context.message!, context.delivery!);
         if (brokeredMessages.length <= maxMessageCount) {

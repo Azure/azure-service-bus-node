@@ -14,7 +14,6 @@ import { LinkEntity } from "./linkEntity";
 import * as log from "../log";
 import { ReceiveMode } from "./messageReceiver";
 import { reorderLockTokens, toBuffer } from "../util/utils";
-import { defaultLastUpdatedTime } from "../util/constants";
 
 /**
  * @ignore
@@ -217,7 +216,7 @@ export class ManagementClient extends LinkEntity {
       throw new Error("'messageCount' must be of type 'number'.");
     }
     if (options.sessionId != undefined && typeof options.sessionId !== "string") {
-      throw new Error("'sessionId' is a required parameter and must be of type 'string'.");
+      throw new Error("'sessionId' must be of type 'string'.");
     }
     if (options.messageCount == undefined) options.messageCount = 1;
     const messageList: ReceivedMessageInfo[] = [];
@@ -669,10 +668,6 @@ export class ManagementClient extends LinkEntity {
       throw new Error("'sessionId' is a required parameter and must be of type 'string'.");
     }
 
-    if (state == undefined) {
-      throw new Error("'state' is a required parameter.");
-    }
-
     try {
       const messageBody: any = {};
       messageBody[Constants.sessionIdMapKey] = sessionId;
@@ -744,6 +739,7 @@ export class ManagementClient extends LinkEntity {
    * @returns Promise<ListSessionsResponse> A list of sessions.
    */
   async listMessageSessions(skip: number, top: number, lastUpdatedTime?: Date): Promise<ListSessionsResponse> {
+    const defaultLastUpdatedTimeForListingSessions: number = 259200000; // 3 * 24 * 3600 * 1000
     if (typeof skip !== "number") {
       throw new Error("'skip' is a required parameter and must be of type 'number'.");
     }
@@ -754,7 +750,7 @@ export class ManagementClient extends LinkEntity {
       throw new Error("'lastUpdatedTime' must be of type 'Date'.");
     }
     if (!lastUpdatedTime) {
-      lastUpdatedTime = new Date(Date.now() - defaultLastUpdatedTime);
+      lastUpdatedTime = new Date(Date.now() - defaultLastUpdatedTimeForListingSessions);
     }
     try {
       const messageBody: any = {};
