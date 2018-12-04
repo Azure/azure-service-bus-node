@@ -61,9 +61,14 @@ export class QueueClient extends Client {
         if (this._context.sender) {
           await this._context.sender.close();
         }
-        // Close the receiver.
+        // Close the streaming receiver.
         if (this._context.streamingReceiver) {
           await this._context.streamingReceiver.close();
+        }
+
+        // Close the batching receiver.
+        if (this._context.batchingReceiver) {
+          await this._context.batchingReceiver.close();
         }
 
         // Close all the MessageSessions.
