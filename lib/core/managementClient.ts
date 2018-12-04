@@ -14,8 +14,8 @@ import { LinkEntity } from "./linkEntity";
 import * as log from "../log";
 import { ReceiveMode } from "./messageReceiver";
 import { reorderLockTokens } from "../util/utils";
-import { Typed } from 'rhea/typings/types';
-import { max32BitNumber, descriptorCodes } from '../util/constants';
+import { Typed } from "rhea/typings/types";
+import { max32BitNumber, descriptorCodes } from "../util/constants";
 
 export enum DispositionStatus {
   completed = "completed",
@@ -559,7 +559,7 @@ export class ManagementClient extends LinkEntity {
 
   /**
    * Get all the rules on the Subscription.
-   * @returns Promise<RuleDescription> A list of rules.
+   * @returns Promise<RuleDescription[]> A list of rules.
    */
   async getRules(): Promise<RuleDescription[]> {
     try {
@@ -641,6 +641,7 @@ export class ManagementClient extends LinkEntity {
             }
             break;
           default:
+            log.mgmt(`Found unexpected descriptor code for the filter: ${filtersRawData.descriptor.value}`)
             break;
         }
 
@@ -671,6 +672,9 @@ export class ManagementClient extends LinkEntity {
    * @param ruleName
    */
   async removeRule(ruleName: string): Promise<void> {
+    if (!ruleName || typeof ruleName !== "string") {
+      throw new Error("Cannot remove rule. Rule name is missing or is not a string.");
+    }
     try {
       const request: AmqpMessage = {
         body: {

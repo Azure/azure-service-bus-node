@@ -265,8 +265,10 @@ export class SubscriptionClient extends Client {
    * otherwise, the added rule will have no affect as the true filter will always result in
    * the subscription receiving all messages.
    * @param ruleName Name of the rule
-   * @param filter A Boolean, SQL expression or a Correlation filter
-   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression
+   * @param filter A Boolean, SQL expression or a Correlation filter. For SQL Filter syntax, see 
+   * {@link https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-sql-filter SQLFilter syntax}.
+   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression. For SQL Rule Action syntax, 
+   * see {@link https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-sql-rule-action SQLRuleAction syntax}.
    */
   async addRule(ruleName: string, filter: boolean | string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
     return this._context.managementClient!.addRule(ruleName, filter, sqlRuleActionExpression);

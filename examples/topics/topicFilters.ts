@@ -11,15 +11,6 @@ const subscriptionCorrelationFilter = process.env.SUBSCRIPTION_NAME_CORRELATION_
 
 let ns: Namespace;
 
-const yellowSqlRule = {
-  name: "YellowSqlRule",
-  expression: "Color = 'Yellow'"
-};
-const correlationRule = {
-  name: "CorrelationRule",
-  filter: { label: "Blue Message" }
-};
-
 const redMessage = {
   messageId: "RedMessageId" + generateUuid(),
   body: "Red Message",
@@ -56,11 +47,11 @@ async function main(): Promise<void> {
 
   const subscriptionClientSqlFilter = ns.createSubscriptionClient(topic, subscriptionSqlFilter);
   await removeAllRules(subscriptionClientSqlFilter);
-  await testAddedRule(subscriptionClientSqlFilter, yellowSqlRule.name, yellowSqlRule.expression);
+  await testAddedRule(subscriptionClientSqlFilter, "YellowSqlRule", "Color = 'Yellow'");
 
   const subscriptionClientCorrelationFilter = ns.createSubscriptionClient(topic, subscriptionCorrelationFilter);
   await removeAllRules(subscriptionClientCorrelationFilter);
-  await testAddedRule(subscriptionClientCorrelationFilter, correlationRule.name, correlationRule.filter);
+  await testAddedRule(subscriptionClientCorrelationFilter, "CorrelationRule", { label: blueMessage.label });
 
   await subscriptionClientNoFilter.close();
   await subscriptionClientSqlFilter.close();
@@ -97,17 +88,15 @@ async function removeAllRules(client: SubscriptionClient): Promise<boolean> {
   return true;
 }
 
-async function testAddedRule(client: SubscriptionClient, ruleName: string, filter: boolean | string | CorrelationFilter): Promise<boolean> {
-  await client.addRule(ruleName, filter);
+async function testAddedRule(client: SubscriptionClient, ruleName: string, filter: boolean | string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
+  await client.addRule(ruleName, filter, sqlRuleActionExpression);
   const rules = await client.getRules();
   if (rules.find((rule) => rule.name === ruleName)) {
     console.log(`Rule ${ruleName} has been added`);
   } else {
     console.log(`Nooooo.... Where is the ${ruleName} rule??`);
-    return false;
+    return;
   }
-
-  return true;
 }
 
 main().then(() => {
