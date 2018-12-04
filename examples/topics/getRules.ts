@@ -29,7 +29,7 @@ async function main(): Promise<void> {
 }
 
 async function getRules(client: SubscriptionClient): Promise<void> {
-  let rules = await client.getRules();
+  const rules = await client.getRules();
   console.log(`${rules.length} rules found for ${client.name}`);
 
   for (let i = 0; i < rules.length; i++) {
