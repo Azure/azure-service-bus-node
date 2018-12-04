@@ -23,8 +23,8 @@ async function sendMessages(queueClient: QueueClient): Promise<void> {
     { name: "Kopernikus", firstName: "Nikolaus" }
   ];
 
-  // Send these messages to the queue
-  data.forEach(async (element) => {
+  for (let index = 0; index < data.length; index++) {
+    const element = data[index];
     const message: SendableMessageInfo = {
       body: `${element.firstName} ${element.name}`,
       label: "Scientist",
@@ -34,7 +34,7 @@ async function sendMessages(queueClient: QueueClient): Promise<void> {
 
     console.log(`Sending ${message.body}`);
     await queueClient.send(message);
-  });
+  }
 }
 
 async function main(): Promise<void> {
@@ -51,13 +51,13 @@ async function main(): Promise<void> {
     console.log(`Retrieved: ${msg[0].body} - ${msg[0].label}`);
   }
 
-  console.log(">>>> Calling close....");
-  await ns.close();
+  await client.close();
 }
 
-main()
-  .then(() => console.log("done"))
-  .catch((err) => {
-    console.log("error: ", err);
-  });
+main().then(() => {
+  console.log(">>>> Calling close....");
+  return ns.close();
+}).catch((err) => {
+  console.log("error: ", err);
+});
 
