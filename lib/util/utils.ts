@@ -147,7 +147,7 @@ export function toBuffer(input: any): Buffer {
   let result: any;
   log.utils("[utils.toBuffer] The given message body that needs to be converted to buffer is: ", input);
   if (isBuffer(input)) {
-    result = input
+    result = input;
   } else {
     // string, undefined, null, boolean, array, object, number should end up here
     // coercing undefined to null as that will ensure that null value will be given to the
