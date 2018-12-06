@@ -124,16 +124,23 @@ export class BatchingReceiver extends MessageReceiver {
 
       // Action to be performed after the max wait time is over.
       actionAfterWaitTimeout = () => {
-        log.batching("[%s] Batching Receiver '%s'  max wait time in seconds %d over.",
-          this._context.namespace.connectionId, this.name, maxWaitTimeInSeconds);
+        log.batching(
+          "[%s] Batching Receiver '%s'  max wait time in seconds %d over.",
+          this._context.namespace.connectionId,
+          this.name,
+          maxWaitTimeInSeconds
+        );
         return finalAction();
       };
 
       // Action to be performed on the "message" event.
       onReceiveMessage = async (context: EventContext) => {
         resetTimerOnNewMessageReceived();
-        const data: ServiceBusMessage = new ServiceBusMessage(this._context,
-          context.message!, context.delivery!);
+        const data: ServiceBusMessage = new ServiceBusMessage(
+          this._context,
+          context.message!,
+          context.delivery!
+        );
         if (brokeredMessages.length < maxMessageCount) {
           brokeredMessages.push(data);
         }

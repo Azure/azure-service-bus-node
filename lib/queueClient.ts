@@ -173,14 +173,15 @@ export class QueueClient extends Client {
   async receiveBatch(
     maxMessageCount: number,
     maxWaitTimeInSeconds?: number,
-    maxMessageWaitTimeoutInSeconds?: number): Promise<ServiceBusMessage[]> {
-
+    maxMessageWaitTimeoutInSeconds?: number
+  ): Promise<ServiceBusMessage[]> {
     let bReceiver = this._context.batchingReceiver;
-    if (bReceiver
-      && bReceiver.isOpen()
-      && bReceiver.isReceivingMessages) {
-      const msg = `A "${bReceiver.receiverType}" receiver with id "${bReceiver.name}" has already been ` +
-        `created for the Queue "${this.name}". Another receiveBatch() call cannot be made while the ` +
+    if (bReceiver && bReceiver.isOpen() && bReceiver.isReceivingMessages) {
+      const msg =
+        `A "${bReceiver.receiverType}" receiver with id "${bReceiver.name}" has already been ` +
+        `created for the Queue "${
+          this.name
+        }". Another receiveBatch() call cannot be made while the ` +
         `previous one is active. Please wait for the previous receiveBatch() to complete and ` +
         `then call receiveBatch() again.`;
       throw new Error(msg);
@@ -195,12 +196,21 @@ export class QueueClient extends Client {
     }
 
     try {
-      return await bReceiver.receive(maxMessageCount, maxWaitTimeInSeconds,
-        maxMessageWaitTimeoutInSeconds);
+      return await bReceiver.receive(
+        maxMessageCount,
+        maxWaitTimeInSeconds,
+        maxMessageWaitTimeoutInSeconds
+      );
     } catch (err) {
-      log.error("[%s] Receiver '%s', an error occurred while receiving %d messages for %d " +
-        "max time:\n %O", this._context.namespace.connectionId, bReceiver.name, maxMessageCount,
-        maxWaitTimeInSeconds, err);
+      log.error(
+        "[%s] Receiver '%s', an error occurred while receiving %d messages for %d " +
+          "max time:\n %O",
+        this._context.namespace.connectionId,
+        bReceiver.name,
+        maxMessageCount,
+        maxWaitTimeInSeconds,
+        err
+      );
       throw err;
     }
   }

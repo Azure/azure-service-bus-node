@@ -9,7 +9,7 @@ import { BatchingReceiver } from "./core/batchingReceiver";
 import { ServiceBusMessage, ReceivedMessageInfo } from "./serviceBusMessage";
 import { Client } from "./client";
 import { ReceiveMode } from "./core/messageReceiver";
-import { CorrelationFilter, RuleDescription } from './core/managementClient';
+import { CorrelationFilter, RuleDescription } from "./core/managementClient";
 
 /**
  * Describes the options that can be provided while creating the SubscriptionClient.
@@ -146,14 +146,15 @@ export class SubscriptionClient extends Client {
   async receiveBatch(
     maxMessageCount: number,
     maxWaitTimeInSeconds?: number,
-    maxMessageWaitTimeoutInSeconds?: number): Promise<ServiceBusMessage[]> {
-
+    maxMessageWaitTimeoutInSeconds?: number
+  ): Promise<ServiceBusMessage[]> {
     let bReceiver = this._context.batchingReceiver;
-    if (bReceiver
-      && bReceiver.isOpen()
-      && bReceiver.isReceivingMessages) {
-      const msg = `A "${bReceiver.receiverType}" receiver with id "${bReceiver.name}" has already been ` +
-        `created for the Subscription "${this.name}". Another receiveBatch() call cannot be made while the ` +
+    if (bReceiver && bReceiver.isOpen() && bReceiver.isReceivingMessages) {
+      const msg =
+        `A "${bReceiver.receiverType}" receiver with id "${bReceiver.name}" has already been ` +
+        `created for the Subscription "${
+          this.name
+        }". Another receiveBatch() call cannot be made while the ` +
         `previous one is active. Please wait for the previous receiveBatch() to complete and ` +
         `then call receiveBatch() again.`;
       throw new Error(msg);
@@ -168,12 +169,21 @@ export class SubscriptionClient extends Client {
     }
 
     try {
-      return await bReceiver.receive(maxMessageCount, maxWaitTimeInSeconds,
-        maxMessageWaitTimeoutInSeconds);
+      return await bReceiver.receive(
+        maxMessageCount,
+        maxWaitTimeInSeconds,
+        maxMessageWaitTimeoutInSeconds
+      );
     } catch (err) {
-      log.error("[%s] Receiver '%s', an error occurred while receiving %d messages for %d " +
-        "max time:\n %O", this._context.namespace.connectionId, bReceiver.name, maxMessageCount,
-        maxWaitTimeInSeconds, err);
+      log.error(
+        "[%s] Receiver '%s', an error occurred while receiving %d messages for %d " +
+          "max time:\n %O",
+        this._context.namespace.connectionId,
+        bReceiver.name,
+        maxMessageCount,
+        maxWaitTimeInSeconds,
+        err
+      );
       throw err;
     }
   }
@@ -283,19 +293,22 @@ export class SubscriptionClient extends Client {
     return this._context.managementClient!.removeRule(ruleName);
   }
 
-
   /**
    * Adds a rule on the subscription as defined by the given rule name, filter and action.
    * Remember to remove the default true filter on the subscription before adding a rule,
    * otherwise, the added rule will have no affect as the true filter will always result in
    * the subscription receiving all messages.
    * @param ruleName Name of the rule
-   * @param filter A Boolean, SQL expression or a Correlation filter. For SQL Filter syntax, see 
+   * @param filter A Boolean, SQL expression or a Correlation filter. For SQL Filter syntax, see
    * {@link https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-sql-filter SQLFilter syntax}.
-   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression. For SQL Rule Action syntax, 
+   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression. For SQL Rule Action syntax,
    * see {@link https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-sql-rule-action SQLRuleAction syntax}.
    */
-  async addRule(ruleName: string, filter: boolean | string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
+  async addRule(
+    ruleName: string,
+    filter: boolean | string | CorrelationFilter,
+    sqlRuleActionExpression?: string
+  ): Promise<void> {
     return this._context.managementClient!.addRule(ruleName, filter, sqlRuleActionExpression);
   }
 
