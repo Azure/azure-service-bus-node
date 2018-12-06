@@ -2,15 +2,33 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 export {
-  ConnectionConfig, TokenInfo, TokenType, TokenProvider, DataTransformer, DefaultDataTransformer,
-  parseConnectionString, ServiceBusConnectionStringModel, delay, Timeout, MessagingError
+  ConnectionConfig,
+  TokenInfo,
+  TokenType,
+  TokenProvider,
+  DataTransformer,
+  DefaultDataTransformer,
+  parseConnectionString,
+  ServiceBusConnectionStringModel,
+  delay,
+  Timeout,
+  MessagingError
 } from "@azure/amqp-common";
 export {
-  AmqpError, Delivery, Dictionary, MessageProperties, MessageHeader, generate_uuid as generateUuid
+  AmqpError,
+  Delivery,
+  Dictionary,
+  MessageProperties,
+  MessageHeader,
+  generate_uuid as generateUuid
 } from "rhea-promise";
 export {
-  ServiceBusMessage, ReceivedMessageInfo, SendableMessageInfo, ServiceBusDeliveryAnnotations,
-  ServiceBusMessageAnnotations, DeadLetterOptions
+  ServiceBusMessage,
+  ReceivedMessageInfo,
+  SendableMessageInfo,
+  ServiceBusDeliveryAnnotations,
+  ServiceBusMessageAnnotations,
+  DeadLetterOptions
 } from "./serviceBusMessage";
 export { ReceiveHandler, MessageHandlerOptions } from "./core/streamingReceiver";
 export { OnError, OnMessage, ReceiveMode } from "./core/messageReceiver";
@@ -19,4 +37,4 @@ export { QueueClientOptions, QueueClient } from "./queueClient";
 export { Namespace, NamespaceOptions } from "./namespace";
 export { TopicClient } from "./topicClient";
 export { SubscriptionClient, SubscriptionClientOptions } from "./subscriptionClient";
-export { ScheduleMessage } from "./core/managementClient";
+export { ScheduleMessage, SQLExpression, CorrelationFilter, RuleDescription } from "./core/managementClient";
