@@ -6,7 +6,11 @@ import { Constants, translate, MessagingError } from "@azure/amqp-common";
 import { ReceiverEvents, EventContext, OnAmqpEvent, SessionEvents } from "rhea-promise";
 import { ServiceBusMessage } from "../serviceBusMessage";
 import {
-  MessageReceiver, ReceiveOptions, ReceiverType, PromiseLike, OnAmqpEventAsPromise
+  MessageReceiver,
+  ReceiveOptions,
+  ReceiverType,
+  PromiseLike,
+  OnAmqpEventAsPromise
 } from "./messageReceiver";
 import { ClientEntityContext } from "../clientEntityContext";
 
@@ -17,7 +21,6 @@ import { ClientEntityContext } from "../clientEntityContext";
  * @extends MessageReceiver
  */
 export class BatchingReceiver extends MessageReceiver {
-
   /**
    * @property {boolean} isReceivingMessages Indicates whether the link is actively receiving
    * messages. Default: false.
@@ -50,12 +53,15 @@ export class BatchingReceiver extends MessageReceiver {
    * - **Default**: `2` seconds.
    * @returns {Promise<ServiceBusMessage[]>} A promise that resolves with an array of Message objects.
    */
-  receive(maxMessageCount: number,
+  receive(
+    maxMessageCount: number,
     maxWaitTimeInSeconds?: number,
-    maxMessageWaitTimeoutInSeconds?: number): Promise<ServiceBusMessage[]> {
-    if (!maxMessageCount || (maxMessageCount && typeof maxMessageCount !== 'number')) {
-      throw new Error("'maxMessageCount' is a required parameter of type number with a value " +
-        "greater than 0.");
+    maxMessageWaitTimeoutInSeconds?: number
+  ): Promise<ServiceBusMessage[]> {
+    if (!maxMessageCount || (maxMessageCount && typeof maxMessageCount !== "number")) {
+      throw new Error(
+        "'maxMessageCount' is a required parameter of type number with a value " + "greater than 0."
+      );
     }
 
     if (maxWaitTimeInSeconds == undefined) {
@@ -90,15 +96,19 @@ export class BatchingReceiver extends MessageReceiver {
         clearTimeout(waitTimer);
         resetCreditWindow();
         this.isReceivingMessages = false;
-        log.batching("[%s] Resolving the promise with received list of messages: %O.",
-          this._context.namespace.connectionId, brokeredMessages);
+        log.batching(
+          "[%s] Resolving the promise with received list of messages: %O.",
+          this._context.namespace.connectionId,
+          brokeredMessages
+        );
         resolve(brokeredMessages);
       };
 
       const resetTimerOnNewMessageReceived = () => {
         if (maxMessageWaitTimer) clearTimeout(maxMessageWaitTimer);
         maxMessageWaitTimer = setTimeout(() => {
-          const msg = `BatchingReceiver '${this.name}' did not receive any messages in the last ` +
+          const msg =
+            `BatchingReceiver '${this.name}' did not receive any messages in the last ` +
             `${maxMessageWaitTimeoutInSeconds} seconds. Hence ending this batch receive operation.`;
           log.error("[%s] %s", this._context.namespace.connectionId, msg);
           finalAction();
@@ -107,8 +117,12 @@ export class BatchingReceiver extends MessageReceiver {
 
       // Action to be performed after the max wait time is over.
       const actionAfterWaitTimeout = () => {
-        log.batching("[%s] Batching Receiver '%s'  max wait time in seconds %d over.",
-          this._context.namespace.connectionId, this.name, maxWaitTimeInSeconds);
+        log.batching(
+          "[%s] Batching Receiver '%s'  max wait time in seconds %d over.",
+          this._context.namespace.connectionId,
+          this.name,
+          maxWaitTimeInSeconds
+        );
         return finalAction();
       };
 
@@ -116,8 +130,11 @@ export class BatchingReceiver extends MessageReceiver {
       const onReceiveMessage: OnAmqpEventAsPromise = async (context: EventContext) => {
         try {
           resetTimerOnNewMessageReceived();
-          const data: ServiceBusMessage = new ServiceBusMessage(this._context,
-            context.message!, context.delivery!);
+          const data: ServiceBusMessage = new ServiceBusMessage(
+            this._context,
+            context.message!,
+            context.delivery!
+          );
           if (brokeredMessages.length < maxMessageCount) {
             brokeredMessages.push(data);
           }
@@ -125,8 +142,12 @@ export class BatchingReceiver extends MessageReceiver {
             finalAction();
           }
         } catch (err) {
-          log.error("[%s] Receiver '%s' error in onMessage handler:\n%O",
-            this._context.namespace.connectionId, this.name, translate(err));
+          log.error(
+            "[%s] Receiver '%s' error in onMessage handler:\n%O",
+            this._context.namespace.connectionId,
+            this.name,
+            translate(err)
+          );
         }
       };
 
@@ -142,8 +163,12 @@ export class BatchingReceiver extends MessageReceiver {
         let error = new MessagingError("An error occuured while receiving messages.");
         if (receiverError) {
           error = translate(receiverError);
-          log.error("[%s] Receiver '%s' received an error:\n%O",
-            this._context.namespace.connectionId, this.name, error);
+          log.error(
+            "[%s] Receiver '%s' received an error:\n%O",
+            this._context.namespace.connectionId,
+            this.name,
+            error
+          );
         }
         if (waitTimer) {
           clearTimeout(waitTimer);
@@ -159,12 +184,19 @@ export class BatchingReceiver extends MessageReceiver {
           this.isReceivingMessages = false;
           const receiverError = context.receiver && context.receiver.error;
           if (receiverError) {
-            log.error("[%s] 'receiver_close' event occurred. The associated error is: %O",
-              this._context.namespace.connectionId, receiverError);
+            log.error(
+              "[%s] 'receiver_close' event occurred. The associated error is: %O",
+              this._context.namespace.connectionId,
+              receiverError
+            );
           }
         } catch (err) {
-          log.error("[%s] Receiver '%s' error in onClose handler:\n%O",
-            this._context.namespace.connectionId, this.name, translate(err));
+          log.error(
+            "[%s] Receiver '%s' error in onClose handler:\n%O",
+            this._context.namespace.connectionId,
+            this.name,
+            translate(err)
+          );
         }
       };
 
@@ -173,12 +205,20 @@ export class BatchingReceiver extends MessageReceiver {
           this.isReceivingMessages = false;
           const sessionError = context.session && context.session.error;
           if (sessionError) {
-            log.error("[%s] 'session_close' event occurred for receiver '%s'. The associated error is: %O",
-              this._context.namespace.connectionId, this.name, sessionError);
+            log.error(
+              "[%s] 'session_close' event occurred for receiver '%s'. The associated error is: %O",
+              this._context.namespace.connectionId,
+              this.name,
+              sessionError
+            );
           }
         } catch (err) {
-          log.error("[%s] Receiver '%s' error in onSessionClose handler:\n%O",
-            this._context.namespace.connectionId, this.name, translate(err));
+          log.error(
+            "[%s] Receiver '%s' error in onSessionClose handler:\n%O",
+            this._context.namespace.connectionId,
+            this.name,
+            translate(err)
+          );
         }
       };
 
@@ -192,8 +232,12 @@ export class BatchingReceiver extends MessageReceiver {
         let error = new MessagingError("An error occuured while receiving messages.");
         if (sessionError) {
           error = translate(sessionError);
-          log.error("[%s] 'session_close' event occurred for Receiver '%s' received an error:\n%O",
-            this._context.namespace.connectionId, this.name, error);
+          log.error(
+            "[%s] 'session_close' event occurred for Receiver '%s' received an error:\n%O",
+            this._context.namespace.connectionId,
+            this.name,
+            error
+          );
         }
         if (waitTimer) {
           clearTimeout(waitTimer);
@@ -211,16 +255,29 @@ export class BatchingReceiver extends MessageReceiver {
           const id = delivery.id;
           const state = delivery.remote_state;
           const settled = delivery.remote_settled;
-          log.receiver("[%s] Delivery with id %d, remote_settled: %s, remote_state: %o has been " +
-            "received.", connectionId, id, settled, state && state.error ? state.error : state);
+          log.receiver(
+            "[%s] Delivery with id %d, remote_settled: %s, remote_state: %o has been " +
+              "received.",
+            connectionId,
+            id,
+            settled,
+            state && state.error ? state.error : state
+          );
           if (settled && this._deliveryDispositionMap.has(id)) {
             const promise = this._deliveryDispositionMap.get(id) as PromiseLike;
             clearTimeout(promise.timer);
-            log.receiver("[%s] Found the delivery with id %d in the map and cleared the timer.",
-              connectionId, id);
+            log.receiver(
+              "[%s] Found the delivery with id %d in the map and cleared the timer.",
+              connectionId,
+              id
+            );
             const deleteResult = this._deliveryDispositionMap.delete(id);
-            log.receiver("[%s] Successfully deleted the delivery with id %d from the map.",
-              connectionId, id, deleteResult);
+            log.receiver(
+              "[%s] Successfully deleted the delivery with id %d from the map.",
+              connectionId,
+              id,
+              deleteResult
+            );
             if (state && state.error && (state.error.condition || state.error.description)) {
               const error = translate(state.error);
               return promise.reject(error);
@@ -232,8 +289,12 @@ export class BatchingReceiver extends MessageReceiver {
       };
 
       const addCreditAndSetTimer = (reuse?: boolean) => {
-        log.batching("[%s] Receiver '%s', adding credit for receiving %d messages.",
-          this._context.namespace.connectionId, this.name, maxMessageCount);
+        log.batching(
+          "[%s] Receiver '%s', adding credit for receiving %d messages.",
+          this._context.namespace.connectionId,
+          this.name,
+          maxMessageCount
+        );
         // By adding credit here, we let the service know that at max we can handle `maxMessageCount`
         // number of messages concurrently. We will return the user an array of messages that can
         // be of size upto maxMessageCount. Then the user needs to accordingly dispose
@@ -257,8 +318,11 @@ export class BatchingReceiver extends MessageReceiver {
       };
 
       if (!this.isOpen()) {
-        log.batching("[%s] Receiver '%s', setting max concurrent calls to 0.",
-          this._context.namespace.connectionId, this.name);
+        log.batching(
+          "[%s] Receiver '%s', setting max concurrent calls to 0.",
+          this._context.namespace.connectionId,
+          this.name
+        );
         // while creating the receiver link for batching receiver the max concurrent calls
         // i.e. the credit_window on the link is set to zero. After the link is created
         // successfully, we add credit which is the maxMessageCount specified by the user.
@@ -271,7 +335,9 @@ export class BatchingReceiver extends MessageReceiver {
           onClose: onReceiveClose,
           onSessionClose: onSessionClose
         });
-        this._init(rcvrOptions).then(() => addCreditAndSetTimer()).catch(reject);
+        this._init(rcvrOptions)
+          .then(() => addCreditAndSetTimer())
+          .catch(reject);
       } else {
         addCreditAndSetTimer(true);
         this._receiver!.on(ReceiverEvents.message, onReceiveMessage);
