@@ -73,7 +73,7 @@ export class BatchingReceiver extends MessageReceiver {
     }
 
     const brokeredMessages: ServiceBusMessage[] = [];
-    let timeOver = false;
+
     this.isReceivingMessages = true;
     return new Promise<ServiceBusMessage[]>((resolve, reject) => {
       let onReceiveMessage: OnAmqpEventAsPromise;
@@ -90,7 +90,7 @@ export class BatchingReceiver extends MessageReceiver {
         this._receiver!.addCredit(0);
       };
       // Final action to be performed after maxMessageCount is reached or the maxWaitTime is over.
-      const finalAction = (timeOver: boolean, data?: ServiceBusMessage) => {
+      const finalAction = () => {
         if (maxMessageWaitTimer) {
           clearTimeout(maxMessageWaitTimer);
         }
@@ -99,14 +99,8 @@ export class BatchingReceiver extends MessageReceiver {
           this._receiver.removeListener(ReceiverEvents.receiverError, onReceiveError);
           this._receiver.removeListener(ReceiverEvents.message, onReceiveMessage);
         }
-        if (!data) {
-          data = brokeredMessages.length
-            ? brokeredMessages[brokeredMessages.length - 1]
-            : undefined;
-        }
-        if (!timeOver) {
-          clearTimeout(waitTimer);
-        }
+
+        clearTimeout(waitTimer);
         resetCreditWindow();
         this.isReceivingMessages = false;
         log.batching(
@@ -124,35 +118,27 @@ export class BatchingReceiver extends MessageReceiver {
             `BatchingReceiver '${this.name}' did not receive any messages in the last ` +
             `${maxMessageWaitTimeoutInSeconds} seconds. Hence ending this batch receive operation.`;
           log.error("[%s] %s", this._context.namespace.connectionId, msg);
-          finalAction(true);
+          finalAction();
         }, maxMessageWaitTimeoutInSeconds! * 1000);
       };
 
       // Action to be performed after the max wait time is over.
       actionAfterWaitTimeout = () => {
-        timeOver = true;
-        log.batching(
-          "[%s] Batching Receiver '%s'  max wait time in seconds %d over.",
-          this._context.namespace.connectionId,
-          this.name,
-          maxWaitTimeInSeconds
-        );
-        return finalAction(timeOver);
+        log.batching("[%s] Batching Receiver '%s'  max wait time in seconds %d over.",
+          this._context.namespace.connectionId, this.name, maxWaitTimeInSeconds);
+        return finalAction();
       };
 
       // Action to be performed on the "message" event.
       onReceiveMessage = async (context: EventContext) => {
         resetTimerOnNewMessageReceived();
-        const data: ServiceBusMessage = new ServiceBusMessage(
-          this._context,
-          context.message!,
-          context.delivery!
-        );
-        if (brokeredMessages.length <= maxMessageCount) {
+        const data: ServiceBusMessage = new ServiceBusMessage(this._context,
+          context.message!, context.delivery!);
+        if (brokeredMessages.length < maxMessageCount) {
           brokeredMessages.push(data);
         }
         if (brokeredMessages.length === maxMessageCount) {
-          finalAction(timeOver, data);
+          finalAction();
         }
       };
 

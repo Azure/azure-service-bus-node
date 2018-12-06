@@ -9,6 +9,7 @@ import { BatchingReceiver } from "./core/batchingReceiver";
 import { ServiceBusMessage, ReceivedMessageInfo } from "./serviceBusMessage";
 import { Client } from "./client";
 import { ReceiveMode } from "./core/messageReceiver";
+import { CorrelationFilter, RuleDescription } from './core/managementClient';
 
 /**
  * Describes the options that can be provided while creating the SubscriptionClient.
@@ -36,6 +37,11 @@ export class SubscriptionClient extends Client {
    * Default: ReceiveMode.peekLock
    */
   receiveMode: ReceiveMode;
+
+  /**
+   * @property {string} defaultRuleName Name of the default rule on the subscription.
+   */
+  readonly defaultRuleName: string = "$Default";
 
   /**
    * Instantiates a client pointing to the ServiceBus Subscription given by this configuration.
@@ -140,45 +146,35 @@ export class SubscriptionClient extends Client {
   async receiveBatch(
     maxMessageCount: number,
     maxWaitTimeInSeconds?: number,
-    maxMessageWaitTimeoutInSeconds?: number
-  ): Promise<ServiceBusMessage[]> {
-    if (
-      !this._context.batchingReceiver ||
-      (this._context.batchingReceiver && !this._context.batchingReceiver.isOpen()) ||
-      (this._context.batchingReceiver && !this._context.batchingReceiver.isReceivingMessages)
-    ) {
+    maxMessageWaitTimeoutInSeconds?: number): Promise<ServiceBusMessage[]> {
+
+    let bReceiver = this._context.batchingReceiver;
+    if (bReceiver
+      && bReceiver.isOpen()
+      && bReceiver.isReceivingMessages) {
+      const msg = `A "${bReceiver.receiverType}" receiver with id "${bReceiver.name}" has already been ` +
+        `created for the Subscription "${this.name}". Another receiveBatch() call cannot be made while the ` +
+        `previous one is active. Please wait for the previous receiveBatch() to complete and ` +
+        `then call receiveBatch() again.`;
+      throw new Error(msg);
+    }
+
+    if (!bReceiver || !bReceiver.isOpen()) {
       const options: ReceiveOptions = {
         maxConcurrentCalls: 0,
         receiveMode: this.receiveMode
       };
-      const bReceiver: BatchingReceiver = BatchingReceiver.create(this._context, options);
-      this._context.batchingReceiver = bReceiver;
-      try {
-        return await bReceiver.receive(
-          maxMessageCount,
-          maxWaitTimeInSeconds,
-          maxMessageWaitTimeoutInSeconds
-        );
-      } catch (err) {
-        log.error(
-          "[%s] Receiver '%s', an error occurred while receiving %d messages for %d " +
-            "max time:\n %O",
-          this._context.namespace.connectionId,
-          bReceiver.name,
-          maxMessageCount,
-          maxWaitTimeInSeconds,
-          err
-        );
-        throw err;
-      }
-    } else {
-      const rcvr = this._context.batchingReceiver;
-      const msg =
-        `A "${rcvr.receiverType}" receiver with id "${rcvr.name}" has already been ` +
-        `created for the Subscription "${this.name}". Another receiveBatch() call cannot be made` +
-        `while the previous one is active. Please wait for the previous receiveBatch() to complete` +
-        `and then call receiveBatch() again.`;
-      throw new Error(msg);
+      this._context.batchingReceiver = bReceiver = BatchingReceiver.create(this._context, options);
+    }
+
+    try {
+      return await bReceiver.receive(maxMessageCount, maxWaitTimeInSeconds,
+        maxMessageWaitTimeoutInSeconds);
+    } catch (err) {
+      log.error("[%s] Receiver '%s', an error occurred while receiving %d messages for %d " +
+        "max time:\n %O", this._context.namespace.connectionId, bReceiver.name, maxMessageCount,
+        maxWaitTimeInSeconds, err);
+      throw err;
     }
   }
 
@@ -269,4 +265,39 @@ export class SubscriptionClient extends Client {
       this.receiveMode
     );
   }
+
+  //#region topic-filters
+
+  /**
+   * Get all the rules associated with the subscription
+   */
+  async getRules(): Promise<RuleDescription[]> {
+    return this._context.managementClient!.getRules();
+  }
+
+  /**
+   * Removes the rule on the subscription identified by the given rule name.
+   * @param ruleName
+   */
+  async removeRule(ruleName: string): Promise<void> {
+    return this._context.managementClient!.removeRule(ruleName);
+  }
+
+
+  /**
+   * Adds a rule on the subscription as defined by the given rule name, filter and action.
+   * Remember to remove the default true filter on the subscription before adding a rule,
+   * otherwise, the added rule will have no affect as the true filter will always result in
+   * the subscription receiving all messages.
+   * @param ruleName Name of the rule
+   * @param filter A Boolean, SQL expression or a Correlation filter. For SQL Filter syntax, see 
+   * {@link https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-sql-filter SQLFilter syntax}.
+   * @param sqlRuleActionExpression Action to perform if the message satisfies the filtering expression. For SQL Rule Action syntax, 
+   * see {@link https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-messaging-sql-rule-action SQLRuleAction syntax}.
+   */
+  async addRule(ruleName: string, filter: boolean | string | CorrelationFilter, sqlRuleActionExpression?: string): Promise<void> {
+    return this._context.managementClient!.addRule(ruleName, filter, sqlRuleActionExpression);
+  }
+
+  //#endregion
 }
