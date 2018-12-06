@@ -76,6 +76,11 @@ export class BatchingReceiver extends MessageReceiver {
 
     this.isReceivingMessages = true;
     return new Promise<ServiceBusMessage[]>((resolve, reject) => {
+      let onReceiveMessage: OnAmqpEventAsPromise;
+      let onSessionClose: OnAmqpEventAsPromise;
+      let onReceiveClose: OnAmqpEventAsPromise;
+      let onReceiveError: OnAmqpEvent;
+      let onSessionError: OnAmqpEvent;
       let waitTimer: any;
       let maxMessageWaitTimer: any;
       const resetCreditWindow = () => {
@@ -127,7 +132,7 @@ export class BatchingReceiver extends MessageReceiver {
       };
 
       // Action to be performed on the "message" event.
-      const onReceiveMessage: OnAmqpEventAsPromise = async (context: EventContext) => {
+      onReceiveMessage = async (context: EventContext) => {
         try {
           resetTimerOnNewMessageReceived();
           const data: ServiceBusMessage = new ServiceBusMessage(
@@ -152,7 +157,7 @@ export class BatchingReceiver extends MessageReceiver {
       };
 
       // Action to be taken when an error is received.
-      const onReceiveError: OnAmqpEvent = (context: EventContext) => {
+      onReceiveError = (context: EventContext) => {
         this.isReceivingMessages = false;
         const receiver = this._receiver || context.receiver!;
         receiver.removeListener(ReceiverEvents.receiverError, onReceiveError);
@@ -179,7 +184,7 @@ export class BatchingReceiver extends MessageReceiver {
         reject(error);
       };
 
-      const onReceiveClose: OnAmqpEventAsPromise = async (context: EventContext) => {
+      onReceiveClose = async (context: EventContext) => {
         try {
           this.isReceivingMessages = false;
           const receiverError = context.receiver && context.receiver.error;
@@ -200,7 +205,7 @@ export class BatchingReceiver extends MessageReceiver {
         }
       };
 
-      const onSessionClose: OnAmqpEventAsPromise = async (context: EventContext) => {
+      onSessionClose = async (context: EventContext) => {
         try {
           this.isReceivingMessages = false;
           const sessionError = context.session && context.session.error;
@@ -222,7 +227,7 @@ export class BatchingReceiver extends MessageReceiver {
         }
       };
 
-      const onSessionError: OnAmqpEvent = (context: EventContext) => {
+      onSessionError = (context: EventContext) => {
         this.isReceivingMessages = false;
         const receiver = this._receiver || context.receiver!;
         receiver.removeListener(ReceiverEvents.receiverError, onReceiveError);
