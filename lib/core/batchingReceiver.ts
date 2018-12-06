@@ -2,7 +2,7 @@
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
 import * as log from "../log";
-import { Func, Constants, translate, MessagingError } from "@azure/amqp-common";
+import { Constants, translate, MessagingError } from "@azure/amqp-common";
 import { ReceiverEvents, EventContext, OnAmqpEvent, SessionEvents } from "rhea-promise";
 import { ServiceBusMessage } from "../serviceBusMessage";
 import {
@@ -70,15 +70,8 @@ export class BatchingReceiver extends MessageReceiver {
 
     this.isReceivingMessages = true;
     return new Promise<ServiceBusMessage[]>((resolve, reject) => {
-      let onReceiveMessage: OnAmqpEventAsPromise;
-      let onSessionClose: OnAmqpEventAsPromise;
-      let onReceiveClose: OnAmqpEventAsPromise;
-      let onReceiveError: OnAmqpEvent;
-      let onSessionError: OnAmqpEvent;
-      let onSettled: OnAmqpEvent;
       let waitTimer: any;
       let maxMessageWaitTimer: any;
-      let actionAfterWaitTimeout: Func<void, void>;
       const resetCreditWindow = () => {
         this._receiver!.setCreditWindow(0);
         this._receiver!.addCredit(0);
@@ -113,27 +106,32 @@ export class BatchingReceiver extends MessageReceiver {
       };
 
       // Action to be performed after the max wait time is over.
-      actionAfterWaitTimeout = () => {
+      const actionAfterWaitTimeout = () => {
         log.batching("[%s] Batching Receiver '%s'  max wait time in seconds %d over.",
           this._context.namespace.connectionId, this.name, maxWaitTimeInSeconds);
         return finalAction();
       };
 
       // Action to be performed on the "message" event.
-      onReceiveMessage = async (context: EventContext) => {
-        resetTimerOnNewMessageReceived();
-        const data: ServiceBusMessage = new ServiceBusMessage(this._context,
-          context.message!, context.delivery!);
-        if (brokeredMessages.length < maxMessageCount) {
-          brokeredMessages.push(data);
-        }
-        if (brokeredMessages.length === maxMessageCount) {
-          finalAction();
+      const onReceiveMessage: OnAmqpEventAsPromise = async (context: EventContext) => {
+        try {
+          resetTimerOnNewMessageReceived();
+          const data: ServiceBusMessage = new ServiceBusMessage(this._context,
+            context.message!, context.delivery!);
+          if (brokeredMessages.length < maxMessageCount) {
+            brokeredMessages.push(data);
+          }
+          if (brokeredMessages.length === maxMessageCount) {
+            finalAction();
+          }
+        } catch (err) {
+          log.error("[%s] Receiver '%s' error in onMessage handler:\n%O",
+            this._context.namespace.connectionId, this.name, translate(err));
         }
       };
 
       // Action to be taken when an error is received.
-      onReceiveError = (context: EventContext) => {
+      const onReceiveError: OnAmqpEvent = (context: EventContext) => {
         this.isReceivingMessages = false;
         const receiver = this._receiver || context.receiver!;
         receiver.removeListener(ReceiverEvents.receiverError, onReceiveError);
@@ -156,25 +154,35 @@ export class BatchingReceiver extends MessageReceiver {
         reject(error);
       };
 
-      onReceiveClose = async (context: EventContext) => {
-        this.isReceivingMessages = false;
-        const receiverError = context.receiver && context.receiver.error;
-        if (receiverError) {
-          log.error("[%s] 'receiver_close' event occurred. The associated error is: %O",
-            this._context.namespace.connectionId, receiverError);
+      const onReceiveClose: OnAmqpEventAsPromise = async (context: EventContext) => {
+        try {
+          this.isReceivingMessages = false;
+          const receiverError = context.receiver && context.receiver.error;
+          if (receiverError) {
+            log.error("[%s] 'receiver_close' event occurred. The associated error is: %O",
+              this._context.namespace.connectionId, receiverError);
+          }
+        } catch (err) {
+          log.error("[%s] Receiver '%s' error in onClose handler:\n%O",
+            this._context.namespace.connectionId, this.name, translate(err));
         }
       };
 
-      onSessionClose = async (context: EventContext) => {
-        this.isReceivingMessages = false;
-        const sessionError = context.session && context.session.error;
-        if (sessionError) {
-          log.error("[%s] 'session_close' event occurred for receiver '%s'. The associated error is: %O",
-            this._context.namespace.connectionId, this.name, sessionError);
+      const onSessionClose: OnAmqpEventAsPromise = async (context: EventContext) => {
+        try {
+          this.isReceivingMessages = false;
+          const sessionError = context.session && context.session.error;
+          if (sessionError) {
+            log.error("[%s] 'session_close' event occurred for receiver '%s'. The associated error is: %O",
+              this._context.namespace.connectionId, this.name, sessionError);
+          }
+        } catch (err) {
+          log.error("[%s] Receiver '%s' error in onSessionClose handler:\n%O",
+            this._context.namespace.connectionId, this.name, translate(err));
         }
       };
 
-      onSessionError = (context: EventContext) => {
+      const onSessionError: OnAmqpEvent = (context: EventContext) => {
         this.isReceivingMessages = false;
         const receiver = this._receiver || context.receiver!;
         receiver.removeListener(ReceiverEvents.receiverError, onReceiveError);
@@ -196,7 +204,7 @@ export class BatchingReceiver extends MessageReceiver {
         reject(error);
       };
 
-      onSettled = (context: EventContext) => {
+      const onSettled: OnAmqpEvent = (context: EventContext) => {
         const connectionId = this._context.namespace.connectionId;
         const delivery = context.delivery;
         if (delivery) {
@@ -255,13 +263,13 @@ export class BatchingReceiver extends MessageReceiver {
         // i.e. the credit_window on the link is set to zero. After the link is created
         // successfully, we add credit which is the maxMessageCount specified by the user.
         this.maxConcurrentCalls = 0;
-        const rcvrOptions = this._createReceiverOptions({
-          onMessage: (context: EventContext) => onReceiveMessage(context).catch(() => { /* */ }),
+        const rcvrOptions = this._createReceiverOptions(false, {
+          onMessage: onReceiveMessage,
           onError: onReceiveError,
           onSessionError: onSessionError,
           onSettled: onSettled,
-          onClose: (context: EventContext) => onReceiveClose(context).catch(() => { /* */ }),
-          onSessionClose: (context: EventContext) => onSessionClose(context).catch(() => { /* */ })
+          onClose: onReceiveClose,
+          onSessionClose: onSessionClose
         });
         this._init(rcvrOptions).then(() => addCreditAndSetTimer()).catch(reject);
       } else {
