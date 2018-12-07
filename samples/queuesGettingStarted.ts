@@ -13,8 +13,7 @@ async function main(): Promise<void> {
 }
 
 async function sendMessage(): Promise<void> {
-  let nsSend: Namespace;
-  nsSend = Namespace.createFromConnectionString(str);
+  const nsSend = Namespace.createFromConnectionString(str);
   const sendClient = nsSend.createQueueClient(path);
   var data = [
     { name: "Einstein", firstName: "Albert" },
@@ -41,20 +40,18 @@ async function sendMessage(): Promise<void> {
     }
     console.log("\n>>>>>> Total Sent messages: %d\n", data.length);
   } catch (err) {
-    console.log("Sending error", err);
+    console.log("Error while sending", err);
   }
   return nsSend.close();
 }
 
 async function receiveMessage(): Promise<void> {
-  let nsRcv: Namespace;
-  nsRcv = Namespace.createFromConnectionString(str);
+  const nsRcv = Namespace.createFromConnectionString(str);
   const receiveClient = nsRcv.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
   try {
     const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
       if (brokeredMessage.label === 'Scientist' &&
         brokeredMessage.contentType === 'application/json') {
-
         console.log("Message Received:", brokeredMessage.body ? brokeredMessage.body.toString() : null);
       }
       await brokeredMessage.complete();
@@ -66,13 +63,13 @@ async function receiveMessage(): Promise<void> {
     await delay(10000);
     await rcvHandler.stop();
   } catch (err) {
-    console.log("Receiving error: ", err);
+    console.log("Error while receiving: ", err);
   }
   return nsRcv.close();
 }
 
 main().then(() => {
-  console.log(">>>> sample Done!!!!");
+  console.log("\n>>>> sample Done!!!!");
 }).catch((err) => {
   console.log("error: ", err);
 });
