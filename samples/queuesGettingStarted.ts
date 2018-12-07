@@ -7,14 +7,13 @@ const path = process.env.QUEUE_NAME || "";
 console.log("str: ", str);
 console.log("path: ", path);
 
-let nsSend: Namespace;
-let nsRcv: Namespace;
 async function main(): Promise<void> {
   await sendMessage();
   await receiveMessage();
 }
 
 async function sendMessage(): Promise<void> {
+  let nsSend: Namespace;
   nsSend = Namespace.createFromConnectionString(str);
   const sendClient = nsSend.createQueueClient(path);
   var data = [
@@ -29,43 +28,51 @@ async function sendMessage(): Promise<void> {
     { name: "Kepler", firstName: "Johannes" },
     { name: "Kopernikus", firstName: "Nikolaus" }
   ];
-
-  for (let i = 0; i < data.length; i++) {
-    var message = {
-      body: JSON.stringify(data[i]),
-      contentType: "application/json",
-      label: "Scientist",
-      messageId: generateUuid(),
+  try {
+    for (let i = 0; i < data.length; i++) {
+      var message = {
+        body: JSON.stringify(data[i]),
+        contentType: "application/json",
+        label: "Scientist",
+        messageId: generateUuid(),
+      }
+      await sendClient.send(message);
+      console.log("Sent message number:", i + 1);
     }
-    await sendClient.send(message);
-    console.log("Sent message number:", i + 1);
+    console.log("\n>>>>>> Total Sent messages: %d\n", data.length);
+  } catch (err) {
+    console.log("Sending error", err);
   }
-  console.log("\n>>>>>> Total Sent messages: %d\n", data.length);
+  return nsSend.close();
 }
 
 async function receiveMessage(): Promise<void> {
+  let nsRcv: Namespace;
   nsRcv = Namespace.createFromConnectionString(str);
   const receiveClient = nsRcv.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
-  const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    if (brokeredMessage.label != null &&
-      brokeredMessage.contentType != null &&
-      brokeredMessage.label === 'Scientist' &&
-      brokeredMessage.contentType === 'application/json') {
+  try {
+    const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
+      if (brokeredMessage.label === 'Scientist' &&
+        brokeredMessage.contentType === 'application/json') {
 
-      console.log("Message Received:", brokeredMessage.body ? brokeredMessage.body.toString() : null);
+        console.log("Message Received:", brokeredMessage.body ? brokeredMessage.body.toString() : null);
+      }
+      await brokeredMessage.complete();
     }
-    await brokeredMessage.complete();
+    const onError: OnError = (err: MessagingError | Error) => {
+      console.log(">>>>> Error occurred: ", err);
+    };
+    const rcvHandler = receiveClient.receive(onMessage, onError, { autoComplete: false });
+    await delay(10000);
+    await rcvHandler.stop();
+  } catch (err) {
+    console.log("Receiving error: ", err);
   }
-  const onError: OnError = (err: MessagingError | Error) => {
-    console.log(">>>>> Error occurred: ", err);
-  };
-  const rcvHandler = receiveClient.receive(onMessage, onError, { autoComplete: false });
-  await delay(30000);
-  await rcvHandler.stop();
+  return nsRcv.close();
 }
 
 main().then(() => {
-  console.log(">>>> Calling close....");
+  console.log(">>>> sample Done!!!!");
 }).catch((err) => {
   console.log("error: ", err);
 });
