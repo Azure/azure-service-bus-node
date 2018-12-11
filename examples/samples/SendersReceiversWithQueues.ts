@@ -64,21 +64,21 @@ async function main(): Promise<void> {
   // retrieve all the messages that were sent to the queue (10 messages)
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     try {
-      if (received <= 10) {
+      if (received < 10) {
         console.log(
           "### Actual message:",
           brokeredMessage.body ? brokeredMessage.body.toString() : undefined
         );
 
+        // we received a message
+        received++;
+
         // mark the message as completed
         await brokeredMessage.complete();
       }
     } finally {
-      // we received a message
-      received++;
-
       if (received >= 10) {
-        console.log("Received 10 messages.");
+        console.log(`Received ${received} messages.`);
         rcvHandler.stop();
       }
     }
