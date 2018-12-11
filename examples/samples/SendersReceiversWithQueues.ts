@@ -1,4 +1,16 @@
-import { ReceiveMode, Namespace, generateUuid, QueueClient, SendableMessageInfo, OnMessage, ServiceBusMessage, OnError, MessagingError, delay, ReceiveHandler } from "../../lib";
+import {
+  ReceiveMode,
+  Namespace,
+  generateUuid,
+  QueueClient,
+  SendableMessageInfo,
+  OnMessage,
+  ServiceBusMessage,
+  OnError,
+  MessagingError,
+  delay,
+  ReceiveHandler
+} from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -51,10 +63,15 @@ async function main(): Promise<void> {
 
   // retrieve all the messages that were sent to the queue (10 messages)
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : undefined);
+    console.log(
+      "### Actual message:",
+      brokeredMessage.body ? brokeredMessage.body.toString() : undefined
+    );
     try {
-      // mark the message as completed
-      await brokeredMessage.complete();
+      if (received <= 10) {
+        // mark the message as completed
+        await brokeredMessage.complete();
+      }
     } finally {
       // we received a message
       received++;
@@ -83,10 +100,11 @@ async function main(): Promise<void> {
   await client.close();
 }
 
-main().then(() => {
-  console.log(">>>> Calling close....");
-  return ns.close();
-}).catch((err) => {
-  console.log("error: ", err);
-});
-
+main()
+  .then(() => {
+    console.log(">>>> Calling close....");
+    return ns.close();
+  })
+  .catch((err) => {
+    console.log("error: ", err);
+  });
