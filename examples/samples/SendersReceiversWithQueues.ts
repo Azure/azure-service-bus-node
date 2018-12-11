@@ -63,20 +63,17 @@ async function main(): Promise<void> {
   // retrieve all the messages that were sent to the queue (10 messages)
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     if (received < 10) {
-      console.log(
-        "### Actual message:",
-        brokeredMessage.body ? brokeredMessage.body.toString() : undefined
-      );
-
-      console.log(`Received: ${received + 1}, message ID: ${brokeredMessage.messageId}`);
       // we received a message
       received++;
 
-      // we should only complete the message if we haven't seen 10 messages yet
-      if (received < 10) {
-        // mark the message as completed
-        await brokeredMessage.complete();
-      }
+      console.log(
+        `### Received message ${received}: ,${
+          brokeredMessage.body ? brokeredMessage.body.toString() : undefined
+        }`
+      );
+
+      // mark the message as completed
+      await brokeredMessage.complete();
     }
   };
 
