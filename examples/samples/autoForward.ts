@@ -14,7 +14,7 @@ let ns: Namespace;
 // You need to setup a queue and a topic
 // The topic needs to have a subcription that will forward the messages from the topic to the queue
 
-// The sample assumes the topoloy described here is already setup.
+// The sample assumes the topology described here is already setup.
 
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   };
 
   console.log("Sending messages");
-  // send 2 duplicated messages
+  // send 2 messages
   await topicSenderClient.send(message1);
   await queueClient.send(message2);
   await topicSenderClient.close();
