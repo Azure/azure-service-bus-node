@@ -58,29 +58,17 @@ async function main(): Promise<void> {
 
   let rcvHandler: ReceiveHandler;
 
-  let received = 0;
-
-  // retrieve all the messages that were sent to the queue (10 messages)
+  // retrieve messages from the queue
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    if (received < 10) {
-      // we received a message
-      received++;
-
-      console.log(
-        `### Received message ${received}: ,${
-          brokeredMessage.body ? brokeredMessage.body.toString() : undefined
-        }`
-      );
-
-      // mark the message as completed
-      await brokeredMessage.complete();
-    }
+    console.log(
+      `### Received message: ${brokeredMessage.body ? brokeredMessage.body.toString() : undefined}`
+    );
   };
 
   const onError: OnError = (err: MessagingError | Error) => {
     console.log(">>>>> Error occurred: ", err);
   };
-  rcvHandler = client.receive(onMessage, onError, { autoComplete: false });
+  rcvHandler = client.receive(onMessage, onError);
 
   // wait 5 seconds
   await delay(5000);
