@@ -58,7 +58,6 @@ async function main(): Promise<void> {
 
   let rcvHandler: ReceiveHandler;
 
-  // Using an object so that we can pass it around by reference
   let received = 0;
 
   // retrieve all the messages that were sent to the queue (10 messages)
