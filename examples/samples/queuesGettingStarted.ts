@@ -47,7 +47,7 @@ async function sendMessage(): Promise<void> {
       await sendClient.send(message);
       console.log("Sent message number:", i + 1);
     }
-    console.log("\n>>>>>> Total Sent messages: %d\n", data.length);
+    console.log("\n>>>>>>> Total Sent messages: %d\n", data.length);
   } catch (err) {
     console.log("Error while sending", err);
   }
