@@ -62,23 +62,20 @@ async function main(): Promise<void> {
 
   // retrieve all the messages that were sent to the queue (10 messages)
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    try {
+    if (received < 10) {
+      console.log(
+        "### Actual message:",
+        brokeredMessage.body ? brokeredMessage.body.toString() : undefined
+      );
+
+      console.log(`Received: ${received + 1}, message ID: ${brokeredMessage.messageId}`);
+      // we received a message
+      received++;
+
+      // we should only complete the message if we haven't seen 10 messages yet
       if (received < 10) {
-        console.log(
-          "### Actual message:",
-          brokeredMessage.body ? brokeredMessage.body.toString() : undefined
-        );
-
-        // we received a message
-        received++;
-
         // mark the message as completed
         await brokeredMessage.complete();
-      }
-    } finally {
-      if (received === 10) {
-        console.log(`Received ${received} messages.`);
-        rcvHandler.stop();
       }
     }
   };
@@ -88,21 +85,19 @@ async function main(): Promise<void> {
   };
   rcvHandler = client.receive(onMessage, onError, { autoComplete: false });
 
-  // wait 30 seconds, or until we receive 10 messages
-  let timeout = 0;
-  while (received < 10 && timeout < 30 * 1000) {
-    console.log(received);
+  // wait 5 seconds
+  await delay(5000);
 
-    await delay(1000);
-    timeout += 1000;
-  }
+  console.log("Stopping the receiver");
+  await rcvHandler.stop();
 
+  console.log("Closing the client");
   await client.close();
 }
 
 main()
   .then(() => {
-    console.log(">>>> Calling close....");
+    console.log("Closing the namespace");
     return ns.close();
   })
   .catch((err) => {
