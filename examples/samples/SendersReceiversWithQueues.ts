@@ -77,7 +77,7 @@ async function main(): Promise<void> {
         await brokeredMessage.complete();
       }
     } finally {
-      if (received >= 10) {
+      if (received === 10) {
         console.log(`Received ${received} messages.`);
         rcvHandler.stop();
       }
