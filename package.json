@@ -16,6 +16,7 @@
     "tslib": "^1.9.3"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "^6.3.0",
     "@types/async-lock": "^1.1.0",
     "@types/chai": "^4.1.6",
     "@types/chai-as-promised": "^7.1.0",
@@ -42,7 +43,8 @@
     "build": "npm run tslint && npm run tsc",
     "test": "npm run build",
     "unit": "nyc --reporter=lcov --reporter=text-lcov mocha -r ts-node/register -t 50000 test/**/*.spec.ts",
-    "prepack": "npm i && npm run build"
+    "prepack": "npm i && npm run build",
+    "extract-api": "api-extractor run --local"
   },
   "homepage": "http://github.com/azure/azure-servcie-bus-node",
   "repository": {
