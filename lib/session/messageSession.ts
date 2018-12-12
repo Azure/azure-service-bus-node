@@ -302,7 +302,7 @@ export class MessageSession extends LinkEntity {
         this._onError(error);
         log.error(
           "[%s] Notified the user's error handler about the error received by the " +
-          "Receiver '%s'.",
+            "Receiver '%s'.",
           this._context.namespace.connectionId,
           this.name
         );
@@ -347,7 +347,7 @@ export class MessageSession extends LinkEntity {
         const sbError = translate(receiverError);
         log.error(
           "[%s] 'receiver_close' event occurred for receiver '%s' for sessionId '%s'. " +
-          "The associated error is: %O",
+            "The associated error is: %O",
           connectionId,
           this.name,
           this.sessionId,
@@ -359,7 +359,7 @@ export class MessageSession extends LinkEntity {
       if (receiver && !receiver.isClosed()) {
         log.error(
           "[%s] 'receiver_close' event occurred on the receiver '%s' for sessionId '%s' " +
-          "and the sdk did not initiate this. Hence, let's gracefully close the receiver.",
+            "and the sdk did not initiate this. Hence, let's gracefully close the receiver.",
           connectionId,
           this.name,
           this.sessionId
@@ -378,7 +378,7 @@ export class MessageSession extends LinkEntity {
       } else {
         log.error(
           "[%s] 'receiver_close' event occurred on the receiver '%s' for sessionId '%s' " +
-          "because the sdk initiated it. Hence no need to gracefully close the receiver",
+            "because the sdk initiated it. Hence no need to gracefully close the receiver",
           connectionId,
           this.name,
           this.sessionId
@@ -394,7 +394,7 @@ export class MessageSession extends LinkEntity {
         const sbError = translate(sessionError);
         log.error(
           "[%s] 'session_close' event occurred for receiver '%s' for sessionId '%s'. " +
-          "The associated error is: %O",
+            "The associated error is: %O",
           connectionId,
           this.name,
           this.sessionId,
@@ -407,7 +407,7 @@ export class MessageSession extends LinkEntity {
       if (receiver && !receiver.isSessionClosed()) {
         log.error(
           "[%s] 'session_close' event occurred on the receiver '%s' for sessionId '%s' " +
-          "and the sdk did not initiate this. Hence, let's gracefully close the receiver.",
+            "and the sdk did not initiate this. Hence, let's gracefully close the receiver.",
           connectionId,
           this.name,
           this.sessionId
@@ -426,7 +426,7 @@ export class MessageSession extends LinkEntity {
       } else {
         log.error(
           "[%s] 'session_close' event occurred on the receiver '%s' for sessionId '%s' " +
-          "because the sdk initiated it. Hence no need to gracefully close the receiver",
+            "because the sdk initiated it. Hence no need to gracefully close the receiver",
           connectionId,
           this.name,
           this.sessionId
@@ -445,7 +445,7 @@ export class MessageSession extends LinkEntity {
       if (this._sessionLockRenewalTimer) clearTimeout(this._sessionLockRenewalTimer);
       log.messageSession(
         "[%s] Cleared the timers for 'no new message received' task and " +
-        "'session lock renewal' task.",
+          "'session lock renewal' task.",
         this._context.namespace.connectionId
       );
       if (this._receiver) {
@@ -493,7 +493,7 @@ export class MessageSession extends LinkEntity {
     if (this._isReceivingMessages) {
       throw new Error(
         `MessageSession '${this.name}' with sessionId '${this.sessionId}' is ` +
-        `already receiving messages.`
+          `already receiving messages.`
       );
     }
     if (typeof onSessionMessage !== "function") {
@@ -526,7 +526,7 @@ export class MessageSession extends LinkEntity {
             try {
               log.error(
                 "[%s] Abandoning the message with id '%s' on the receiver '%s' since " +
-                "an error occured: %O.",
+                  "an error occured: %O.",
                 connectionId,
                 bMessage.messageId,
                 this.name,
@@ -537,7 +537,7 @@ export class MessageSession extends LinkEntity {
               const translatedError = translate(abandonError);
               log.error(
                 "[%s] An error occurred while abandoning the message with id '%s' on the " +
-                "receiver '%s': %O.",
+                  "receiver '%s': %O.",
                 connectionId,
                 bMessage.messageId,
                 this.name,
@@ -564,7 +564,7 @@ export class MessageSession extends LinkEntity {
             const translatedError = translate(completeError);
             log.error(
               "[%s] An error occurred while completing the message with id '%s' on the " +
-              "receiver '%s': %O.",
+                "receiver '%s': %O.",
               connectionId,
               bMessage.messageId,
               this.name,
@@ -604,7 +604,7 @@ export class MessageSession extends LinkEntity {
     if (this._isReceivingMessages) {
       throw new Error(
         `MessageSession '${this.name}' with sessionId '${this.sessionId}' is ` +
-        `already receiving messages.`
+          `already receiving messages.`
       );
     }
 
@@ -731,7 +731,7 @@ export class MessageSession extends LinkEntity {
         this._deliveryDispositionMap.delete(delivery.id);
         log.receiver(
           "[%s] Disposition for delivery id: %d, did not complete in %d milliseconds. " +
-          "Hence resolving the promise.",
+            "Hence resolving the promise.",
           this._context.namespace.connectionId,
           delivery.id,
           messageDispositionTimeout
@@ -889,7 +889,7 @@ export class MessageSession extends LinkEntity {
       if (!this.isOpen() && !this.isConnecting) {
         log.error(
           "[%s] The receiver '%s' with address '%s' is not open and is not currently " +
-          "establishing itself. Hence let's try to connect.",
+            "establishing itself. Hence let's try to connect.",
           connectionId,
           this.name,
           this.address
@@ -908,9 +908,10 @@ export class MessageSession extends LinkEntity {
 
         this._receiver = await this._context.namespace.connection.createReceiver(options);
         this.isConnecting = false;
-        const receivedSessionId = this._receiver.source
-          && this._receiver.source.filter
-          && this._receiver.source.filter[Constants.sessionFilterName];
+        const receivedSessionId =
+          this._receiver.source &&
+          this._receiver.source.filter &&
+          this._receiver.source.filter[Constants.sessionFilterName];
         let errorMessage: string = "";
         // SB allows a sessionId with empty string value :)
         if (receivedSessionId == undefined) {
@@ -967,7 +968,7 @@ export class MessageSession extends LinkEntity {
       } else {
         log.error(
           "[%s] The receiver '%s' for sessionId '%s' is open -> %s and is connecting " +
-          "-> %s. Hence not reconnecting.",
+            "-> %s. Hence not reconnecting.",
           connectionId,
           this.name,
           this.sessionId,
@@ -1034,7 +1035,7 @@ export class MessageSession extends LinkEntity {
         try {
           log.messageSession(
             "[%s] Attempting to renew the session lock for MessageSession '%s' " +
-            "with name '%s'.",
+              "with name '%s'.",
             connectionId,
             this.sessionId,
             this.name
@@ -1049,7 +1050,7 @@ export class MessageSession extends LinkEntity {
           );
           log.receiver(
             "[%s] Successfully renewed the session lock for MessageSession '%s' " +
-            "with name '%s'.",
+              "with name '%s'.",
             connectionId,
             this.sessionId,
             this.name
@@ -1063,7 +1064,7 @@ export class MessageSession extends LinkEntity {
         } catch (err) {
           log.error(
             "[%s] An error occurred while renewing the session lock for MessageSession " +
-            "'%s' with name '%s': %O",
+              "'%s' with name '%s': %O",
             this._context.namespace.connectionId,
             this.sessionId,
             this.name,
@@ -1073,7 +1074,7 @@ export class MessageSession extends LinkEntity {
       }, nextRenewalTimeout);
       log.messageSession(
         "[%s] MessageSession '%s' with name '%s', has next session lock renewal " +
-        "in %d seconds @(%s).",
+          "in %d seconds @(%s).",
         this._context.namespace.connectionId,
         this.sessionId,
         this.name,
@@ -1094,7 +1095,7 @@ export class MessageSession extends LinkEntity {
       const msg =
         `MessageSession '${this.sessionId}' with name '${this.name}' did not receive ` +
         `any messages in the last ${
-        this.maxMessageWaitTimeoutInSeconds
+          this.maxMessageWaitTimeoutInSeconds
         } seconds. Hence closing it.`;
       log.error("[%s] %s", this._context.namespace.connectionId, msg);
       const error = translate({

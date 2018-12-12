@@ -73,7 +73,9 @@ export class SessionManager {
     if (!options) options = {};
     if (options.maxConcurrentSessions) this.maxConcurrentSessions = options.maxConcurrentSessions;
     this._maxConcurrentSessionsSemaphore = new Semaphore(this.maxConcurrenSessions);
-    this._maxPendingAcceptSessionsSemaphore = new Semaphore(this.maxConcurrentAcceptSessionRequests);
+    this._maxPendingAcceptSessionsSemaphore = new Semaphore(
+      this.maxConcurrentAcceptSessionRequests
+    );
 
     for (let i = 0; i < this._maxConcurrentAcceptSessionRequests; i++) {
       this.acceptSessionAndReceiveMessages(onSessionMessage, onError, options).catch((err) => {
@@ -91,7 +93,8 @@ export class SessionManager {
   async acceptSessionAndReceiveMessages(
     onSessionMessage: OnSessionMessage,
     onError: OnError,
-    options?: SessionHandlerOptions): Promise<void> {
+    options?: SessionHandlerOptions
+  ): Promise<void> {
     const connectionId = this._context.namespace.connectionId;
     const noActiveSessionBackOffInSeconds = 10;
     while (!this._isCancelRequested) {
@@ -102,8 +105,10 @@ export class SessionManager {
         concurrentSessionSemaphoreAcquired = true;
 
         await this._maxPendingAcceptSessionsSemaphore!.acquire();
-        log.sessionManager("[%s] Acquired the semaphore for max pending accept sessions",
-          connectionId);
+        log.sessionManager(
+          "[%s] Acquired the semaphore for max pending accept sessions",
+          connectionId
+        );
         const messageSession = await MessageSession.create(this._context, options);
         const sessionId = messageSession.sessionId;
         this._context.messageSessions[sessionId as string] = messageSession;
@@ -111,8 +116,9 @@ export class SessionManager {
         const onSessionError: OnError = async (error) => {
           try {
             await this._maxConcurrentSessionsSemaphore!.release();
-            log.sessionManager("[%s] Releasing the semaphore for max concurrent sessions " +
-              "because an error ocurred in MessageSession with id '%s': %O.",
+            log.sessionManager(
+              "[%s] Releasing the semaphore for max concurrent sessions " +
+                "because an error ocurred in MessageSession with id '%s': %O.",
               connectionId,
               sessionId,
               error
@@ -123,7 +129,7 @@ export class SessionManager {
           } catch (err) {
             log.error(
               "[%s] An error occurred while receiving messages from MessageSession with " +
-              "id '%s': %O.",
+                "id '%s': %O.",
               connectionId,
               messageSession.sessionId,
               err
@@ -136,30 +142,35 @@ export class SessionManager {
         };
         messageSession.receive(onSessionMessage, onSessionError, options);
       } catch (err) {
-        log.error("[%s] An error occurred while accepting a MessageSession: %O", connectionId,
-          err);
+        log.error("[%s] An error occurred while accepting a MessageSession: %O", connectionId, err);
         if (concurrentSessionSemaphoreAcquired) {
           this._maxConcurrentSessionsSemaphore!.release();
-          log.sessionManager("[%s] Releasing the semaphore for max concurrent sessions " +
-            "because an error ocurred.",
+          log.sessionManager(
+            "[%s] Releasing the semaphore for max concurrent sessions " +
+              "because an error ocurred.",
             connectionId
           );
         }
-        if (err.name === ConditionErrorNameMapper["amqp:operation-timeout"] ||
+        if (
+          err.name === ConditionErrorNameMapper["amqp:operation-timeout"] ||
           err.name === ConditionErrorNameMapper["com.microsoft:timeout"] ||
-          err.name === ConditionErrorNameMapper["com.microsoft:session-cannot-be-locked"]) {
-          log.sessionManager("[%s] Sleeping for %d seconds, since there are no more " +
-            "active MessageSessions on the ServiceBus entity.",
+          err.name === ConditionErrorNameMapper["com.microsoft:session-cannot-be-locked"]
+        ) {
+          log.sessionManager(
+            "[%s] Sleeping for %d seconds, since there are no more " +
+              "active MessageSessions on the ServiceBus entity.",
             connectionId,
-            noActiveSessionBackOffInSeconds);
+            noActiveSessionBackOffInSeconds
+          );
           await delay(noActiveSessionBackOffInSeconds * 1000);
         } else {
           onError(err);
         }
       } finally {
         this._maxPendingAcceptSessionsSemaphore!.release();
-        log.sessionManager("[%s] Releasing the semaphore for max pending accept sessions from " +
-          "the finally block.",
+        log.sessionManager(
+          "[%s] Releasing the semaphore for max pending accept sessions from " +
+            "the finally block.",
           connectionId
         );
       }
