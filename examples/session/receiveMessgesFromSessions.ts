@@ -1,5 +1,11 @@
 import {
-  OnSessionMessage, OnError, MessagingError, delay, ServiceBusMessage, ReceiveMode, Namespace,
+  OnSessionMessage,
+  OnError,
+  MessagingError,
+  delay,
+  ServiceBusMessage,
+  ReceiveMode,
+  Namespace,
   MessageSession
 } from "../../lib";
 import * as dotenv from "dotenv";
@@ -14,9 +20,15 @@ let ns: Namespace;
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
   const client = ns.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
-  const onMessage: OnSessionMessage = async (messageSession: MessageSession, brokeredMessage: ServiceBusMessage) => {
+  const onMessage: OnSessionMessage = async (
+    messageSession: MessageSession,
+    brokeredMessage: ServiceBusMessage
+  ) => {
     console.log(">>> Message: ", brokeredMessage);
-    console.log("### Actual message:", brokeredMessage.body ? brokeredMessage.body.toString() : undefined);
+    console.log(
+      "### Actual message:",
+      brokeredMessage.body ? brokeredMessage.body.toString() : undefined
+    );
     // await brokeredMessage.complete();
   };
   const onError: OnError = (err: MessagingError | Error) => {
@@ -27,9 +39,11 @@ async function main(): Promise<void> {
   await client.close();
 }
 
-main().then(() => {
-  console.log(">>>> Calling close....");
-  return ns.close();
-}).catch((err) => {
-  console.log("error: ", err);
-});
+main()
+  .then(() => {
+    console.log(">>>> Calling close....");
+    return ns.close();
+  })
+  .catch((err) => {
+    console.log("error: ", err);
+  });
