@@ -38,5 +38,8 @@ export { Namespace, NamespaceOptions } from "./namespace";
 export { TopicClient } from "./topicClient";
 export { SubscriptionClient, SubscriptionClientOptions } from "./subscriptionClient";
 export {
-  ScheduleMessage, SQLExpression, CorrelationFilter, RuleDescription
+  ScheduleMessage,
+  SQLExpression,
+  CorrelationFilter,
+  RuleDescription
 } from "./core/managementClient";
