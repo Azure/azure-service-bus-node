@@ -7,7 +7,7 @@ import { ClientEntityContext } from "../clientEntityContext";
 import { getProcessorCount } from "../util/utils";
 import * as log from "../log";
 import { Semaphore } from "../util/semaphore";
-import { delay, ConditionErrorNameMapper } from "@azure/amqp-common";
+import { delay, ConditionErrorNameMapper, Constants } from "@azure/amqp-common";
 
 export class SessionManager {
   /**
@@ -72,16 +72,29 @@ export class SessionManager {
     this.isManagingSessions = true;
     if (!options) options = {};
     if (options.maxConcurrentSessions) this.maxConcurrentSessions = options.maxConcurrentSessions;
+    // We are explicitly configuring the messageSession to timeout in 60 seconds if no new messages
+    // are received.
+    if (!options.maxMessageWaitTimeoutInSeconds) {
+      options.maxMessageWaitTimeoutInSeconds = Constants.defaultOperationTimeoutInSeconds;
+    }
     this._maxConcurrentSessionsSemaphore = new Semaphore(this.maxConcurrenSessions);
     this._maxPendingAcceptSessionsSemaphore = new Semaphore(
       this.maxConcurrentAcceptSessionRequests
     );
 
     for (let i = 0; i < this._maxConcurrentAcceptSessionRequests; i++) {
-      this.acceptSessionAndReceiveMessages(onSessionMessage, onError, options).catch((err) => {
+      this._acceptSessionAndReceiveMessages(onSessionMessage, onError, options).catch((err) => {
         log.error(err);
       });
     }
+  }
+
+  /**
+   * Close the session manager.
+   */
+  close(): void {
+    this._isCancelRequested = true;
+    this.isManagingSessions = false;
   }
 
   /**
@@ -90,7 +103,7 @@ export class SessionManager {
    * @param onError Handler for receiving errors.
    * @param options Optional parameters for handling sessions.
    */
-  async acceptSessionAndReceiveMessages(
+  private async _acceptSessionAndReceiveMessages(
     onSessionMessage: OnSessionMessage,
     onError: OnError,
     options?: SessionHandlerOptions
@@ -151,6 +164,16 @@ export class SessionManager {
             connectionId
           );
         }
+        // When we ask servicebus to give us a random session and if there are no active sessions,
+        // ServiceBus initially sends the attach frame which causes rhea to emit "receiver_open"
+        // event and thus rhea-promise resolves the promise. Moments later ServiceBus sends a
+        // detach frame with an error that the link creation timed out. Therefore inside
+        // MessageSession._init() after the promise to create a session enabled receiver link
+        // resolves we check for sessionId. If it is undefined then we reject the Promise with an
+        // error "session-cannot-be-locked". The "operation-timeout" error happens when
+        // rhea-promise does not receive a response from ServiceBus in a predefined time frame and
+        // the Promise is rejected. The "microsoft.timeout" error occurs when timeout happens on
+        // the server side and ServiceBus sends a detach frame due to which the Promise is rejected.
         if (
           err.name === ConditionErrorNameMapper["amqp:operation-timeout"] ||
           err.name === ConditionErrorNameMapper["com.microsoft:timeout"] ||
@@ -175,13 +198,5 @@ export class SessionManager {
         );
       }
     }
-  }
-
-  /**
-   * Close the session manager.
-   */
-  close(): void {
-    this._isCancelRequested = true;
-    this.isManagingSessions = false;
   }
 }

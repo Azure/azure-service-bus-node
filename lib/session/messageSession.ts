@@ -61,7 +61,6 @@ export interface MessageSessionOptionsBase {
    * @property {number} [maxMessageWaitTimeoutInSeconds] The maximum amount of idle time the session
    * receiver will wait ater a message has been received. If no messages are received in that
    * time frame then the session will be closed.
-   * - **Default**: `60` seconds.
    */
   maxMessageWaitTimeoutInSeconds?: number;
   /**
@@ -164,9 +163,8 @@ export class MessageSession extends LinkEntity {
    * @property {number} [maxMessageWaitTimeoutInSeconds] The maximum amount of idle time the session
    * reaceiver will wait ater a message has been received. If no messages are received in that
    * time frame then the session will be closed.
-   * - **Default**: `60` seconds.
    */
-  maxMessageWaitTimeoutInSeconds: number;
+  maxMessageWaitTimeoutInSeconds?: number;
   /**
    * @property {boolean} autoRenewLock Should lock renewal happen automatically.
    */
@@ -247,8 +245,7 @@ export class MessageSession extends LinkEntity {
     this.autoComplete = false;
     this.sessionId = options.sessionId;
     this.receiveMode = options.receiveMode || ReceiveMode.peekLock;
-    this.maxMessageWaitTimeoutInSeconds =
-      options.maxMessageWaitTimeoutInSeconds || Constants.defaultOperationTimeoutInSeconds;
+    this.maxMessageWaitTimeoutInSeconds = options.maxMessageWaitTimeoutInSeconds;
     this.maxAutoRenewDurationInSeconds =
       options.maxAutoRenewDurationInSeconds != undefined
         ? options.maxAutoRenewDurationInSeconds
@@ -619,20 +616,32 @@ export class MessageSession extends LinkEntity {
     }
 
     const brokeredMessages: ServiceBusMessage[] = [];
-
     this._isReceivingMessages = true;
+
     return new Promise<ServiceBusMessage[]>((resolve, reject) => {
       let onReceiveMessage: OnAmqpEventAsPromise;
       let waitTimer: any;
       let actionAfterWaitTimeout: Func<void, void>;
 
+      const setMaxMessageWaitTimeoutInSeconds = (value?: number) => {
+        this.maxMessageWaitTimeoutInSeconds = value;
+      };
+
+      // Setting the maxMessageWaitTimeoutInSeconds to `2`seconds every time we want to receive
+      // a new batch of messages.
+      setMaxMessageWaitTimeoutInSeconds(2);
+
       this._onError = (error: MessagingError | Error) => {
         this._isReceivingMessages = false;
+        // Resetting the maxMessageWaitTimeoutInSeconds to undefined since we are done receiving
+        // a batch of messages.
+        setMaxMessageWaitTimeoutInSeconds();
         if (waitTimer) {
           clearTimeout(waitTimer);
         }
         reject(error);
       };
+
       const resetCreditWindow = () => {
         this._receiver!.setCreditWindow(0);
         this._receiver!.addCredit(0);
@@ -642,6 +651,9 @@ export class MessageSession extends LinkEntity {
         if (this._newMessageReceivedTimer) {
           clearTimeout(this._newMessageReceivedTimer);
         }
+        // Resetting the maxMessageWaitTimeoutInSeconds to undefined since we are done receiving
+        // a batch of messages.
+        setMaxMessageWaitTimeoutInSeconds();
         // Resetting the mode. Now anyone can call receive() again.
         if (this._receiver) {
           this._receiver.removeListener(ReceiverEvents.message, onReceiveMessage);
@@ -1091,20 +1103,22 @@ export class MessageSession extends LinkEntity {
    */
   private _resetTimerOnNewMessageReceived(): void {
     if (this._newMessageReceivedTimer) clearTimeout(this._newMessageReceivedTimer);
-    this._newMessageReceivedTimer = setTimeout(async () => {
-      const msg =
-        `MessageSession '${this.sessionId}' with name '${this.name}' did not receive ` +
-        `any messages in the last ${
-          this.maxMessageWaitTimeoutInSeconds
-        } seconds. Hence closing it.`;
-      log.error("[%s] %s", this._context.namespace.connectionId, msg);
-      const error = translate({
-        condition: "com:microsoft:message-wait-timeout",
-        description: msg
-      });
-      this._notifyError(translate(error));
-      await this.close();
-    }, this.maxMessageWaitTimeoutInSeconds * 1000);
+    if (this.maxMessageWaitTimeoutInSeconds) {
+      this._newMessageReceivedTimer = setTimeout(async () => {
+        const msg =
+          `MessageSession '${this.sessionId}' with name '${this.name}' did not receive ` +
+          `any messages in the last ${
+            this.maxMessageWaitTimeoutInSeconds
+          } seconds. Hence closing it.`;
+        log.error("[%s] %s", this._context.namespace.connectionId, msg);
+        const error = translate({
+          condition: "com:microsoft:message-wait-timeout",
+          description: msg
+        });
+        this._notifyError(translate(error));
+        await this.close();
+      }, this.maxMessageWaitTimeoutInSeconds * 1000);
+    }
   }
 
   /**
