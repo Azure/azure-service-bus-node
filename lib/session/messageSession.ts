@@ -1112,7 +1112,7 @@ export class MessageSession extends LinkEntity {
           } seconds. Hence closing it.`;
         log.error("[%s] %s", this._context.namespace.connectionId, msg);
         const error = translate({
-          condition: "com:microsoft:message-wait-timeout",
+          condition: "com.microsoft:message-wait-timeout",
           description: msg
         });
         this._notifyError(translate(error));
