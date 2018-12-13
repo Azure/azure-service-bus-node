@@ -18,6 +18,7 @@ import {
   SessionHandlerOptions,
   OnSessionMessage
 } from "./session/messageSession";
+import { EntityType } from "./session/sessionManager";
 
 /**
  * Describes the options that can be provided while creating the QueueClient.
@@ -186,7 +187,7 @@ export class QueueClient extends Client {
       const msg =
         `A "${bReceiver.receiverType}" receiver with id "${bReceiver.name}" has already been ` +
         `created for the Queue "${
-        this.name
+          this.name
         }". Another receiveBatch() call cannot be made while the ` +
         `previous one is active. Please wait for the previous receiveBatch() to complete and ` +
         `then call receiveBatch() again.`;
@@ -210,7 +211,7 @@ export class QueueClient extends Client {
     } catch (err) {
       log.error(
         "[%s] Receiver '%s', an error occurred while receiving %d messages for %d " +
-        "max time:\n %O",
+          "max time:\n %O",
         this._context.namespace.connectionId,
         bReceiver.name,
         maxMessageCount,
@@ -406,13 +407,11 @@ export class QueueClient extends Client {
     onError: OnError,
     options?: SessionHandlerOptions
   ): Promise<void> {
-    if (this._context.sessionManager!.isManagingSessions) {
-      throw new Error(
-        `QueueClient for Queue '${this.name}' is already receiving messages ` +
-        `from sessions. Please close this QueueClient or create a new one and receiveMessages ` +
-        `from Sessions.`
-      );
-    }
-    return this._context.sessionManager!.manageMessageSessions(onSessionMessage, onError, options);
+    return this._context.sessionManager!.manageMessageSessions(
+      EntityType.queue,
+      onSessionMessage,
+      onError,
+      options
+    );
   }
 }

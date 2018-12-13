@@ -24,6 +24,11 @@ import { convertTicksToDate, calculateRenewAfterDuration } from "../util/utils";
 import { ServiceBusMessage, ReceivedMessageInfo } from "../serviceBusMessage";
 import { messageDispositionTimeout } from "../util/constants";
 
+export enum Callee {
+  standalone = "standalone",
+  sessionManager = "sessionManager"
+}
+
 /**
  * Describes the signature for the message handler that needs to be provided while receiving
  * messages in a session.
@@ -57,12 +62,6 @@ export interface MessageSessionOptionsBase {
    * - **For disabling autolock renewal**, please set `maxAutoRenewDurationInSeconds` to `0`.
    */
   maxAutoRenewDurationInSeconds?: number;
-  /**
-   * @property {number} [maxMessageWaitTimeoutInSeconds] The maximum amount of idle time the session
-   * receiver will wait ater a message has been received. If no messages are received in that
-   * time frame then the session will be closed.
-   */
-  maxMessageWaitTimeoutInSeconds?: number;
   /**
    * @property {number} [receiveMode] The mode in which messages should be received.
    * Default: ReceiveMode.peekLock
@@ -108,12 +107,21 @@ export interface SessionHandlerOptions extends MessageSessionOptionsBase {
    * - **Default**: `true`.
    */
   autoComplete?: boolean;
+  /**
+   * @property {number} [maxMessageWaitTimeoutInSeconds] The maximum amount of idle time the session
+   * receiver will wait after a message has been received. If no messages are received in that
+   * time frame then the session will be closed.
+   */
+  maxMessageWaitTimeoutInSeconds?: number;
 }
 
 /**
  * Describes all the options that can be set while instantiating a MessageSession object.
  */
-export type MessageSessionOptions = SessionHandlerOptions & AcceptSessionOptions;
+export type MessageSessionOptions = SessionHandlerOptions &
+  AcceptSessionOptions & {
+    callee?: Callee;
+  };
 
 /**
  * Describes the receiver for a Message Session.
@@ -169,6 +177,12 @@ export class MessageSession extends LinkEntity {
    * @property {boolean} autoRenewLock Should lock renewal happen automatically.
    */
   autoRenewLock: boolean;
+  /**
+   * @property {Callee} callee Describes who instantied the MessageSession. Whether it was called
+   * by the SessionManager or it was called standalone.
+   * - Default: "standalone"
+   */
+  callee: Callee;
   /**
    * @property {Receiver} [_receiver] The AMQP receiver link.
    */
@@ -245,7 +259,7 @@ export class MessageSession extends LinkEntity {
     this.autoComplete = false;
     this.sessionId = options.sessionId;
     this.receiveMode = options.receiveMode || ReceiveMode.peekLock;
-    this.maxMessageWaitTimeoutInSeconds = options.maxMessageWaitTimeoutInSeconds;
+    this.callee = options.callee || Callee.standalone;
     this.maxAutoRenewDurationInSeconds =
       options.maxAutoRenewDurationInSeconds != undefined
         ? options.maxAutoRenewDurationInSeconds
@@ -502,6 +516,7 @@ export class MessageSession extends LinkEntity {
     if (!options) options = {};
     this._isReceivingMessages = true;
     this.maxConcurrentCallsPerSession = options.maxConcurrentCallsPerSession || 1;
+    this.maxMessageWaitTimeoutInSeconds = options.maxMessageWaitTimeoutInSeconds;
     this.autoComplete = !!options.autoComplete;
     this._onMessage = onSessionMessage;
     this._onError = onError;
@@ -593,10 +608,16 @@ export class MessageSession extends LinkEntity {
    * @param maxMessageCount The maximum message count. Must be a value greater than 0.
    * @param maxWaitTimeInSeconds The maximum wait time in seconds for which the Receiver
    * should wait to receiver the said amount of messages. If not provided, it defaults to 60 seconds.
+   * @param {number} [maxMessageWaitTimeoutInSeconds] The maximum amount of idle time the Receiver
+   * will wait after creating the link or after receiving a new message. If no messages are received
+   * in that time frame then the batch receive operation ends. It is advised to keep this value at
+   * 10% of the lockDuration value.
+   * - **Default**: `2` seconds.
    */
   receiveBatch(
     maxMessageCount: number,
-    maxWaitTimeInSeconds?: number
+    maxWaitTimeInSeconds?: number,
+    maxMessageWaitTimeoutInSeconds?: number
   ): Promise<ServiceBusMessage[]> {
     if (this._isReceivingMessages) {
       throw new Error(
@@ -615,6 +636,10 @@ export class MessageSession extends LinkEntity {
       maxWaitTimeInSeconds = Constants.defaultOperationTimeoutInSeconds;
     }
 
+    if (maxMessageWaitTimeoutInSeconds == undefined) {
+      maxMessageWaitTimeoutInSeconds = 2;
+    }
+
     const brokeredMessages: ServiceBusMessage[] = [];
     this._isReceivingMessages = true;
 
@@ -627,9 +652,7 @@ export class MessageSession extends LinkEntity {
         this.maxMessageWaitTimeoutInSeconds = value;
       };
 
-      // Setting the maxMessageWaitTimeoutInSeconds to `2`seconds every time we want to receive
-      // a new batch of messages.
-      setMaxMessageWaitTimeoutInSeconds(2);
+      setMaxMessageWaitTimeoutInSeconds(maxMessageWaitTimeoutInSeconds);
 
       this._onError = (error: MessagingError | Error) => {
         this._isReceivingMessages = false;
@@ -1116,7 +1139,9 @@ export class MessageSession extends LinkEntity {
           description: msg
         });
         this._notifyError(translate(error));
-        await this.close();
+        if (this.callee === Callee.sessionManager) {
+          await this.close();
+        }
       }, this.maxMessageWaitTimeoutInSeconds * 1000);
     }
   }

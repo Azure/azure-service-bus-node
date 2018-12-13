@@ -32,7 +32,12 @@ export {
 } from "./serviceBusMessage";
 export { ReceiveHandler, MessageHandlerOptions } from "./core/streamingReceiver";
 export { OnError, OnMessage, ReceiveMode } from "./core/messageReceiver";
-export { MessageSession, OnSessionMessage } from "./session/messageSession";
+export {
+  MessageSession,
+  OnSessionMessage,
+  AcceptSessionOptions,
+  SessionHandlerOptions
+} from "./session/messageSession";
 export { QueueClientOptions, QueueClient } from "./queueClient";
 export { Namespace, NamespaceOptions } from "./namespace";
 export { TopicClient } from "./topicClient";

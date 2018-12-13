@@ -1,13 +1,18 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-import { OnSessionMessage, SessionHandlerOptions, MessageSession } from "./messageSession";
+import { OnSessionMessage, SessionHandlerOptions, MessageSession, Callee } from "./messageSession";
 import { OnError } from "../core/messageReceiver";
 import { ClientEntityContext } from "../clientEntityContext";
 import { getProcessorCount } from "../util/utils";
 import * as log from "../log";
 import { Semaphore } from "../util/semaphore";
 import { delay, ConditionErrorNameMapper, Constants } from "@azure/amqp-common";
+
+export enum EntityType {
+  queue = "Queue",
+  subscription = "Subscription"
+}
 
 export class SessionManager {
   /**
@@ -41,6 +46,7 @@ export class SessionManager {
   get maxConcurrentAcceptSessionRequests(): number {
     return this._maxConcurrentAcceptSessionRequests;
   }
+
   private _maxConcurrentSessions!: number;
   private _maxConcurrentAcceptSessionRequests!: number;
   private _isCancelRequested: boolean = false;
@@ -65,15 +71,21 @@ export class SessionManager {
    * from a session enabled entity.
    */
   async manageMessageSessions(
+    entityType: EntityType,
     onSessionMessage: OnSessionMessage,
     onError: OnError,
     options?: SessionHandlerOptions
   ): Promise<void> {
+    if (this.isManagingSessions) {
+      throw new Error(`${entityType}Client for "${this._context.namespace.config.entityPath}" ` +
+      `is already receiving messages from sessions. Please close this ${entityType}Client or ` +
+      `create a new one and receiveMessages from Sessions.`);
+    }
     this.isManagingSessions = true;
     if (!options) options = {};
     if (options.maxConcurrentSessions) this.maxConcurrentSessions = options.maxConcurrentSessions;
-    // We are explicitly configuring the messageSession to timeout in 60 seconds if no new messages
-    // are received.
+    // We are explicitly configuring the messageSession to timeout in 60 seconds (if not provided
+    // by the user) when no new messages are received.
     if (!options.maxMessageWaitTimeoutInSeconds) {
       options.maxMessageWaitTimeoutInSeconds = Constants.defaultOperationTimeoutInSeconds;
     }
@@ -122,7 +134,10 @@ export class SessionManager {
           "[%s] Acquired the semaphore for max pending accept sessions",
           connectionId
         );
-        const messageSession = await MessageSession.create(this._context, options);
+        const messageSession = await MessageSession.create(this._context, {
+          callee: Callee.sessionManager,
+          ...options
+        });
         const sessionId = messageSession.sessionId;
         this._context.messageSessions[sessionId as string] = messageSession;
         log.sessionManager("[%s] Created MessageSession with id '%s'.", connectionId, sessionId);
