@@ -5,10 +5,10 @@ import {
   delay,
   ServiceBusMessage,
   ReceiveMode,
-  Namespace,
-  MessageSession
+  Namespace
 } from "../../lib";
 import * as dotenv from "dotenv";
+import { MessageSession } from "../../lib/session/messageSession";
 dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
