@@ -517,7 +517,8 @@ export class MessageSession extends LinkEntity {
     this._isReceivingMessages = true;
     this.maxConcurrentCallsPerSession = options.maxConcurrentCallsPerSession || 1;
     this.maxMessageWaitTimeoutInSeconds = options.maxMessageWaitTimeoutInSeconds;
-    this.autoComplete = !!options.autoComplete;
+    // If explicitly set to false then autoComplete is false else true (default).
+    this.autoComplete = options.autoComplete === false ? options.autoComplete : true;
     this._onMessage = onSessionMessage;
     this._onError = onError;
     const connectionId = this._context.namespace.connectionId;
