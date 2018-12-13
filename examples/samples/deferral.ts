@@ -35,7 +35,7 @@ async function sendMessage(): Promise<void> {
   var promises = new Array();
   for (let index = 0; index < data.length; index++) {
     const message: SendableMessageInfo = {
-      body: JSON.stringify(data[index]),
+      body: data[index],
       label: "RecipeStep",
       contentType: "application/json",
       timeToLive: 2 * 60 * 1000, // 2 minutes
@@ -69,7 +69,7 @@ async function receiveMessage(): Promise<void> {
         brokeredMessage.label === "RecipeStep" &&
         brokeredMessage.contentType === "application/json"
       ) {
-        const message = JSON.parse(brokeredMessage.body);
+        const message = brokeredMessage.body;
         // now let's check whether the step we received is the step we expect at this stage of the workflow
         if (message.step == lastProcessedRecipeStep + 1) {
           console.log("Message Received:", brokeredMessage.body ? message : null);
@@ -106,7 +106,7 @@ async function receiveMessage(): Promise<void> {
       const sequenceNumber = deferredSteps.get(curStep);
       const message = await receiveClient.receiveDeferredMessage(sequenceNumber);
       if (message) {
-        console.log("Received Deferral Message:", JSON.parse(message.body));
+        console.log("Received Deferral Message:", message.body);
         await message.complete();
       } else {
         console.log("No message found for step number ", curStep);
