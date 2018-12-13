@@ -94,7 +94,7 @@ export namespace ConnectionContext {
       if (!state.wasConnectionCloseCalled && state.numClients) {
         log.error(
           "[%s] connection.close() was not called from the sdk and there were some " +
-          "clients. We should reconnect.",
+            "clients. We should reconnect.",
           connectionContext.connection.id
         );
         await delay(Constants.connectionReconnectDelay);
