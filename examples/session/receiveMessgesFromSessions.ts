@@ -24,7 +24,7 @@ async function main(): Promise<void> {
     messageSession: MessageSession,
     brokeredMessage: ServiceBusMessage
   ) => {
-    console.log(">>> Message: ", brokeredMessage);
+    console.log(">>> MessageSession: ", messageSession.sessionId);
     console.log(
       "### Actual message:",
       brokeredMessage.body ? brokeredMessage.body.toString() : undefined
