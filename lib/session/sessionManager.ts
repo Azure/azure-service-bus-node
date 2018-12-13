@@ -77,9 +77,11 @@ export class SessionManager {
     options?: SessionHandlerOptions
   ): Promise<void> {
     if (this.isManagingSessions) {
-      throw new Error(`${entityType}Client for "${this._context.namespace.config.entityPath}" ` +
-      `is already receiving messages from sessions. Please close this ${entityType}Client or ` +
-      `create a new one and receiveMessages from Sessions.`);
+      throw new Error(
+        `${entityType}Client for "${this._context.namespace.config.entityPath}" ` +
+          `is already receiving messages from sessions. Please close this ${entityType}Client or ` +
+          `create a new one and receiveMessages from Sessions.`
+      );
     }
     this.isManagingSessions = true;
     if (!options) options = {};
@@ -126,13 +128,20 @@ export class SessionManager {
       let concurrentSessionSemaphoreAcquired: boolean = false;
       try {
         await this._maxConcurrentSessionsSemaphore!.acquire();
-        log.sessionManager("[%s] Acquired the semaphore for max concurrent sessions", connectionId);
+        log.sessionManager(
+          "[%s] Acquired the semaphore for max concurrent sessions: %d, %d.",
+          connectionId,
+          this._maxConcurrentSessionsSemaphore!.currentLockCount(),
+          this._maxConcurrentSessionsSemaphore!.awaitedTaskCount()
+        );
         concurrentSessionSemaphoreAcquired = true;
 
         await this._maxPendingAcceptSessionsSemaphore!.acquire();
         log.sessionManager(
-          "[%s] Acquired the semaphore for max pending accept sessions",
-          connectionId
+          "[%s] Acquired the semaphore for max pending accept sessions: %d, %d.",
+          connectionId,
+          this._maxPendingAcceptSessionsSemaphore!.currentLockCount(),
+          this._maxPendingAcceptSessionsSemaphore!.awaitedTaskCount()
         );
         const messageSession = await MessageSession.create(this._context, {
           callee: Callee.sessionManager,
@@ -143,13 +152,18 @@ export class SessionManager {
         log.sessionManager("[%s] Created MessageSession with id '%s'.", connectionId, sessionId);
         const onSessionError: OnError = async (error) => {
           try {
-            await this._maxConcurrentSessionsSemaphore!.release();
             log.sessionManager(
-              "[%s] Releasing the semaphore for max concurrent sessions " +
-                "because an error ocurred in MessageSession with id '%s': %O.",
+              "An error ocurred in MessageSession with id '%s': %O.",
               connectionId,
               sessionId,
               error
+            );
+            await this._maxConcurrentSessionsSemaphore!.release();
+            log.sessionManager(
+              "[%s] Releasing the semaphore for max concurrent sessions: %d, %d.",
+              connectionId,
+              this._maxConcurrentSessionsSemaphore!.currentLockCount(),
+              this._maxConcurrentSessionsSemaphore!.awaitedTaskCount()
             );
             if (messageSession.isOpen()) {
               await messageSession.close();
@@ -172,11 +186,14 @@ export class SessionManager {
       } catch (err) {
         log.error("[%s] An error occurred while accepting a MessageSession: %O", connectionId, err);
         if (concurrentSessionSemaphoreAcquired) {
+          concurrentSessionSemaphoreAcquired = false;
           this._maxConcurrentSessionsSemaphore!.release();
           log.sessionManager(
             "[%s] Releasing the semaphore for max concurrent sessions " +
-              "because an error ocurred.",
-            connectionId
+              "because an error ocurred: %d, %d.",
+            connectionId,
+            this._maxConcurrentSessionsSemaphore!.currentLockCount(),
+            this._maxConcurrentSessionsSemaphore!.awaitedTaskCount()
           );
         }
         // When we ask servicebus to give us a random session and if there are no active sessions,
@@ -208,8 +225,10 @@ export class SessionManager {
         this._maxPendingAcceptSessionsSemaphore!.release();
         log.sessionManager(
           "[%s] Releasing the semaphore for max pending accept sessions from " +
-            "the finally block.",
-          connectionId
+            "the finally block: %d, %d.",
+          connectionId,
+          this._maxPendingAcceptSessionsSemaphore!.currentLockCount(),
+          this._maxPendingAcceptSessionsSemaphore!.awaitedTaskCount()
         );
       }
     }
