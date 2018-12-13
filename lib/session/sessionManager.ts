@@ -84,6 +84,7 @@ export class SessionManager {
       );
     }
     this.isManagingSessions = true;
+    this._isCancelRequested = false;
     if (!options) options = {};
     if (options.maxConcurrentSessions) this.maxConcurrentSessions = options.maxConcurrentSessions;
     // We are explicitly configuring the messageSession to timeout in 60 seconds (if not provided
@@ -211,14 +212,18 @@ export class SessionManager {
           err.name === ConditionErrorNameMapper["com.microsoft:timeout"] ||
           err.name === ConditionErrorNameMapper["com.microsoft:session-cannot-be-locked"]
         ) {
-          log.sessionManager(
-            "[%s] Sleeping for %d seconds, since there are no more " +
-              "active MessageSessions on the ServiceBus entity.",
-            connectionId,
-            noActiveSessionBackOffInSeconds
-          );
-          await delay(noActiveSessionBackOffInSeconds * 1000);
+          // No point in delaying if cancel has been requested.
+          if (!this._isCancelRequested) {
+            log.sessionManager(
+              "[%s] Sleeping for %d seconds, since there are no more active MessageSessions on " +
+                "the ServiceBus entity.",
+              connectionId,
+              noActiveSessionBackOffInSeconds
+            );
+            await delay(noActiveSessionBackOffInSeconds * 1000);
+          }
         } else {
+          // notify the user about the error only when it is not one of the above mentioned errors.
           onError(err);
         }
       } finally {
