@@ -503,7 +503,7 @@ export class MessageReceiver extends LinkEntity {
           sbError
         );
         if (!sbError.retryable) {
-          if (receiver && !receiver.isClosed()) {
+          if (receiver && !receiver.isItselfClosed()) {
             log.error(
               "[%s] Since the user did not close the receiver and the error is not " +
                 "retryable, we let the user know about it by calling the user's error handler.",
@@ -539,7 +539,7 @@ export class MessageReceiver extends LinkEntity {
           this.name,
           sbError
         );
-        if (receiver && !receiver.isSessionClosed() && !sbError.retryable) {
+        if (receiver && !receiver.isSessionItselfClosed() && !sbError.retryable) {
           log.error(
             "[%s] Since the user did not close the receiver and the session error is not " +
               "retryable, we let the user know about it by calling the user's error handler.",
@@ -565,7 +565,7 @@ export class MessageReceiver extends LinkEntity {
         );
       }
       this._clearAllMessageLockRenewTimers();
-      if (receiver && !receiver.isClosed()) {
+      if (receiver && !receiver.isItselfClosed()) {
         if (!this.isConnecting) {
           log.error(
             "[%s] 'receiver_close' event occurred on the receiver '%s' with address '%s' " +
@@ -613,7 +613,7 @@ export class MessageReceiver extends LinkEntity {
         );
       }
       this._clearAllMessageLockRenewTimers();
-      if (receiver && !receiver.isSessionClosed()) {
+      if (receiver && !receiver.isSessionItselfClosed()) {
         if (!this.isConnecting) {
           log.error(
             "[%s] 'session_close' event occurred on the session of receiver '%s' with " +
@@ -656,13 +656,11 @@ export class MessageReceiver extends LinkEntity {
   async detached(receiverError?: AmqpError | Error): Promise<void> {
     const connectionId = this._context.namespace.connectionId;
     try {
-      const wasCloseInitiated = this._receiver && this._receiver.isClosed();
+      const wasCloseInitiated = this._receiver && this._receiver.isItselfClosed();
       // Clears the token renewal timer. Closes the link and its session if they are open.
       // Removes the link and its session if they are present in rhea's cache.
       await this._closeLink(this._receiver);
-      // For session_close and receiver_close this should attempt to reopen
-      // only when the receiver(sdk) did not initiate the close) OR
-      // if an error is present and the error is retryable.
+      // We should attempt to reopen only when the receiver(sdk) did not initiate the close
       let shouldReopen = false;
       if (receiverError && !wasCloseInitiated) {
         const translatedError = translate(receiverError);
