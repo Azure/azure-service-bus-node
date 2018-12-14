@@ -72,7 +72,7 @@ async function receiveMessage(): Promise<void> {
         const message = brokeredMessage.body;
         // now let's check whether the step we received is the step we expect at this stage of the workflow
         if (message.step == lastProcessedRecipeStep + 1) {
-          console.log("Message Received:", brokeredMessage.body ? message : null);
+          console.log("Message Received:", message);
           lastProcessedRecipeStep++;
           await brokeredMessage.complete();
         } else {
@@ -84,34 +84,33 @@ async function receiveMessage(): Promise<void> {
         }
       } else {
         // we dead-letter the message if we don't know what to do with it.
-        brokeredMessage.deadLetter();
         console.log(
           "Unknown message recieved, moving it to dead-letter queue ",
           brokeredMessage.body
         );
+        await brokeredMessage.deadLetter();
       }
     };
     const onError: OnError = (err: MessagingError | Error) => {
       console.log(">>>>> Error occurred: ", err);
     };
 
-    /*autoComplete : Indicates whether `Message.complete()` should be called
-    automatically after the message processing is complete while receiving messages with handlers*/
+    /*we are disabling autoComplete because we want to control the settling of the message i.e we want to control whether the message should be completed, deferred or deadlettered.*/
     const rcvHandler = receiveClient.receive(onMessage, onError, { autoComplete: false });
     await delay(10000);
     console.log("Deferred Messages count:", deferredSteps.size);
     // Now we process the deferrred messages
     while (deferredSteps.size > 0) {
-      var curStep = lastProcessedRecipeStep + 1;
-      const sequenceNumber = deferredSteps.get(curStep);
+      var step = lastProcessedRecipeStep + 1;
+      const sequenceNumber = deferredSteps.get(step);
       const message = await receiveClient.receiveDeferredMessage(sequenceNumber);
       if (message) {
         console.log("Received Deferral Message:", message.body);
         await message.complete();
       } else {
-        console.log("No message found for step number ", curStep);
+        console.log("No message found for step number ", step);
       }
-      deferredSteps.delete(curStep);
+      deferredSteps.delete(step);
       lastProcessedRecipeStep++;
     }
     await rcvHandler.stop();
