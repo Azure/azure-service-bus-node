@@ -32,9 +32,9 @@ async function main(): Promise<void> {
   const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
 
   //retrieving message one by one from each subscription
-  receiveMessage(subscription1Client, "color:red;");
-  receiveMessage(subscription2Client, "color:green;");
-  receiveMessage(subscription3Client, "color:cyan;");
+  receiveMessage(subscription1Client);
+  receiveMessage(subscription2Client);
+  receiveMessage(subscription3Client);
 
   await sendMessage(client);
 
@@ -72,9 +72,9 @@ async function sendMessage(client: TopicClient): Promise<void> {
   }
 }
 
-async function receiveMessage(client: SubscriptionClient, color: string): Promise<void> {
+async function receiveMessage(client: SubscriptionClient): Promise<void> {
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log(`%cRetrieved: ${brokeredMessage.body}`, color);
+    console.log(`subscription: ${client.name}  Retrieved: ${brokeredMessage.body}`);
     await brokeredMessage.complete();
   };
   const onError: OnError = (err: MessagingError | Error) => {
