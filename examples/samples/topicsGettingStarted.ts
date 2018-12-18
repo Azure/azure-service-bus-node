@@ -32,9 +32,9 @@ async function main(): Promise<void> {
   const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
 
   //retrieving message one by one from each subscription
-  receiveMessage(subscription1Client);
-  receiveMessage(subscription2Client);
-  receiveMessage(subscription3Client);
+  setupReceiveHandlers(subscription1Client);
+  setupReceiveHandlers(subscription2Client);
+  setupReceiveHandlers(subscription3Client);
 
   await sendMessage(client);
 
@@ -72,15 +72,14 @@ async function sendMessage(client: TopicClient): Promise<void> {
   }
 }
 
-async function receiveMessage(client: SubscriptionClient): Promise<void> {
+async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(`subscription: ${client.name}  Retrieved: ${brokeredMessage.body}`);
-    await brokeredMessage.complete();
   };
   const onError: OnError = (err: MessagingError | Error) => {
     console.log(">>>>> Error occurred: ", err);
   };
-  const rcvHandler = client.receive(onMessage, onError, { autoComplete: false });
+  const rcvHandler = client.receive(onMessage, onError);
   await delay(10000);
   await rcvHandler.stop();
 }
