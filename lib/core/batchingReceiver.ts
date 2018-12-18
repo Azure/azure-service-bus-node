@@ -301,7 +301,7 @@ export class BatchingReceiver extends MessageReceiver {
         // number of messages concurrently. We will return the user an array of messages that can
         // be of size upto maxMessageCount. Then the user needs to accordingly dispose
         // (complete,/abandon/defer/deadletter) the messages from the array.
-        let creditNeeded: number = Math.max(maxMessageCount - this._receiver!.credit, 0);
+        const creditNeeded: number = Math.max(maxMessageCount - this._receiver!.credit, 0);
         this._receiver!.addCredit(creditNeeded);
         let msg: string = "[%s] Setting the wait timer for %d seconds for receiver '%s'.";
         if (reuse) msg += " Receiver link already present, hence reusing it.";
