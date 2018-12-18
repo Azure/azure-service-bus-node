@@ -83,10 +83,7 @@ export class BatchingReceiver extends MessageReceiver {
       let onSessionError: OnAmqpEvent;
       let waitTimer: any;
       let maxMessageWaitTimer: any;
-      const resetCreditWindow = () => {
-        this._receiver!.setCreditWindow(0);
-        this._receiver!.addCredit(0);
-      };
+
       // Final action to be performed after maxMessageCount is reached or the maxWaitTime is over.
       const finalAction = () => {
         if (maxMessageWaitTimer) {
@@ -100,7 +97,6 @@ export class BatchingReceiver extends MessageReceiver {
         }
 
         clearTimeout(waitTimer);
-        resetCreditWindow();
         this.isReceivingMessages = false;
         log.batching(
           "[%s] Resolving the promise with received list of messages: %O.",
@@ -305,7 +301,8 @@ export class BatchingReceiver extends MessageReceiver {
         // number of messages concurrently. We will return the user an array of messages that can
         // be of size upto maxMessageCount. Then the user needs to accordingly dispose
         // (complete,/abandon/defer/deadletter) the messages from the array.
-        this._receiver!.addCredit(maxMessageCount);
+        let creditNeeded: number = Math.max(maxMessageCount - this._receiver!.credit, 0);
+        this._receiver!.addCredit(creditNeeded);
         let msg: string = "[%s] Setting the wait timer for %d seconds for receiver '%s'.";
         if (reuse) msg += " Receiver link already present, hence reusing it.";
         log.batching(msg, this._context.namespace.connectionId, maxWaitTimeInSeconds, this.name);
