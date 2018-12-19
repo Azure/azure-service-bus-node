@@ -30,6 +30,22 @@ const testMessages: SendableMessageInfo[] = [
   }
 ];
 
+function testReceivedMessages(receivedMsgs: ServiceBusMessage[]) {
+  should.equal(receivedMsgs.length, 2);
+  should.equal(receivedMsgs[0].body, testMessages[0].body);
+  should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+  should.equal(receivedMsgs[1].body, testMessages[1].body);
+  should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
+}
+
+async function testPeekMsgsLength(
+  client: QueueClient | SubscriptionClient,
+  expectedPeekLength: number
+) {
+  const peekedMsgs = await client.peek(expectedPeekLength + 1);
+  should.equal(peekedMsgs.length, expectedPeekLength);
+}
+
 describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
   let namespace: Namespace;
   let queueClient: QueueClient;
@@ -91,8 +107,7 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
 
     await msgs[0].complete();
 
-    const peekedQueueMsg = await queueClient.peek();
-    should.equal(peekedQueueMsg.length, 0);
+    await testPeekMsgsLength(queueClient, 0);
   });
 
   it("Simple send and receiveBatch using Topics and Subscriptions", async function() {
@@ -106,8 +121,7 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
 
     await msgs[0].complete();
 
-    const peekedSubscriptionMsg = await subscriptionClient.peek();
-    should.equal(peekedSubscriptionMsg.length, 0);
+    await testPeekMsgsLength(subscriptionClient, 0);
   });
 
   // We test for mutilple receiveBatch specifically to ensure that batchingRecevier on a client is reused
@@ -132,8 +146,7 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
     await msgs1[0].complete();
     await msgs2[0].complete();
 
-    const peekedQueueMsg = await queueClient.peek();
-    should.equal(peekedQueueMsg.length, 0);
+    await testPeekMsgsLength(queueClient, 0);
   });
 
   // We test for mutilple receiveBatch specifically to ensure that batchingRecevier on a client is reused
@@ -158,8 +171,7 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
     await msgs1[0].complete();
     await msgs2[0].complete();
 
-    const peekedSubscriptionMsg = await subscriptionClient.peek();
-    should.equal(peekedSubscriptionMsg.length, 0);
+    await testPeekMsgsLength(subscriptionClient, 0);
   });
 
   it("Streaming Receiver and autoComplete removes the message from Queue", async function() {
@@ -178,15 +190,10 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
 
     await delay(1000);
 
-    should.equal(receivedMsgs.length, 2);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(receivedMsgs[1].body, testMessages[1].body);
-    should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
+    testReceivedMessages(receivedMsgs);
 
     await receiveListener.stop();
-    const peekedQueueMsg = await queueClient.peek();
-    should.equal(peekedQueueMsg.length, 0);
+    await testPeekMsgsLength(queueClient, 0);
   });
 
   it("Streaming Receiver and autoComplete removes the message from Subscription", async function() {
@@ -205,15 +212,10 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
 
     await delay(1000);
 
-    should.equal(receivedMsgs.length, 2);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(receivedMsgs[1].body, testMessages[1].body);
-    should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
+    testReceivedMessages(receivedMsgs);
 
     await receiveListener.stop();
-    const peekedSubscriptionMsg = await subscriptionClient.peek();
-    should.equal(peekedSubscriptionMsg.length, 0);
+    await testPeekMsgsLength(subscriptionClient, 0);
   });
 
   it("Streaming Receiver without autoComplete, no manual complete retains the message in Queue", async function() {
@@ -233,14 +235,9 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
 
     await delay(1000);
 
-    should.equal(receivedMsgs.length, 2);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(receivedMsgs[1].body, testMessages[1].body);
-    should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
+    testReceivedMessages(receivedMsgs);
 
-    const peekedQueueMsg = await queueClient.peek(2);
-    should.equal(peekedQueueMsg.length, 2);
+    await testPeekMsgsLength(queueClient, 2);
 
     await receivedMsgs[0].complete();
     await receivedMsgs[1].complete();
@@ -264,14 +261,9 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
 
     await delay(1000);
 
-    should.equal(receivedMsgs.length, 2);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(receivedMsgs[1].body, testMessages[1].body);
-    should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
+    testReceivedMessages(receivedMsgs);
 
-    const peekedSubscriptionMsg = await subscriptionClient.peek(2);
-    should.equal(peekedSubscriptionMsg.length, 2);
+    await testPeekMsgsLength(subscriptionClient, 2);
 
     await receivedMsgs[0].complete();
     await receivedMsgs[1].complete();
@@ -295,14 +287,9 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
 
     await delay(1000);
 
-    should.equal(receivedMsgs.length, 2);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(receivedMsgs[1].body, testMessages[1].body);
-    should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
+    testReceivedMessages(receivedMsgs);
 
-    const peekedQueueMsg = await queueClient.peek();
-    should.equal(peekedQueueMsg.length, 0);
+    await testPeekMsgsLength(queueClient, 0);
 
     await receiveListener.stop();
   });
@@ -324,14 +311,9 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
 
     await delay(1000);
 
-    should.equal(receivedMsgs.length, 2);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(receivedMsgs[1].body, testMessages[1].body);
-    should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
+    testReceivedMessages(receivedMsgs);
 
-    const peekedSubscriptionMsg = await subscriptionClient.peek();
-    should.equal(peekedSubscriptionMsg.length, 0);
+    await testPeekMsgsLength(subscriptionClient, 0);
 
     await receiveListener.stop();
   });
@@ -348,8 +330,7 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
     // TODO: This is taking 20 seconds. Why?
     await receivedMsgs[0].abandon();
 
-    const peekedQueueMsg = await queueClient.peek(1);
-    should.equal(peekedQueueMsg.length, 1);
+    await testPeekMsgsLength(queueClient, 1);
 
     receivedMsgs = await queueClient.receiveBatch(1);
 
@@ -372,8 +353,7 @@ describe("Simple send/receive to/from Queue/Topic/Subscription", function() {
     // TODO: This is taking 20 seconds. Why?
     await receivedMsgs[0].abandon();
 
-    const peekedSubscriptionMsg = await subscriptionClient.peek(1);
-    should.equal(peekedSubscriptionMsg.length, 1);
+    await testPeekMsgsLength(subscriptionClient, 1);
 
     receivedMsgs = await subscriptionClient.receiveBatch(1);
 
