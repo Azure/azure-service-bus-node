@@ -1,8 +1,3 @@
-The tests in this repo use mocha and chai libraries. 
-If you are not familiar with these frameworks, please go through 
-[Testing for the novice JavaScript developer](https://hackernoon.com/testing-for-the-novice-javascript-developer-f41f22563855?gi=a65f1b270155) 
-which provides a simple introduction along with a few tips and tricks.
-
 ## Pre-requisites
 
 - Run `npm i` to install all the dependencies of this project. This is a one time task
