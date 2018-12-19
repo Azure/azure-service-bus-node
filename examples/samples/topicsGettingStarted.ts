@@ -21,6 +21,9 @@ const subscription3 = process.env.SUBSCRIPTION_NAME3 || "";
 
 console.log("str: ", str);
 console.log("path: ", topic);
+console.log("Subscription 1: ", subscription1);
+console.log("Subscription 2: ", subscription2);
+console.log("Subscription 3: ", subscription3);
 
 let ns: Namespace;
 async function main(): Promise<void> {
@@ -31,7 +34,7 @@ async function main(): Promise<void> {
   const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
   const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
 
-  //retrieving message one by one from each subscription
+  //we are setting up receive handlers here
   setupReceiveHandlers(subscription1Client);
   setupReceiveHandlers(subscription2Client);
   setupReceiveHandlers(subscription3Client);
