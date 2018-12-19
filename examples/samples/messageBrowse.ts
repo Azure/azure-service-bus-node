@@ -1,9 +1,7 @@
 import {
-  OnMessage,
-  OnError,
-  MessagingError,
   delay,
-  ServiceBusMessage,
+  SendableMessageInfo,
+  QueueClient,
   ReceiveMode,
   generateUuid,
   Namespace
@@ -13,61 +11,55 @@ dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const path = process.env.QUEUE_NAME || "";
-
 console.log("str: ", str);
 console.log("path: ", path);
 
+let ns: Namespace;
 async function main(): Promise<void> {
-  // send a set of messages
-  await sendMessage();
+  ns = Namespace.createFromConnectionString(str);
+  const client = ns.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
+
+  // populate the queue with messages
+  await sendMessages(client);
   // browse those messages
-  await peekMessage();
-  // receive the messages [ to clear the queue ]
-  await receiveMessage();
+  await peekMessages();
 }
 
-async function sendMessage(): Promise<void> {
-  const nsSend = Namespace.createFromConnectionString(str);
-  const sendClient = nsSend.createQueueClient(path);
-  var data = [
-    { name: "Einstein", firstName: "Albert" },
-    { name: "Heisenberg", firstName: "Werner" },
-    { name: "Curie", firstName: "Marie" },
-    { name: "Hawking", firstName: "Steven" },
-    { name: "Newton", firstName: "Isaac" },
-    { name: "Bohr", firstName: "Niels" },
-    { name: "Faraday", firstName: "Michael" },
-    { name: "Galilei", firstName: "Galileo" },
-    { name: "Kepler", firstName: "Johannes" },
-    { name: "Kopernikus", firstName: "Nikolaus" }
+async function sendMessages(queueClient: QueueClient): Promise<void> {
+  const data: { lastName: string; firstName: string }[] = [
+    { lastName: "Einstein", firstName: "Albert" },
+    { lastName: "Heisenberg", firstName: "Werner" },
+    { lastName: "Curie", firstName: "Marie" },
+    { lastName: "Hawking", firstName: "Steven" },
+    { lastName: "Newton", firstName: "Isaac" },
+    { lastName: "Bohr", firstName: "Niels" },
+    { lastName: "Faraday", firstName: "Michael" },
+    { lastName: "Galilei", firstName: "Galileo" },
+    { lastName: "Kepler", firstName: "Johannes" },
+    { lastName: "Kopernikus", firstName: "Nikolaus" }
   ];
-  try {
-    for (let i = 0; i < data.length; i++) {
-      var message = {
-        body: JSON.stringify(data[i]),
-        contentType: "application/json",
-        label: "Scientist",
-        messageId: generateUuid()
-      };
-      await sendClient.send(message);
-      console.log("Sent message number:", i + 1);
-    }
-    console.log("\n>>>>>>> Total Sent messages: %d\n", data.length);
-  } catch (err) {
-    console.log("Error while sending", err);
+
+  for (let index = 0; index < data.length; index++) {
+    const element = data[index];
+    const message: SendableMessageInfo = {
+      body: `${element.firstName} ${element.lastName}`,
+      label: "Scientist",
+      timeToLive: 2 * 60 * 1000, // After 2 minutes, the queue gets cleared
+      messageId: generateUuid()
+    };
+
+    console.log(`Sending ${message.body}`);
+    await queueClient.send(message);
   }
-  return nsSend.close();
 }
 
-async function peekMessage(): Promise<void> {
+async function peekMessages(): Promise<void> {
   const nsRcv = Namespace.createFromConnectionString(str);
   const receiveClient = nsRcv.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
   console.log("Browsing messages from Queue...");
 
   try {
     const count: number = 10;
-    //peek function takes "the number of messages to retrieve" as the argument
-    //If no arguments are passed to peek(), peeks the first message in the queue [Default value `1`]
     const peekedMessage = await receiveClient.peek(count);
     for (let i = 0; i < count; i++) {
       console.log(
@@ -77,10 +69,7 @@ async function peekMessage(): Promise<void> {
           label - ${peekedMessage[i].label}`
       );
     }
-    //Uncomment the following statement to check all the attributes of the peekedMessage[0]
-    //console.log(peekedMessage[0]);
-    console.log("\n>>>> Browsed the Messages!!!!\n");
-
+    console.log("\n>>>> Browsed the Messages.\n");
     await delay(1000);
   } catch (err) {
     console.log("Error while peeking: ", err);
@@ -88,37 +77,9 @@ async function peekMessage(): Promise<void> {
   return nsRcv.close();
 }
 
-async function receiveMessage(): Promise<void> {
-  const nsRcv = Namespace.createFromConnectionString(str);
-  const receiveClient = nsRcv.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
-  try {
-    const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-      if (
-        brokeredMessage.label === "Scientist" &&
-        brokeredMessage.contentType === "application/json"
-      ) {
-        console.log(
-          "Message Received:",
-          brokeredMessage.body ? brokeredMessage.body.toString() : null
-        );
-      }
-      await brokeredMessage.complete();
-    };
-    const onError: OnError = (err: MessagingError | Error) => {
-      console.log(">>>>> Error occurred: ", err);
-    };
-    const rcvHandler = receiveClient.receive(onMessage, onError, { autoComplete: false });
-    await delay(10000);
-    await rcvHandler.stop();
-  } catch (err) {
-    console.log("Error while receiving: ", err);
-  }
-  return nsRcv.close();
-}
-
 main()
   .then(() => {
-    console.log("\n>>>> Received the Messages!!!!");
+    console.log("\n>>>> Done!!!!");
   })
   .catch((err) => {
     console.log("error: ", err);
