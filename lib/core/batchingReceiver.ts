@@ -8,6 +8,7 @@ import { ServiceBusMessage } from "../serviceBusMessage";
 import {
   MessageReceiver,
   ReceiveOptions,
+  ReceiveMode,
   ReceiverType,
   PromiseLike,
   OnAmqpEventAsPromise
@@ -270,6 +271,10 @@ export class BatchingReceiver extends MessageReceiver {
             state && state.error ? state.error : state
           );
           if (settled && this._deliveryDispositionMap.has(id)) {
+            if (this.receiveMode === ReceiveMode.peekLock) {
+              delivery.update(true);
+            }
+
             const promise = this._deliveryDispositionMap.get(id) as PromiseLike;
             clearTimeout(promise.timer);
             log.receiver(

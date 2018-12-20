@@ -296,6 +296,10 @@ export class MessageReceiver extends LinkEntity {
           state && state.error ? state.error : state
         );
         if (settled && this._deliveryDispositionMap.has(id)) {
+          if (this.receiveMode === ReceiveMode.peekLock) {
+            delivery.update(true);
+          }
+
           const promise = this._deliveryDispositionMap.get(id) as PromiseLike;
           clearTimeout(promise.timer);
           log.receiver(
