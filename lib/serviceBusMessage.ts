@@ -936,17 +936,14 @@ export class ServiceBusMessage implements ReceivedMessage {
    * rejecting the message.
    * @returns Promise<void>
    */
-  async deadLetter(options?: DeadLetterOptions): Promise<void> {
+  async deadLetter(
+    options: DeadLetterOptions = { deadletterReason: "", deadLetterErrorDescription: "" }
+  ): Promise<void> {
     let error: AmqpError = {};
     if (options) {
       error = {
         condition: options.deadletterReason,
         description: options.deadLetterErrorDescription
-      };
-    } else {
-      error = {
-        condition: "",
-        description: ""
       };
     }
     log.message(
