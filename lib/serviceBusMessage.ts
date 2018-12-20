@@ -940,12 +940,10 @@ export class ServiceBusMessage implements ReceivedMessage {
     options: DeadLetterOptions = { deadletterReason: "", deadLetterErrorDescription: "" }
   ): Promise<void> {
     let error: AmqpError = {};
-    if (options) {
-      error = {
-        condition: options.deadletterReason,
-        description: options.deadLetterErrorDescription
-      };
-    }
+    error = {
+      condition: options.deadletterReason,
+      description: options.deadLetterErrorDescription
+    };
     log.message(
       "[%s] Deadlettering the message with id '%s'.",
       this._context.namespace.connectionId,
