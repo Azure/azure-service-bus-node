@@ -44,7 +44,7 @@ async function sendMessages(queueClient: QueueClient): Promise<void> {
     const message: SendableMessageInfo = {
       body: `${element.firstName} ${element.lastName}`,
       label: "Scientist",
-      timeToLive: 2 * 60 * 1000, // After 2 minutes, the queue gets cleared
+      timeToLive: 2 * 60 * 1000, // After 2 minutes, the message will be removed from the queue
       messageId: generateUuid()
     };
 
@@ -59,7 +59,7 @@ async function peekMessages(): Promise<void> {
   console.log("Browsing messages from Queue...");
 
   try {
-    const count: number = 10;
+    const count = 10;
     const peekedMessage = await receiveClient.peek(count);
     for (let i = 0; i < count; i++) {
       console.log(
