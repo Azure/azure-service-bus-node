@@ -943,6 +943,11 @@ export class ServiceBusMessage implements ReceivedMessage {
         condition: options.deadletterReason,
         description: options.deadLetterErrorDescription
       };
+    } else {
+      error = {
+        condition: "",
+        description: ""
+      };
     }
     log.message(
       "[%s] Deadlettering the message with id '%s'.",
