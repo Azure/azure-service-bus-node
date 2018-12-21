@@ -55,7 +55,7 @@ export class ConcurrentExpiringMap<TKey> {
   }
 
   private async _scheduleCleanup(): Promise<void> {
-    if (this._cleanupScheduled || this._map.size <= 0) {
+    if (this._cleanupScheduled || this._map.size === 0) {
       return;
     }
 
