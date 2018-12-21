@@ -5,8 +5,7 @@ import {
   MessagingError,
   ServiceBusMessage,
   ReceiveMode,
-  Namespace,
-  QueueClient
+  Namespace
 } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
