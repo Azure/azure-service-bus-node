@@ -84,6 +84,9 @@ export class QueueClient extends Client {
           await this._context.streamingReceiver.close();
         }
 
+        // Make sure that we clear the map of deferred messages
+        this._context.requestResponseLockedMessages.clear();
+
         // Close the batching receiver.
         if (this._context.batchingReceiver) {
           log.qClient("[%s] Closing the BatchingReceiver for queue '%s'.", connectionId, this.name);
