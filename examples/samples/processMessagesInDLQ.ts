@@ -31,8 +31,8 @@ let ns: Namespace;
 async function main(): Promise<void> {
   try {
     ns = Namespace.createFromConnectionString(str);
-    // Process messages from the Dead Letter Queue, by invoking .deadletter() on the brokered message
-    await processMessageQueue(deadLetterMessageProcessor, deadLetterQueuePath);
+    // Process messages from the Dead Letter Queue
+    await processDeadletterMessageQueue();
   } catch (err) {
     console.log(">>>>> Error occurred in running sampple: ", err);
   } finally {
@@ -41,25 +41,9 @@ async function main(): Promise<void> {
   }
 }
 
-async function processMessageQueue(messageProcessor: Function, path: string): Promise<void> {
-  const client = ns.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
-  await messageProcessor(client);
-}
-
-// This function takes in the message to inspect and reprocess it as needed.
-async function fixAndResendMessage(oldMessage: ServiceBusMessage): Promise<void> {
-  // Inspect given message and repair it
-  const repairedMessage = oldMessage.clone();
-  repairedMessage.body = { name: "Grilled Tomatoes", type: "Vegetarian" };
-
-  // Send repaired message back to the current queue
-  const client = ns.createQueueClient(queuePath);
-  await client.send(repairedMessage);
-  await client.close();
-}
-
-// OnMessage handlers for processing the Dead Letter Messages
-async function deadLetterMessageProcessor(client: QueueClient): Promise<void> {
+// Handler for processing the Dead Letter Messages
+async function processDeadletterMessageQueue(): Promise<void> {
+  const client = ns.createQueueClient(deadLetterQueuePath, { receiveMode: ReceiveMode.peekLock });
   const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(">>>>> Reprocessing the message in DLQ - ", brokeredMessage);
     await fixAndResendMessage(brokeredMessage);
@@ -73,6 +57,18 @@ async function deadLetterMessageProcessor(client: QueueClient): Promise<void> {
   const receiverHandler = await client.receive(onMessageHandler, onError, { autoComplete: false });
   await delay(receiveClientTimeoutInMilliseconds);
   await receiverHandler.stop();
+  await client.close();
+}
+
+// This function takes in the message to inspect and reprocess it as needed.
+async function fixAndResendMessage(oldMessage: ServiceBusMessage): Promise<void> {
+  // Inspect given message and repair it
+  const repairedMessage = oldMessage.clone();
+  repairedMessage.body = { name: "Grilled Tomatoes", type: "Vegetarian" };
+
+  // Send repaired message back to the current queue
+  const client = ns.createQueueClient(queuePath);
+  await client.send(repairedMessage);
   await client.close();
 }
 
