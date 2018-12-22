@@ -67,6 +67,19 @@ async function main(): Promise<void> {
   }
 }
 
+// Helper for purging a given queue
+async function purgeMessageQueue(path: string): Promise<void> {
+  const client = ns.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
+  const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
+    await brokeredMessage.complete();
+  };
+
+  const receiverHandler = await client.receive(onMessageHandler, onError, { autoComplete: false });
+  await delay(receiveClientTimeoutInMilliseconds);
+  await receiverHandler.stop();
+  await client.close();
+}
+
 async function runSimpleDeadLetterScenario(): Promise<void> {
   // Prepare given queue by sending few messages
   await sendMessage(0);
@@ -131,19 +144,6 @@ async function runProcessingErrorHandlingScenario(): Promise<void> {
   const receiverHandler = await client.receive(onMessageHandler, onError, {
     autoComplete: false
   });
-  await delay(receiveClientTimeoutInMilliseconds);
-  await receiverHandler.stop();
-  await client.close();
-}
-
-// OnMessage handler for accomplishing queue purge
-async function purgeMessageQueue(path: string): Promise<void> {
-  const client = ns.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
-  const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    await brokeredMessage.complete();
-  };
-
-  const receiverHandler = await client.receive(onMessageHandler, onError, { autoComplete: false });
   await delay(receiveClientTimeoutInMilliseconds);
   await receiverHandler.stop();
   await client.close();
