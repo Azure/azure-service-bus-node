@@ -116,12 +116,12 @@ async function runProcessingErrorHandlingScenario(): Promise<void> {
   const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(">>>>> Rejecting the message: ", brokeredMessage);
     try {
-      await Promise.reject("Customer is Vegetarian.");
+      throw new Error("Customer is Vegetarian.");
     } catch (err) {
       console.log("Message from faulty processor: ", err);
 
       // TODO: Fix bug with .deadletter() in SDK for not setting these properties on the message.
-      brokeredMessage.deadLetter({
+      await brokeredMessage.deadLetter({
         deadletterReason: "Incorrect Recipe type",
         deadLetterErrorDescription: "Recipe type does not  match preferences."
       });
