@@ -24,7 +24,6 @@ console.log(`path: ${topic}`);
 console.log(`Subscription 1: ${subscription1}`);
 console.log(`Subscription 2: ${subscription2}`);
 console.log(`Subscription 3: ${subscription3}\n`);
-console;
 
 let ns: Namespace;
 
@@ -77,14 +76,11 @@ async function main(): Promise<void> {
     await rcvHandler.stop();
   }
 
-  //Setting up receive handlers
-  setupReceiveHandlers(subscription1Client);
-  setupReceiveHandlers(subscription2Client);
-  setupReceiveHandlers(subscription3Client);
-
   await sendMessages(client);
-
-  await delay(2000);
+  // Setting up receive handlers
+  await setupReceiveHandlers(subscription1Client);
+  await setupReceiveHandlers(subscription2Client);
+  await setupReceiveHandlers(subscription3Client);
 
   await subscription1Client.close();
   await subscription2Client.close();
