@@ -21,12 +21,13 @@ npm run build
 ```
 
 ## Before executing a sample
-- Go to the [Azure Portal](https://portal.azure.com)
-- Here are the docs which would help you create a service bus resource in the portal : [ServiceBus - NodeJS DOCS](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-nodejs-how-to-use-queues)
-- In the portal, go to **Dashboard > Service Bus > _your-servicebus-namespace_**
-- If you'd like to work with Queues, find the "Queues" tab right under "Entities" at <your-servicebus-namespace> and create a Queue.
-- Go to the **Shared access policies** under **Settings** tab and add a new one. 
-- Copy the "Primary Connection String" and the "Name of the Queue" and use them below
+- Go to the [Azure Portal](https://portal.azure.com).
+- Here are the docs which would help you create a service bus resource in the portal : [ServiceBus - NodeJS DOCS](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-nodejs-how-to-use-queues).
+- In the portal, go to **Dashboard > Service Bus > _your-servicebus-namespace_**.
+- Copy the "Primary Connection String" of RootManageSharedAccessKey at **Shared access policies** under **Settings** tab.
+- To work with Queues, create a queue right under "Entities" at <your-servicebus-namespace> and copy the name of the Queue.
+- To work with Topics, create a topic right under "Entities" and subscriptions for the topic and copy the names.
+- > _Note : RootManageSharedAccessKey is automatically created for the namespace and has permissions for the entire namespace. If you want to use restricted access, refer [Shared Access Signatures](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas), create the Access Keys exclusive to the specific created Queue/Topic._
 * Example : [Refer this example](https://github.com/Azure/azure-service-bus-node/blob/99b6bff5566f3f8499c8f38a97c7e9f37471cc55/examples/samples/queuesGettingStarted.ts#L14) and update the following lines.
 ```typescript
 const str = process.env.SERVICEBUS_CONNECTION_STRING || <Primary-Connection-String>;
