@@ -72,8 +72,7 @@ async function receiveMessages(queueClient: QueueClient): Promise<void> {
     console.log(">>>>> Error occurred: ", err);
   };
   queueClient.receiveMessgesFromSessions(onMessage, onError);
-  await delay(20000);
-  await queueClient.close();
+  await delay(10000);
 }
 
 main()
