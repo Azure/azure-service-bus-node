@@ -52,3 +52,9 @@ cd examples\samples
 tsc <sample>.ts
 node <sample>.js
 ```
+- For debugging:
+[VS Code - Debugging](https://code.visualstudio.com/docs/editor/debugging#_launch-configurations) -  In `launch.json`, update the path of envFile and the program to execute the sample.
+```bash
+"program": "${workspaceFolder}/examples/simpleSend.ts"
+"envFile": "${workspaceFolder}/examples/samples/.env"
+```
