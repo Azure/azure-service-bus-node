@@ -63,19 +63,6 @@ async function main(): Promise<void> {
   const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
   const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
 
-  async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
-    const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-      console.log(`subscription: ${client.name}  Retrieved: ${brokeredMessage.body}`);
-    };
-    const onError: OnError = (err: MessagingError | Error) => {
-      console.log("\n>>>>> Error occurred: ", err);
-    };
-
-    const rcvHandler = client.receive(onMessage, onError);
-    await delay(10000);
-    await rcvHandler.stop();
-  }
-
   await sendMessages(client);
   // Setting up receive handlers
   await setupReceiveHandlers(subscription1Client);
@@ -88,6 +75,19 @@ async function main(): Promise<void> {
 
   console.log("\nClosing the client");
   await client.close();
+}
+
+async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
+  const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
+    console.log(`subscription: ${client.name}  Retrieved: ${brokeredMessage.body}`);
+  };
+  const onError: OnError = (err: MessagingError | Error) => {
+    console.log("\n>>>>> Error occurred: ", err);
+  };
+
+  const rcvHandler = client.receive(onMessage, onError);
+  await delay(10000);
+  await rcvHandler.stop();
 }
 
 main()
