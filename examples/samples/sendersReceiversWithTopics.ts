@@ -56,25 +56,30 @@ async function sendMessages(topicClient: TopicClient): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  ns = Namespace.createFromConnectionString(str);
-  const client = ns.createTopicClient(topic);
+  try {
+    ns = Namespace.createFromConnectionString(str);
+    const client = ns.createTopicClient(topic);
 
-  const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
-  const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
-  const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
+    const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
+    const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
+    const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
 
-  await sendMessages(client);
-  // Setting up receive handlers
-  await setupReceiveHandlers(subscription1Client);
-  await setupReceiveHandlers(subscription2Client);
-  await setupReceiveHandlers(subscription3Client);
+    await sendMessages(client);
+    // Setting up receive handlers
+    await setupReceiveHandlers(subscription1Client);
+    await setupReceiveHandlers(subscription2Client);
+    await setupReceiveHandlers(subscription3Client);
 
-  await subscription1Client.close();
-  await subscription2Client.close();
-  await subscription3Client.close();
-
-  console.log("\nClosing the client");
-  await client.close();
+    await subscription1Client.close();
+    await subscription2Client.close();
+    await subscription3Client.close();
+    await client.close();
+  } catch (err) {
+    console.log(">>>>> Error occurred in running sampple: ", err);
+  } finally {
+    console.log("\nClosing the client");
+    ns.close();
+  }
 }
 
 async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
@@ -92,10 +97,8 @@ async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
 
 main()
   .then(() => {
-    console.log("\n>>>> Calling close....");
-    return ns.close();
+    console.log("\n>>>> sample Done!!!!");
   })
   .catch((err) => {
     console.log("error: ", err);
-    return ns.close();
   });
