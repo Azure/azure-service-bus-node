@@ -41,30 +41,23 @@ let ns: Namespace;
 
 */
 async function main(): Promise<void> {
-  try {
-    ns = Namespace.createFromConnectionString(str);
-    // Clean up queues before running.
-    await purgeMessageQueue(queuePath);
-    console.log(">>>> Cleaning up queue: ", queuePath);
-    await purgeMessageQueue(deadLetterQueuePath);
-    console.log(">>>> Cleaning up queue: ", deadLetterQueuePath);
+  ns = Namespace.createFromConnectionString(str);
+  // Clean up queues before running.
+  await purgeMessageQueue(queuePath);
+  console.log(">>>> Cleaning up queue: ", queuePath);
+  await purgeMessageQueue(deadLetterQueuePath);
+  console.log(">>>> Cleaning up queue: ", deadLetterQueuePath);
 
-    // This scenario demonstrates brokered message's deadletter() API resulting in immediate
-    // message move to DLQ.
-    await runSimpleDeadLetterScenario();
+  // This scenario demonstrates brokered message's deadletter() API resulting in immediate
+  // message move to DLQ.
+  await runSimpleDeadLetterScenario();
 
-    // This scenario demonstrates how exceeding delivery count on message will result in
-    // automatic move to DLQ
-    await runExceedMaxRetriesScenario();
+  // This scenario demonstrates how exceeding delivery count on message will result in
+  // automatic move to DLQ
+  await runExceedMaxRetriesScenario();
 
-    // This scenario demonstrates how message processing failures can cause message move to DLQ.
-    await runProcessingErrorHandlingScenario();
-  } catch (err) {
-    console.log(">>>>> Error in running sample scenarios: ", err);
-  } finally {
-    console.log("\n >>>> Calling close....");
-    ns.close();
-  }
+  // This scenario demonstrates how message processing failures can cause message move to DLQ.
+  await runProcessingErrorHandlingScenario();
 }
 
 // Helper for purging a given queue
@@ -179,5 +172,9 @@ main()
     console.log("\n>>>> sample Done!!!!");
   })
   .catch((err) => {
-    console.log("error: ", err);
+    console.log(">>>>> Error in running sample scenarios: ", err);
+  })
+  .then(() => {
+    console.log("\n >>>> Calling close....");
+    ns.close();
   });

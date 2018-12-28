@@ -28,16 +28,9 @@ let ns: Namespace;
   On running this sample, you should see 3 instances of a vegetarian recipe in the main queue.
 */
 async function main(): Promise<void> {
-  try {
-    ns = Namespace.createFromConnectionString(str);
-    // Process messages from the Dead Letter Queue
-    await processDeadletterMessageQueue();
-  } catch (err) {
-    console.log(">>>>> Error occurred in running sampple: ", err);
-  } finally {
-    console.log("\n>>>> Calling close....");
-    ns.close();
-  }
+  ns = Namespace.createFromConnectionString(str);
+  // Process messages from the Dead Letter Queue
+  await processDeadletterMessageQueue();
 }
 
 // Handler for processing the Dead Letter Messages
@@ -76,5 +69,9 @@ main()
     console.log("\n>>>> sample Done!!!!");
   })
   .catch((err) => {
-    console.log("error: ", err);
+    console.log(">>>>> Error in running sample scenarios: ", err);
+  })
+  .then(() => {
+    console.log("\n >>>> Calling close....");
+    ns.close();
   });
