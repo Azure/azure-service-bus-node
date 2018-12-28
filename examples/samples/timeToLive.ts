@@ -14,7 +14,7 @@ dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queuePath = process.env.QUEUE_NAME || "";
-const deadLetterQueuePath = queuePath + "/$DeadLetterQueue";
+const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queuePath);
 const receiveClientTimeoutInMilliseconds = 10000;
 console.log("str: ", str);
 console.log("queue path: ", queuePath);
@@ -26,30 +26,28 @@ let ns: Namespace;
   This sample demonstrates how TimeToLive property works. For more information, refer to
   https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-expiration
 
-  On running this sample, you should immediately see a Pineapple Icecream message in the queue.
+  On running this sample, you should immediately see a Pineapple Icecream message in the main queue.
   After 30 seconds, you should see the message moved to DLQ with appropriate reason being set.
 */
 async function main(): Promise<void> {
-  try {
-    ns = Namespace.createFromConnectionString(str);
-    // Send messages with TTL property assigned
-    await SendMessagesAsync();
+  ns = Namespace.createFromConnectionString(str);
+  // Send messages with TTL property assigned
+  await sendMessage();
 
-    // Expire the messages
-    await delay(60000);
+  // Expire the messages by waiting for 40 seconds
+  await delay(40000);
 
-    // Process expired messages from the Dead Letter Queue
-    await PickUpAndFixDeadletters();
-  } catch (err) {
-    console.log(">>>>> Error occurred in running sampple: ", err);
-  } finally {
-    console.log("\n>>>> Calling close....");
-    ns.close();
-  }
+  // Attempt to receive message from main queue
+  await receiveMessageFromQueue(queuePath);
+
+  // Attempt to receive message from DLQ
+  await receiveMessageFromQueue(deadLetterQueuePath);
+
+  console.log(">>>> Calling close....");
+  ns.close();
 }
 
-// Task to send messages to given queue
-async function SendMessagesAsync(): Promise<void> {
+async function sendMessage(): Promise<void> {
   const recipeData = { name: "Limited Pineapple Icecream", type: "Dessert" };
   const client = ns.createQueueClient(queuePath);
   const messageBody = recipeData;
@@ -61,15 +59,16 @@ async function SendMessagesAsync(): Promise<void> {
     messageId: generateUuid()
   };
   await client.send(message);
+  console.log(">>>>> Sent message with data", recipeData);
   await client.close();
 }
 
-// Task for processing the expired messages after they land in the Dead Letter Queue
-async function PickUpAndFixDeadletters(): Promise<void> {
-  const client = ns.createQueueClient(deadLetterQueuePath, { receiveMode: ReceiveMode.peekLock });
+async function receiveMessageFromQueue(givenQueuePath: string): Promise<void> {
+  // Process messages from queue, by invoking .deadletter() on the brokered message
+  const client = ns.createQueueClient(givenQueuePath, { receiveMode: ReceiveMode.peekLock });
+  console.log("\n >>>>> Receiving message from queue", givenQueuePath);
   const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log(">>>>> Reprocessing the message in DLQ - ", brokeredMessage);
-    await fixAndResendMessage(brokeredMessage);
+    console.log(">>>>> Received message with data", brokeredMessage.body);
     await brokeredMessage.complete();
   };
 
@@ -83,23 +82,11 @@ async function PickUpAndFixDeadletters(): Promise<void> {
   await client.close();
 }
 
-async function fixAndResendMessage(oldMessage: ServiceBusMessage): Promise<void> {
-  // Inspect given message and repair it
-  const repairedMessage = oldMessage.clone();
-  // TODO: Fix bug in SDK where the deadletter reason is not cleared when reposted to main queue
-  // Fix message to live longer
-  repairedMessage.timeToLive = 5 * 60 * 1000;
-
-  // Send repaired message back to the current queue
-  const client = ns.createQueueClient(queuePath);
-  await client.send(repairedMessage);
-  await client.close();
-}
-
 main()
-  .then(() => {
-    console.log("\n>>>> sample Done!!!!");
-  })
   .catch((err) => {
-    console.log("error: ", err);
+    console.log(">>>>> Error occurred: ", err);
+    ns.close();
+  })
+  .then(() => {
+    console.log(">>>> sample Done!!!!");
   });
