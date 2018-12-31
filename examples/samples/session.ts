@@ -77,7 +77,7 @@ async function receiveMessages(queueClient: QueueClient): Promise<void> {
 
 main()
   .then(() => {
-    console.log(">>>> Calling close....");
+    console.log("\n>>>> Sample Done!");
   })
   .catch((err) => {
     console.log("error: ", err);
