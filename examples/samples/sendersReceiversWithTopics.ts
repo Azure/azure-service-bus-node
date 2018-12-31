@@ -11,7 +11,7 @@ import {
   TopicClient
 } from "../../lib";
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: "../../.env" });
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const topic = process.env.TOPIC_NAME || "";
@@ -56,30 +56,28 @@ async function sendMessages(topicClient: TopicClient): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  try {
-    ns = Namespace.createFromConnectionString(str);
-    const client = ns.createTopicClient(topic);
+  ns = Namespace.createFromConnectionString(str);
 
-    const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
-    const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
-    const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
+  const client = ns.createTopicClient(topic);
+  const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
+  const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
+  const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
 
-    await sendMessages(client);
-    // Setting up receive handlers
-    await setupReceiveHandlers(subscription1Client);
-    await setupReceiveHandlers(subscription2Client);
-    await setupReceiveHandlers(subscription3Client);
+  await sendMessages(client);
 
-    await subscription1Client.close();
-    await subscription2Client.close();
-    await subscription3Client.close();
-    await client.close();
-  } catch (err) {
-    console.log(">>>>> Error occurred in running sampple: ", err);
-  } finally {
-    console.log("\nClosing the client");
-    ns.close();
-  }
+  // Setting up receive handlers
+  await setupReceiveHandlers(subscription1Client);
+  await setupReceiveHandlers(subscription2Client);
+  await setupReceiveHandlers(subscription3Client);
+
+  await subscription1Client.close();
+  await subscription2Client.close();
+  await subscription3Client.close();
+
+  console.log("\nClosing the client");
+
+  await client.close();
+  return ns.close();
 }
 
 async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
@@ -97,8 +95,9 @@ async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
 
 main()
   .then(() => {
-    console.log("\n>>>> sample Done!!!!");
+    console.log("\n>>>> Sample Done!");
   })
   .catch((err) => {
     console.log("error: ", err);
+    return ns.close();
   });
