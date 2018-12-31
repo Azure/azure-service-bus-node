@@ -66,7 +66,6 @@ async function receiveMessages(queueClient: QueueClient): Promise<void> {
     console.log(
       `Message received: ${brokeredMessage.body} SessionId : ${brokeredMessage.sessionId}`
     );
-    await brokeredMessage.complete();
   };
   const onError: OnError = (err: MessagingError | Error) => {
     console.log(">>>>> Error occurred: ", err);
@@ -76,10 +75,10 @@ async function receiveMessages(queueClient: QueueClient): Promise<void> {
 }
 
 main()
+  .catch((err) => {
+    console.log("error: ", err);
+  })
   .then(() => {
     console.log(">>>> Calling close....");
     return ns.close();
-  })
-  .catch((err) => {
-    console.log("error: ", err);
   });
