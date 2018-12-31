@@ -32,6 +32,7 @@ async function main(): Promise<void> {
   await receiveMessages(client);
 
   await client.close();
+  ns.close();
 }
 
 async function sendMessages(queueClient: QueueClient, sessionId: string): Promise<void> {
@@ -75,10 +76,10 @@ async function receiveMessages(queueClient: QueueClient): Promise<void> {
 }
 
 main()
-  .catch((err) => {
-    console.log("error: ", err);
-  })
   .then(() => {
     console.log(">>>> Calling close....");
-    return ns.close();
+  })
+  .catch((err) => {
+    console.log("error: ", err);
+    ns.close();
   });
