@@ -1,11 +1,4 @@
-import {
-  delay,
-  SendableMessageInfo,
-  QueueClient,
-  ReceiveMode,
-  generateUuid,
-  Namespace
-} from "../../lib";
+import { SendableMessageInfo, QueueClient, ReceiveMode, generateUuid, Namespace } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -70,7 +63,6 @@ async function peekMessages(): Promise<void> {
       );
     }
     console.log("\n>>>> Browsed the Messages.\n");
-
   } catch (err) {
     console.log("Error while peeking: ", err);
   }
