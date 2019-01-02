@@ -32,7 +32,7 @@ async function main(): Promise<void> {
   await receiveMessages(client);
 
   await client.close();
-  ns.close();
+  await ns.close();
 }
 
 async function sendMessages(queueClient: QueueClient, sessionId: string): Promise<void> {
