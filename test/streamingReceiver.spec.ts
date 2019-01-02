@@ -93,26 +93,6 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
   });
 
   afterEach(async () => {
-    const peekedQueueMsg = await queueClient.peek();
-    if (peekedQueueMsg.length) {
-      const handler = queueClient.receive(
-        (msg) => msg.complete(),
-        () => console.log("Error when cleaning up queue after running test.")
-      );
-      await delay(2000);
-      await handler.stop();
-    }
-
-    const peekedSubscriptionMsg = await subscriptionClient.peek();
-    if (peekedSubscriptionMsg.length) {
-      const handler = subscriptionClient.receive(
-        (msg) => msg.complete(),
-        () => console.log("Error when cleaning up subscription after running test.")
-      );
-      await delay(2000);
-      await handler.stop();
-    }
-
     return namespace.close();
   });
 
