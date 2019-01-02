@@ -14,7 +14,7 @@ dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queuePath = process.env.QUEUE_NAME || "";
-const deadLetterQueuePath = (process.env.QUEUE_NAME || "") + "/$DeadLetterQueue";
+const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queuePath);
 const receiveClientTimeoutInMilliseconds = 10000;
 console.log("str: ", str);
 console.log("queue path: ", queuePath);
@@ -45,6 +45,9 @@ async function main(): Promise<void> {
   // This scenario demonstrates how exceeding delivery count on message will result in
   // automatic, implicit message move to DLQ
   await runImplicitDeadletteringScenario();
+
+  console.log("\n >>>> Calling close....");
+  ns.close();
 }
 
 async function runExplicitDeadletteringScenario(): Promise<void> {
@@ -72,7 +75,7 @@ async function runExplicitDeadletteringScenario(): Promise<void> {
 
 async function runImplicitDeadletteringScenario(): Promise<void> {
   // Prepare given queue by sending sample message
-  const data = { name: "Dry-braised Schezuan Prawn", type: "Dinner" };
+  const data = { name: "Dry-braised Schezuan Prawn", type: "Non-Vegetarian" };
   await sendMessage(data);
 
   // Process messages from queue - exceed max retries on the messages
@@ -112,13 +115,10 @@ async function sendMessage(messageBody: Object): Promise<void> {
 }
 
 main()
-  .then(() => {
-    console.log("\n>>>> sample Done!!!!");
-  })
   .catch((err) => {
     console.log(">>>>> Error in running sample scenarios: ", err);
+    ns.close();
   })
   .then(() => {
-    console.log("\n >>>> Calling close....");
-    ns.close();
+    console.log("\n>>>> sample Done!!!!");
   });
