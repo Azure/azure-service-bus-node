@@ -1,19 +1,11 @@
-import {
-  delay,
-  OnMessage,
-  OnError,
-  MessagingError,
-  ServiceBusMessage,
-  ReceiveMode,
-  Namespace
-} from "../../lib";
+import { ServiceBusMessage, ReceiveMode, Namespace } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queuePath = process.env.QUEUE_NAME || "";
 const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queuePath);
-const receiveClientTimeoutInMilliseconds = 10000;
+const receiveClientTimeoutInSeconds = 10;
 console.log("str: ", str);
 console.log("queue path: ", queuePath);
 console.log("deadletter queue path: ", deadLetterQueuePath);
@@ -23,37 +15,34 @@ let ns: Namespace;
 /*
   This sample demonstrates how messages from DLQ can be retrieved and processed.
 
-  Run movingMessagesToDLQ sample before this to populate messages in the DLQ.
-  On running this sample, you should see the existing messages in DLQ be moved back to main queue.
+  Run movingMessagesToDLQ sample before this to populate messages in the DLQ, if required.
+  On running this sample, you should see one message be moved from DLQ to main queue.
 */
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
-  // Process messages from the Dead Letter Queue
+
   await processDeadletterMessageQueue();
 
-  console.log("\n >>>> Calling close....");
+  console.log(">>>> Calling close....");
   ns.close();
 }
 
 async function processDeadletterMessageQueue(): Promise<void> {
   const client = ns.createQueueClient(deadLetterQueuePath, { receiveMode: ReceiveMode.peekLock });
-  const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log(">>>>> Reprocessing the message in DLQ - ", brokeredMessage);
 
+  const message = await client.receiveBatch(1, receiveClientTimeoutInSeconds);
+  console.log(">>>>> Reprocessing the message in DLQ - ", message);
+
+  if (message) {
     // Do something with the message retrieved from DLQ
-    await fixAndResendMessage(brokeredMessage);
+    await fixAndResendMessage(message[0]);
 
     // Mark message as complete/processed.
-    await brokeredMessage.complete();
-  };
+    await message[0].complete();
+  } else {
+    console.log(">>>> Error: No messages were received from the DLQ.");
+  }
 
-  const onError: OnError = (err: MessagingError | Error) => {
-    console.log(">>>>> Error occurred: ", err);
-  };
-
-  const receiverHandler = await client.receive(onMessageHandler, onError, { autoComplete: false });
-  await delay(receiveClientTimeoutInMilliseconds);
-  await receiverHandler.stop();
   await client.close();
 }
 
@@ -69,7 +58,7 @@ async function fixAndResendMessage(oldMessage: ServiceBusMessage): Promise<void>
 
 main()
   .catch((err) => {
-    console.log(">>>>> Error in running sample scenarios: ", err);
+    console.log(">>>>> Error occurred: ", err);
     ns.close();
   })
   .then(() => {
