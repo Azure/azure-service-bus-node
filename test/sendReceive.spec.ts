@@ -30,7 +30,7 @@ const testMessages: SendableMessageInfo[] = [
   }
 ];
 
-async function testReceivedMessages(receivedMsgs: ServiceBusMessage[]): Promise<void> {
+function testReceivedMessages(receivedMsgs: ServiceBusMessage[]): void {
   should.equal(receivedMsgs.length, 2);
   should.equal(receivedMsgs[0].body, testMessages[0].body);
   should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
@@ -46,7 +46,7 @@ async function testPeekMsgsLength(
   should.equal(peekedMsgs.length, expectedPeekLength);
 }
 
-describe("Simple send/receive to/from Queue/Topic/Subscription", async function(): Promise<void> {
+describe("Simple send/receive to/from Queue/Topic/Subscription", function(): void {
   let namespace: Namespace;
   let queueClient: QueueClient;
   let topicClient: TopicClient;
