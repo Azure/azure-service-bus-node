@@ -23,66 +23,45 @@ console.log("deadletter queue path: ", deadLetterQueuePath);
 let ns: Namespace;
 
 /*
-    Setup Instructions: Ensure the queue is configured to have DLQ enabled, and that the appropriate
-    environment variables are set.
-
-    There are many scenarios wherein messages are moved to the DLQ.
+    This sample demonstrates scenarios as to how messages can be moved to the DLQ.
     Ref: https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-dead-letter-queues
 
-    This sample demonstrates usage of DLQ for 3 such scenarios:
-      A. When client invokes the .deadletter() API on the brokered message.
-      B. When system exceeds maximum allowed delivery attempts on the message,
+      A. Explicit - When client invokes the .deadletter() API on the brokered message.
+      B. Implicit - When system exceeds maximum allowed delivery attempts on the message,
          which is by default set to 10
-      C. When processing of message encounters error or an exception.
 
-    After running this sample, you should see 3 Non-Vegetarian recipe messages in the DLQ.
-    Then run the processMessagesInDLQ example to see how the messages
-    can be reprocessed.
+    CAUTION: Running this sample may cause all messages in main queue to be moved to DLQ.
+    If main queue is empty, you should see 2 new "Non-Vegetarian recipe" messages in the DLQ.
+    Then run the processMessagesInDLQ example to see how the messages in DLQ can be reprocessed.
 
 */
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
-  // Clean up queues before running.
-  await purgeMessageQueue(queuePath);
-  console.log(">>>> Cleaning up queue: ", queuePath);
-  await purgeMessageQueue(deadLetterQueuePath);
-  console.log(">>>> Cleaning up queue: ", deadLetterQueuePath);
 
-  // This scenario demonstrates brokered message's deadletter() API resulting in immediate
-  // message move to DLQ.
-  await runSimpleDeadLetterScenario();
+  // This scenario demonstrates how a message can be explicitly moved to DLQ using the
+  // .deadletter() API
+  await runExplicitDeadletteringScenario();
 
   // This scenario demonstrates how exceeding delivery count on message will result in
-  // automatic move to DLQ
-  await runExceedMaxRetriesScenario();
-
-  // This scenario demonstrates how message processing failures can cause message move to DLQ.
-  await runProcessingErrorHandlingScenario();
+  // automatic, implicit message move to DLQ
+  await runImplicitDeadletteringScenario();
 }
 
-// Helper for purging a given queue
-async function purgeMessageQueue(path: string): Promise<void> {
-  const client = ns.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
-  const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    await brokeredMessage.complete();
-  };
-
-  const receiverHandler = await client.receive(onMessageHandler, onError, { autoComplete: false });
-  await delay(receiveClientTimeoutInMilliseconds);
-  await receiverHandler.stop();
-  await client.close();
-}
-
-async function runSimpleDeadLetterScenario(): Promise<void> {
-  // Prepare given queue by sending few messages
-  await sendMessage(0);
+async function runExplicitDeadletteringScenario(): Promise<void> {
+  // Prepare given queue by sending sample message
+  const data = { name: "Creamy Chicken Pasta", type: "Dinner" };
+  await sendMessage(data);
 
   // Process messages from queue, by invoking .deadletter() on the brokered message
-  console.log("\n Setup queues, now running scenario A ... ");
+  console.log("\n Running scenario A ... ");
   const client = ns.createQueueClient(queuePath, { receiveMode: ReceiveMode.peekLock });
   const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(">>>>> Deadletter-ing the message", brokeredMessage);
-    await brokeredMessage.deadLetter();
+    // TODO: Fix bug with .deadletter() in SDK for not setting these properties on the message.
+    await brokeredMessage.deadLetter({
+      deadletterReason: "Incorrect Recipe type",
+      deadLetterErrorDescription: "Recipe type does not  match preferences."
+    });
   };
 
   const receiverHandler = await client.receive(onMessageHandler, onError, { autoComplete: false });
@@ -91,12 +70,13 @@ async function runSimpleDeadLetterScenario(): Promise<void> {
   await client.close();
 }
 
-async function runExceedMaxRetriesScenario(): Promise<void> {
-  // Prepare given queue by sending few messages
-  await sendMessage(1);
+async function runImplicitDeadletteringScenario(): Promise<void> {
+  // Prepare given queue by sending sample message
+  const data = { name: "Dry-braised Schezuan Prawn", type: "Dinner" };
+  await sendMessage(data);
 
   // Process messages from queue - exceed max retries on the messages
-  console.log("\n Setup queues, now running scenario B ... ");
+  console.log("\n Running scenario B ... ");
   const client = ns.createQueueClient(queuePath, { receiveMode: ReceiveMode.peekLock });
   const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(
@@ -112,50 +92,14 @@ async function runExceedMaxRetriesScenario(): Promise<void> {
   await client.close();
 }
 
-async function runProcessingErrorHandlingScenario(): Promise<void> {
-  // Prepare given queue by sending few messages
-  await sendMessage(2);
-
-  // Process messages from queue, by invoking a faulty processor that doesn't successfully process
-  console.log("\n Setup queues, now running scenario C ... ");
-  const client = ns.createQueueClient(queuePath, { receiveMode: ReceiveMode.peekLock });
-  const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log(">>>>> Rejecting the message: ", brokeredMessage);
-    try {
-      throw new Error("Customer is Vegetarian.");
-    } catch (err) {
-      console.log("Message from faulty processor: ", err);
-
-      // TODO: Fix bug with .deadletter() in SDK for not setting these properties on the message.
-      await brokeredMessage.deadLetter({
-        deadletterReason: "Incorrect Recipe type",
-        deadLetterErrorDescription: "Recipe type does not  match preferences."
-      });
-    }
-  };
-
-  const receiverHandler = await client.receive(onMessageHandler, onError, {
-    autoComplete: false
-  });
-  await delay(receiveClientTimeoutInMilliseconds);
-  await receiverHandler.stop();
-  await client.close();
-}
-
 // OnError handler for message receive
 const onError: OnError = (err: MessagingError | Error) => {
   console.log(">>>>> Error occurred: ", err);
 };
 
-// Helper to send few sample messages to given queue
-async function sendMessage(index: number): Promise<void> {
-  const nonVegetarianRecipes = [
-    { name: "Grilled Steak", type: "Non-Vegetarian" },
-    { name: "Dry-braised Schezuan Prawn", type: "Non-Vegetarian" },
-    { name: "Creamy Chicken Pasta", type: "Non-Vegetarian" }
-  ];
+// Helper to send sample message to configured queue
+async function sendMessage(messageBody: Object): Promise<void> {
   const client = ns.createQueueClient(queuePath);
-  const messageBody = nonVegetarianRecipes[index];
   const message: SendableMessageInfo = {
     body: messageBody,
     contentType: "application/json",

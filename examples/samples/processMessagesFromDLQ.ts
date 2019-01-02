@@ -21,11 +21,10 @@ console.log("deadletter queue path: ", deadLetterQueuePath);
 let ns: Namespace;
 
 /*
-  This sample demonstrates how messages from DLQ can be retrieved, inspected and reprocessed if
-  required, by sending to the same or a different queue.
+  This sample demonstrates how messages from DLQ can be retrieved and processed.
 
-  Run movingMessagesToDLQ sample before this to see three Non-Vegetarian recipe messages in the DLQ.
-  On running this sample, you should see 3 instances of a vegetarian recipe in the main queue.
+  Run movingMessagesToDLQ sample before this to populate messages in the DLQ.
+  On running this sample, you should see the existing messages in DLQ be moved back to main queue.
 */
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
@@ -33,12 +32,15 @@ async function main(): Promise<void> {
   await processDeadletterMessageQueue();
 }
 
-// Handler for processing the Dead Letter Messages
 async function processDeadletterMessageQueue(): Promise<void> {
   const client = ns.createQueueClient(deadLetterQueuePath, { receiveMode: ReceiveMode.peekLock });
   const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(">>>>> Reprocessing the message in DLQ - ", brokeredMessage);
+
+    // Do something with the message retrieved from DLQ
     await fixAndResendMessage(brokeredMessage);
+
+    // Mark message as complete/processed.
     await brokeredMessage.complete();
   };
 
@@ -52,11 +54,9 @@ async function processDeadletterMessageQueue(): Promise<void> {
   await client.close();
 }
 
-// This function takes in the message to inspect and reprocess it as needed.
 async function fixAndResendMessage(oldMessage: ServiceBusMessage): Promise<void> {
-  // Inspect given message and repair it
+  // Inspect given message and make any changes if necessary
   const repairedMessage = oldMessage.clone();
-  repairedMessage.body = { name: "Grilled Tomatoes", type: "Vegetarian" };
 
   // Send repaired message back to the current queue
   const client = ns.createQueueClient(queuePath);
