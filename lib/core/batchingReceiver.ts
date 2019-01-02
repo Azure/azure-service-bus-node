@@ -112,6 +112,7 @@ export class BatchingReceiver extends MessageReceiver {
           }
         } else {
           this.isReceivingMessages = false;
+          resolve(brokeredMessages);
         }
       };
 
