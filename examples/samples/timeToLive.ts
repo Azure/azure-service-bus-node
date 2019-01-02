@@ -38,9 +38,11 @@ async function main(): Promise<void> {
   await delay(40000);
 
   // Attempt to receive message from main queue
+  // This will not show the message details that was sent, implying message got expired and removed
   await receiveMessageFromQueue(queuePath);
 
   // Attempt to receive message from DLQ
+  // This will contain the message details that was sent, implying the message is moved to DLQ
   await receiveMessageFromQueue(deadLetterQueuePath);
 
   console.log(">>>> Calling close....");
