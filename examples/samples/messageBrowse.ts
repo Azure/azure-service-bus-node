@@ -70,6 +70,7 @@ async function peekMessages(): Promise<void> {
       );
     }
     console.log("\n>>>> Browsed the Messages.\n");
+
   } catch (err) {
     console.log("Error while peeking: ", err);
   }
