@@ -71,9 +71,9 @@ async function main(): Promise<void> {
   await sendMessages(client);
   // Setting up receive handlers
 
-  await setupReceiveHandlers(subscription1Client, { maxConcurrentCalls: 10, autoComplete: true });
-  await setupReceiveHandlers(subscription2Client, { maxConcurrentCalls: 5, autoComplete: true });
-  await setupReceiveHandlers(subscription3Client, { maxConcurrentCalls: 1, autoComplete: true });
+  await setupReceiveHandlers(subscription1Client);
+  await setupReceiveHandlers(subscription2Client);
+  await setupReceiveHandlers(subscription3Client);
 
   await subscription1Client.close();
   await subscription2Client.close();
@@ -83,10 +83,7 @@ async function main(): Promise<void> {
   return ns.close();
 }
 
-async function setupReceiveHandlers(
-  client: SubscriptionClient,
-  options: MessageHandlerOptions
-): Promise<void> {
+async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
   // retrieve messages from the queue
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(
@@ -100,7 +97,7 @@ async function setupReceiveHandlers(
     console.log("\n>>>>> Error occurred: ", err);
   };
 
-  const rcvHandler = client.receive(onMessage, onError, options);
+  const rcvHandler = client.receive(onMessage, onError);
   await delay(10000);
   await rcvHandler.stop();
 }
