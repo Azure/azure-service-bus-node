@@ -1,4 +1,7 @@
-// Enable partitions for the topics in the azure portal and then execute the sample
+// Enable partitions for the topics in the azure portal and then execute the sample.
+// For partitioned queues, the topmost 16 bits of the SequenceNumber(64-bit unique integer assigned by ServiceBus for a message) reflect the partition id.
+// The usual the ascending SequenceNumber characteristics is no longer guaranteed as the SequenceNumber depends on partitionKey(partitioned queues are distributed among different message brokers).
+// Once you enable the partitions and execute the sample, you should be able to relate the SequenceNumbers corresponding to the same partitionKey.
 import {
   delay,
   SendableMessageInfo,
@@ -29,30 +32,30 @@ async function sendMessages(): Promise<void> {
   const sendClient = nsSend.createQueueClient(path);
   const data = [
     { lastName: "Einstein", firstName: "Albert" },
-    { lastName: "Heisenberg", firstName: "Werner" },
+    { lastName: "Einstein", firstName: "Elsa" },
     { lastName: "Curie", firstName: "Marie" },
-    { lastName: "Hawking", firstName: "Steven" },
-    { lastName: "Newton", firstName: "Isaac" },
+    { lastName: "Curie", firstName: "Eve" },
+    { lastName: "Curie", firstName: "Pierre" },
+    { lastName: "Pavlov", firstName: "Ivan" },
     { lastName: "Bohr", firstName: "Niels" },
+    { lastName: "Asimov", firstName: "Isaac" },
+    { lastName: "Asimov", firstName: "David" },
     { lastName: "Faraday", firstName: "Michael" },
-    { lastName: "Galilei", firstName: "Galileo" },
-    { lastName: "Kepler", firstName: "Johannes" },
+    { lastName: "Kopernikus", firstName: "Katharina" },
     { lastName: "Kopernikus", firstName: "Nikolaus" }
   ];
   try {
-    for (let j = 0; j < 3; j++) {
-      for (let index = 0; index < data.length; index++) {
-        const element = data[index];
-        const message: SendableMessageInfo = {
-          body: `${element.firstName} ${element.lastName}`,
-          label: "Scientist",
-          timeToLive: 2 * 60 * 1000, // After 2 minutes, the message will be removed from the queue
-          messageId: generateUuid(),
-          partitionKey: data[index].lastName.substring(0, 2)
-        };
-        console.log(`Sending ${message.body}`);
-        await sendClient.send(message);
-      }
+    for (let index = 0; index < data.length; index++) {
+      const element = data[index];
+      const message: SendableMessageInfo = {
+        body: `${element.firstName} ${element.lastName}`,
+        label: "Scientist",
+        timeToLive: 2 * 60 * 1000, // After 2 minutes, the message will be removed from the queue
+        messageId: generateUuid(),
+        partitionKey: data[index].lastName.substring(0, 2) // The first two letters of the lastname is the partition key
+      };
+      console.log(`Sending ${message.body}`);
+      await sendClient.send(message);
     }
     console.log("\n>>>>>>> Messages Sent !");
   } catch (err) {
@@ -70,11 +73,9 @@ async function receiveMessages(): Promise<void> {
     const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
       console.log(
         ` \n### Received message:
-        ID - ${brokeredMessage.messageId},
         messageBody - ${brokeredMessage.body ? brokeredMessage.body.toString() : undefined},
         SequenceNumber - ${brokeredMessage.sequenceNumber},
-        partitionKey - ${brokeredMessage.partitionKey},
-        label - ${brokeredMessage.label}`
+        partitionKey - ${brokeredMessage.partitionKey}`
       );
     };
 
