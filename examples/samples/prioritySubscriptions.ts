@@ -30,20 +30,9 @@ console.log(`Subscription 3: ${subscription3}\n`);
 
 let ns: Namespace;
 
-function randomstring(num: number): string {
-  let text = "";
-  const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
-  for (let i = 0; i < 7; i++) {
-    text += possible.charAt(Math.floor(Math.random() * possible.length));
-  }
-
-  return text;
-}
-
 async function sendMessages(topicClient: TopicClient): Promise<void> {
   for (let index = 0; index < 100; index++) {
-    const element = randomstring(index);
+    const element = `Message#${index}`;
     const message: SendableMessageInfo = {
       body: element,
       userProperties: { priority: Math.floor(Math.random() * 3) + 1 },
