@@ -29,7 +29,7 @@ npm run build
 - To work with Topics, find the "Topics" tab right under "Entities" at **_your-servicebus-namespace_**, create a Topic. Go to **_your-servicebus-namespace_ > _your-topic_**, create subscriptions for the topic. Note down the names of the topic and subscriptions for the next step.
 > _Note : **RootManageSharedAccessKey** is automatically created for the namespace and has permissions for the entire namespace. If you want to use restricted access, refer [Shared Access Signatures](https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-sas), create the Access Keys exclusive to the specific created Queue/Topic._
 
-Create a `.env` file in the root folder(`azure-service-bus-node`) with the following contents. Replace the `<string>` with your corresponding values. (These environment variables will be loaded into `process.env` when running the samples)
+Create a `.env` file in the root folder with the following contents. Replace the `<string>` with your corresponding values. (These environment variables will be loaded into `process.env` when running the samples)
 ```typescript
 SERVICEBUS_CONNECTION_STRING=<Primary-Connection-String>
 QUEUE_NAME=<Name-of-the-Queue>
