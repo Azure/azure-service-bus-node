@@ -50,8 +50,26 @@ export class ConcurrentExpiringMap<TKey> {
     return result;
   }
 
+  /**
+   * Removes an entry from the the map if present
+   * @param key The key which needs to be removed from the map.
+   * @returns True if the key was found and removed from the map, False otherwise
+   */
+  delete(key: TKey): boolean {
+    log.map("Deleting key '%s' from the map", key);
+    return this._map.delete(key);
+  }
+
+  /**
+   * Clears all the entries from the underlying map.
+   */
+  clear(): void {
+    log.map("Clearing the map of all the entries");
+    this._map.clear();
+  }
+
   private async _scheduleCleanup(): Promise<void> {
-    if (this._cleanupScheduled || this._map.size < 0) {
+    if (this._cleanupScheduled || this._map.size === 0) {
       return;
     }
 
@@ -64,6 +82,10 @@ export class ConcurrentExpiringMap<TKey> {
   }
 
   private async _collectExpiredEntries(): Promise<void> {
+    if (this._map.size === 0) {
+      return;
+    }
+
     await delay(this._delayBetweenCleanupInSeconds);
     this._cleanupScheduled = false;
     for (const key of this._map.keys()) {
