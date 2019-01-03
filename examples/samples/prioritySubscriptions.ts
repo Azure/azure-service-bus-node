@@ -35,7 +35,7 @@ async function sendMessages(topicClient: TopicClient): Promise<void> {
     const element = `Message#${index}`;
     const message: SendableMessageInfo = {
       body: element,
-      userProperties: { priority: Math.floor(Math.random() * 3) + 1 },
+      userProperties: { priority: Math.ceil(Math.random() * 3) },
       label: "Random String",
       timeToLive: 2 * 60 * 1000, // 2 minutes
       messageId: generateUuid()
