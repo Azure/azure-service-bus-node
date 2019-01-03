@@ -12,10 +12,11 @@ console.log("deadletter queue path: ", deadLetterQueuePath);
 let ns: Namespace;
 
 /*
-  This sample demonstrates how messages from DLQ can be retrieved and processed.
+  This sample demonstrates retrieving a message from a dead letter queue, editing it and
+  sending it back to the main queue.
 
-  Run movingMessagesToDLQ sample before this to populate messages in the DLQ, if required.
-  On running this sample, you should see one message be moved from DLQ to main queue.
+  Prior to running this sample, run the sample in movingMessagesToDLQ.ts file to move a message 
+  to the Dead Letter Queue
 */
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
