@@ -33,7 +33,7 @@ async function processDeadletterMessageQueue(): Promise<void> {
   const message = await client.receiveBatch(1);
   console.log(">>>>> Reprocessing the message in DLQ - ", message);
 
-  if (message) {
+  if (message.length > 0) {
     // Do something with the message retrieved from DLQ
     await fixAndResendMessage(message[0]);
 
