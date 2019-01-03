@@ -64,9 +64,8 @@ async function sendMessage(): Promise<void> {
 }
 
 async function receiveMessageFromQueue(givenQueuePath: string): Promise<void> {
-  // Process messages from queue, by invoking .deadletter() on the brokered message
   const client = ns.createQueueClient(givenQueuePath, { receiveMode: ReceiveMode.peekLock });
-  console.log("\n>>>>> Receiving message from queue", givenQueuePath);
+
   const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(">>>>> Received message with data", brokeredMessage.body);
     await brokeredMessage.complete();
@@ -76,10 +75,12 @@ async function receiveMessageFromQueue(givenQueuePath: string): Promise<void> {
     console.log(">>>>> Error occurred: ", err);
   };
 
+  console.log("\n>>>>> Receiving message from queue", givenQueuePath);
   const receiverHandler = await client.receive(onMessageHandler, onError, { autoComplete: false });
   await delay(receiveClientTimeoutInMilliseconds);
   await receiverHandler.stop();
   console.log(">>>>> Done receiving message from queue", givenQueuePath);
+
   await client.close();
 }
 
