@@ -25,9 +25,6 @@ let ns: Namespace;
 /*
   This sample demonstrates how TimeToLive property works. For more information, refer to
   https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-expiration
-
-  On running this sample, you should immediately see a Pineapple Icecream message in the main queue.
-  After 30 seconds, you should see the message moved to DLQ with appropriate reason being set.
 */
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
@@ -45,9 +42,9 @@ async function main(): Promise<void> {
   // This will contain the message details that was sent, implying the message is moved to DLQ
   await receiveMessageFromQueue(deadLetterQueuePath);
 
-  console.log(">>>> Calling close....");
+  console.log("\n>>>> Calling close....");
   await ns.close();
-  console.log(">>>> sample Done!!!!");
+  console.log("\n>>>> sample Done!!!!");
 }
 
 async function sendMessage(): Promise<void> {
@@ -69,7 +66,7 @@ async function sendMessage(): Promise<void> {
 async function receiveMessageFromQueue(givenQueuePath: string): Promise<void> {
   // Process messages from queue, by invoking .deadletter() on the brokered message
   const client = ns.createQueueClient(givenQueuePath, { receiveMode: ReceiveMode.peekLock });
-  console.log("\n >>>>> Receiving message from queue", givenQueuePath);
+  console.log("\n>>>>> Receiving message from queue", givenQueuePath);
   const onMessageHandler: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(">>>>> Received message with data", brokeredMessage.body);
     await brokeredMessage.complete();
@@ -82,6 +79,7 @@ async function receiveMessageFromQueue(givenQueuePath: string): Promise<void> {
   const receiverHandler = await client.receive(onMessageHandler, onError, { autoComplete: false });
   await delay(receiveClientTimeoutInMilliseconds);
   await receiverHandler.stop();
+  console.log(">>>>> Done receiving message from queue", givenQueuePath);
   await client.close();
 }
 
