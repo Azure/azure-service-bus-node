@@ -63,9 +63,9 @@ async function main(): Promise<void> {
   await sendMessages(client);
   // Setting up receive handlers
 
-  await setupReceiveHandlers(subscription1Client);
-  await setupReceiveHandlers(subscription2Client);
-  await setupReceiveHandlers(subscription3Client);
+  await receiveMessages(subscription1Client);
+  await receiveMessages(subscription2Client);
+  await receiveMessages(subscription3Client);
 
   await subscription1Client.close();
   await subscription2Client.close();
@@ -75,7 +75,7 @@ async function main(): Promise<void> {
   return ns.close();
 }
 
-async function setupReceiveHandlers(client: SubscriptionClient): Promise<void> {
+async function receiveMessages(client: SubscriptionClient): Promise<void> {
   // retrieve messages from the queue
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(
