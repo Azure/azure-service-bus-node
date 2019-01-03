@@ -14,17 +14,18 @@ import {
   SendableMessageInfo,
   generateUuid,
   TopicClient,
-  SubscriptionClient
+  SubscriptionClient,
+  ReceiveMode
 } from "../lib";
 
 const testMessages: SendableMessageInfo[] = [
   {
     body: "hello1",
-    messageId: `test message ${generateUuid}`
+    messageId: `test message ${generateUuid()}`
   },
   {
     body: "hello2",
-    messageId: `test message ${generateUuid}`
+    messageId: `test message ${generateUuid()}`
   }
 ];
 
@@ -212,5 +213,79 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
 
     await receivedMsgs[0].complete();
+  });
+
+  it("Abandoning a message 10 times, you get it no more. You can then only get it from the dead letter queue", async function(): Promise<
+    void
+  > {
+    await queueClient.send(testMessages[0]);
+    let abandonMsgCount = 0;
+    let receivedMsgs;
+
+    while (abandonMsgCount < 10) {
+      receivedMsgs = await queueClient.receiveBatch(1);
+
+      should.equal(receivedMsgs.length, 1);
+      should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+      should.equal(receivedMsgs[0].deliveryCount, abandonMsgCount);
+      abandonMsgCount++;
+      // TODO: This is taking 20 seconds. Why?
+      await receivedMsgs[0].abandon();
+    }
+
+    await testPeekMsgsLength(queueClient, 0);
+
+    const deadLetterQueuePath = process.env.QUEUE_NAME + "/$DeadLetterQueue";
+    const client = namespace.createQueueClient(deadLetterQueuePath, {
+      receiveMode: ReceiveMode.peekLock
+    });
+    receivedMsgs = await client.receiveBatch(1);
+
+    should.equal(Array.isArray(receivedMsgs), true);
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].complete();
+
+    await testPeekMsgsLength(client, 0);
+    await client.close();
+  });
+
+  it("Deferring a message results in not getting the same message again from queue/subscription. The message is then gotten using receiveDefferedMessages", async function(): Promise<
+    void
+  > {
+    await queueClient.sendBatch(testMessages);
+    const msgs = await queueClient.receiveBatch(1);
+
+    should.equal(Array.isArray(msgs), true);
+    should.equal(msgs.length, 1);
+    should.equal(msgs[0].body, testMessages[0].body);
+    should.equal(msgs[0].messageId, testMessages[0].messageId);
+
+    if (msgs[0].sequenceNumber) {
+      const sequenceNumber = msgs[0].sequenceNumber;
+      await msgs[0].defer();
+
+      const receivedMsgs = await queueClient.receiveBatch(1);
+      should.equal(Array.isArray(receivedMsgs), true);
+      should.equal(receivedMsgs.length, 1);
+      should.equal(receivedMsgs[0].body === testMessages[0].body, false);
+      should.equal(receivedMsgs[0].messageId === testMessages[0].messageId, false);
+      await receivedMsgs[0].complete();
+
+      const message = await queueClient.receiveDeferredMessage(sequenceNumber);
+      if (message) {
+        should.equal(message.body, testMessages[0].body);
+        should.equal(message.messageId, testMessages[0].messageId);
+
+        await message.complete();
+      } else {
+        throw "The message that we are receving from the sequence number can not be null";
+      }
+    } else {
+      throw "Sequence Number can not be null";
+    }
+    await testPeekMsgsLength(queueClient, 0);
   });
 });
