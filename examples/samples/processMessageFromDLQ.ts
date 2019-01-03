@@ -23,8 +23,9 @@ async function main(): Promise<void> {
 
   await processDeadletterMessageQueue();
 
-  console.log(">>>> Calling close....");
-  ns.close();
+  console.log("\n>>>> Calling close....");
+  await ns.close();
+  console.log("\n>>>> sample Done!!!!");
 }
 
 async function processDeadletterMessageQueue(): Promise<void> {
@@ -56,11 +57,7 @@ async function fixAndResendMessage(oldMessage: ServiceBusMessage): Promise<void>
   await client.close();
 }
 
-main()
-  .catch((err) => {
-    console.log(">>>>> Error occurred: ", err);
-    ns.close();
-  })
-  .then(() => {
-    console.log("\n>>>> sample Done!!!!");
-  });
+main().catch((err) => {
+  console.log(">>>>> Error occurred: ", err);
+  ns.close();
+});
