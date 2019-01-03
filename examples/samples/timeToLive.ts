@@ -46,7 +46,8 @@ async function main(): Promise<void> {
   await receiveMessageFromQueue(deadLetterQueuePath);
 
   console.log(">>>> Calling close....");
-  ns.close();
+  await ns.close();
+  console.log(">>>> sample Done!!!!");
 }
 
 async function sendMessage(): Promise<void> {
@@ -84,11 +85,7 @@ async function receiveMessageFromQueue(givenQueuePath: string): Promise<void> {
   await client.close();
 }
 
-main()
-  .catch((err) => {
-    console.log(">>>>> Error occurred: ", err);
-    ns.close();
-  })
-  .then(() => {
-    console.log(">>>> sample Done!!!!");
-  });
+main().catch((err) => {
+  console.log(">>>>> Error occurred: ", err);
+  ns.close();
+});
