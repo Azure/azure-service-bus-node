@@ -1,3 +1,4 @@
+// This sample manages rules for the subscriptions using {addRules, removeAllRules} functions in the code. Follow the link to do the same in other ways. Link - https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-resource-manager-namespace-topic-with-rule
 import {
   OnMessage,
   OnError,
