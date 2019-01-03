@@ -2,6 +2,7 @@
 // For partitioned queues, the topmost 16 bits of the SequenceNumber(64-bit unique integer assigned by ServiceBus for a message) reflect the partition id.
 // The usual the ascending SequenceNumber characteristics is no longer guaranteed as the SequenceNumber depends on partitionKey(partitioned queues are distributed among different message brokers).
 // Once you enable the partitions and execute the sample, you should be able to relate the SequenceNumbers corresponding to the same partitionKey.
+// Read more on Partitioned queues and topics : https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-partitioning
 import {
   delay,
   SendableMessageInfo,
