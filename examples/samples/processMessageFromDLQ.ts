@@ -5,7 +5,6 @@ dotenv.config();
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queuePath = process.env.QUEUE_NAME || "";
 const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queuePath);
-const receiveClientTimeoutInSeconds = 10;
 console.log("str: ", str);
 console.log("queue path: ", queuePath);
 console.log("deadletter queue path: ", deadLetterQueuePath);
@@ -31,7 +30,7 @@ async function main(): Promise<void> {
 async function processDeadletterMessageQueue(): Promise<void> {
   const client = ns.createQueueClient(deadLetterQueuePath, { receiveMode: ReceiveMode.peekLock });
 
-  const message = await client.receiveBatch(1, receiveClientTimeoutInSeconds);
+  const message = await client.receiveBatch(1);
   console.log(">>>>> Reprocessing the message in DLQ - ", message);
 
   if (message) {
