@@ -955,8 +955,11 @@ export class ServiceBusMessage implements ReceivedMessage {
     };
     if (options) {
       error = {
-        condition: options.deadletterReason,
-        description: options.deadLetterErrorDescription
+        condition: Constants.deadLetterName,
+        info: {
+          DeadLetterReason: options.deadletterReason,
+          DeadLetterErrorDescription: options.deadLetterErrorDescription
+        }
       };
     }
     log.message(
