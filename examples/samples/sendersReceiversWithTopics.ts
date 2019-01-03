@@ -11,7 +11,7 @@ import {
   TopicClient
 } from "../../lib";
 import * as dotenv from "dotenv";
-dotenv.config({ path: "../../.env" });
+dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const topic = process.env.TOPIC_NAME || "";
