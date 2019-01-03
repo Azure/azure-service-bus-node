@@ -3,11 +3,9 @@ import {
   OnError,
   MessagingError,
   delay,
-  MessageHandlerOptions,
   ServiceBusMessage,
   generateUuid,
   Namespace,
-  ReceiveMode,
   SendableMessageInfo,
   SubscriptionClient,
   TopicClient
@@ -50,21 +48,15 @@ async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(str);
   const client = ns.createTopicClient(topic);
 
-  const subscription1Client = ns.createSubscriptionClient(topic, subscription1, {
-    receiveMode: ReceiveMode.peekLock
-  });
+  const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
   await removeAllRules(subscription1Client);
   await addRules(subscription1Client, "Priority_1", "priority = 1");
 
-  const subscription2Client = ns.createSubscriptionClient(topic, subscription2, {
-    receiveMode: ReceiveMode.peekLock
-  });
+  const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
   await removeAllRules(subscription2Client);
   await addRules(subscription2Client, "Priority_2", "priority = 2");
 
-  const subscription3Client = ns.createSubscriptionClient(topic, subscription3, {
-    receiveMode: ReceiveMode.peekLock
-  });
+  const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
   await removeAllRules(subscription3Client);
   await addRules(subscription3Client, "Priority_3", "priority = 3");
 
