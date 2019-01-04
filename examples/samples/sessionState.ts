@@ -19,7 +19,7 @@ let ns: Namespace;
   remembering the user's shopped items even if they leave the site and return later.
 
   The scenario in sample walks through user activity of two customers Alice and Bob.
-  Alice shops for 3 items and checks out, whereas Bob adds 2 items and leaves without
+  Alice shops for 3 items and checks out, whereas Bob adds 3 items and leaves without
   checking out to likely return later.
   The session state keeps track of the cart items accordingly.
 */
