@@ -1,7 +1,7 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
 
-import * as Long from "long";
+import Long from "long";
 import {
   Delivery,
   uuid_to_string,
