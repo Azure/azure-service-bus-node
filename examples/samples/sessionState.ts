@@ -12,7 +12,7 @@ let ns: Namespace;
 
 /*
   This sample demonstrates usage of SessionState and how to use it.
-  Ref - <link>
+  Ref - https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-sessions
 
   We take for example the context of an online shopping app and see how we can use Session State
   to implement the maintaining of shopping cart information completely on server side i.e.,
