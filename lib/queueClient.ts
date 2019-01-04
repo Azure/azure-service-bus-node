@@ -101,6 +101,9 @@ export class QueueClient extends Client {
           await this._context.messageSessions[messageSessionId].close();
         }
 
+        // Make sure that we clear the map of deferred messages
+        this._context.requestResponseLockedMessages.clear();
+
         log.qClient("Closed the Queue client '%s'.", this.id);
       }
     } catch (err) {
@@ -417,7 +420,7 @@ export class QueueClient extends Client {
    * @param onError The error handler to receive an error that occurs while receiving messages
    * from a session enabled Queue.
    */
-  receiveMessgesFromSessions(
+  receiveMessagesFromSessions(
     onSessionMessage: OnSessionMessage,
     onError: OnError,
     options?: SessionHandlerOptions
