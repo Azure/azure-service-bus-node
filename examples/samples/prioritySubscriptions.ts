@@ -1,4 +1,5 @@
-// This sample manages rules for the subscriptions using {addRules, removeAllRules} functions in the code. Follow the link to do the same in other ways. Link - https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-resource-manager-namespace-topic-with-rule
+// This sample manages rules for the subscriptions using {addRules, removeAllRules} functions in the code.
+// Follow the link to do the same in other ways. Link - https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-resource-manager-namespace-topic-with-rule
 import {
   OnMessage,
   OnError,
@@ -12,7 +13,6 @@ import {
   TopicClient
 } from "../../lib";
 import * as dotenv from "dotenv";
-import { CorrelationFilter } from "../../lib/core/managementClient";
 dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
@@ -51,15 +51,15 @@ async function main(): Promise<void> {
 
   const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
   await removeAllRules(subscription1Client);
-  await addRules(subscription1Client, "Priority_1", "priority = 1");
+  await subscription1Client.addRule("Priority_1", "priority = 1");
 
   const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
   await removeAllRules(subscription2Client);
-  await addRules(subscription2Client, "Priority_2", "priority = 2");
+  await subscription2Client.addRule("Priority_2", "priority = 2");
 
   const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
   await removeAllRules(subscription3Client);
-  await addRules(subscription3Client, "Priority_3", "priority = 3");
+  await subscription3Client.addRule("Priority_3", "priority = 3");
 
   await sendMessages(client);
   // Setting up receive handlers
@@ -95,44 +95,20 @@ async function receiveMessages(client: SubscriptionClient): Promise<void> {
   await rcvHandler.stop();
 }
 
-async function removeAllRules(client: SubscriptionClient): Promise<boolean> {
-  let rules = await client.getRules();
-  console.log(`${rules.length} rules found for ${client.name}`);
+// We need to remove rules before adding one because otherwise the existing default rule will let in all messages.
+async function removeAllRules(client: SubscriptionClient): Promise<void> {
+  try {
+    let rules = await client.getRules();
+    // console.log(`${rules.length} rules found for ${client.name}`);
 
-  for (let i = 0; i < rules.length; i++) {
-    const rule = rules[i];
-    console.log(`Rule Name: ${rule.name}`);
-    console.log(`Filter: ${JSON.stringify(rule.filter)}`);
-    if (rule.action) {
-      console.log(`Action: ${JSON.stringify(rule.action)}`);
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+      await client.removeRule(rule.name);
     }
-    await client.removeRule(rule.name);
-  }
 
-  rules = await client.getRules();
-  if (rules.length) {
-    console.log(`Failed to remove all rules from ${client.name}`);
-    return false;
-  } else {
-    console.log(`All rules removed from ${client.name}`);
-  }
-
-  return true;
-}
-
-async function addRules(
-  client: SubscriptionClient,
-  ruleName: string,
-  filter: boolean | string | CorrelationFilter,
-  sqlRuleActionExpression?: string
-): Promise<void> {
-  await client.addRule(ruleName, filter, sqlRuleActionExpression);
-  const rules = await client.getRules();
-  if (rules.find((rule) => rule.name === ruleName)) {
-    console.log(`Rule ${ruleName} has been added \n`);
-  } else {
-    console.log(`Nooooo.... Where is the ${ruleName} rule??`);
-    return;
+    rules = await client.getRules();
+  } catch (err) {
+    console.log("Error while removing", err);
   }
 }
 
