@@ -98,17 +98,13 @@ async function receiveMessages(client: SubscriptionClient): Promise<void> {
 // We need to remove rules before adding one because otherwise the existing default rule will let in all messages.
 async function removeAllRules(client: SubscriptionClient): Promise<void> {
   try {
-    let rules = await client.getRules();
-    // console.log(`${rules.length} rules found for ${client.name}`);
-
+    const rules = await client.getRules();
     for (let i = 0; i < rules.length; i++) {
       const rule = rules[i];
       await client.removeRule(rule.name);
     }
-
-    rules = await client.getRules();
   } catch (err) {
-    console.log("Error while removing", err);
+    console.log("Error while removing the rule", err);
   }
 }
 
