@@ -11,7 +11,7 @@ console.log("path: ", userEventsQueue);
 let ns: Namespace;
 
 /*
-  This sample demonstrates usage of SessionState and how to use it.
+  This sample demonstrates usage of SessionState.
   Ref - https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-sessions
 
   We take for example the context of an online shopping app and see how we can use Session State
