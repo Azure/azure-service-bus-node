@@ -236,7 +236,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await testPeekMsgsLength(queueClient, 0);
 
     const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(
-      process.env.QUEUE_NAME ? process.env.QUEUE_NAME : ""
+      queueClient.name ? queueClient.name : ""
     );
     const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
@@ -249,7 +249,6 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await deadLetterMsgs[0].complete();
 
     await testPeekMsgsLength(deadletterQueueClient, 0);
-    await deadletterQueueClient.close();
   });
 
   it("Message abandoned more than maxDeliveryCount goes to dead letter subscriptions", async function(): Promise<
@@ -257,7 +256,6 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
   > {
     await topicClient.send(testMessages[0]);
     let abandonMsgCount = 0;
-    let deadletterSubscriptionClient: SubscriptionClient;
 
     while (abandonMsgCount < maxDeliveryCount) {
       const receivedMsgs = await subscriptionClient.receiveBatch(1);
@@ -273,13 +271,14 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await testPeekMsgsLength(subscriptionClient, 0);
 
     const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      process.env.TOPIC_NAME ? process.env.TOPIC_NAME : "",
-      process.env.SUBSCRIPTION_NAME ? process.env.SUBSCRIPTION_NAME : ""
+      topicClient.name ? topicClient.name : "",
+      subscriptionClient.subscriptionName ? subscriptionClient.subscriptionName : ""
     );
 
+    let deadletterSubscriptionClient: SubscriptionClient;
     deadletterSubscriptionClient = namespace.createSubscriptionClient(
       deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      process.env.SUBSCRIPTION_NAME ? process.env.SUBSCRIPTION_NAME : ""
+      subscriptionClient.subscriptionName ? subscriptionClient.subscriptionName : ""
     );
 
     const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
@@ -304,7 +303,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     should.equal(msgs[0].messageId, testMessages[0].messageId);
 
     if (!msgs[0].sequenceNumber) {
-      throw "The message that we are receving from the sequence number can not be null";
+      throw "Sequence Number can not be null";
     }
     const sequenceNumber = msgs[0].sequenceNumber;
     await msgs[0].defer();
@@ -318,7 +317,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
 
     const deferredMsgs = await queueClient.receiveDeferredMessage(sequenceNumber);
     if (!deferredMsgs) {
-      throw "The message that we are receving from the sequence number can not be null";
+      throw "No message received for sequence number";
     }
     should.equal(deferredMsgs.body, testMessages[0].body);
     should.equal(deferredMsgs.messageId, testMessages[0].messageId);
@@ -377,7 +376,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await testPeekMsgsLength(queueClient, 0);
 
     const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(
-      process.env.QUEUE_NAME ? process.env.QUEUE_NAME : ""
+      queueClient.name ? queueClient.name : ""
     );
     const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
@@ -390,12 +389,10 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await deadLetterMsgs[0].complete();
 
     await testPeekMsgsLength(deadletterQueueClient, 0);
-    await deadletterQueueClient.close();
   });
 
   it("Receive dead letter message from subscription", async function(): Promise<void> {
     await topicClient.send(testMessages[0]);
-    let deadletterSubscriptionClient: SubscriptionClient;
 
     const receivedMsgs = await subscriptionClient.receiveBatch(1);
 
@@ -409,13 +406,14 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await testPeekMsgsLength(subscriptionClient, 0);
 
     const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      process.env.TOPIC_NAME ? process.env.TOPIC_NAME : "",
-      process.env.SUBSCRIPTION_NAME ? process.env.SUBSCRIPTION_NAME : ""
+      topicClient.name ? topicClient.name : "",
+      subscriptionClient.subscriptionName ? subscriptionClient.subscriptionName : ""
     );
 
+    let deadletterSubscriptionClient: SubscriptionClient;
     deadletterSubscriptionClient = namespace.createSubscriptionClient(
       deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      process.env.SUBSCRIPTION_NAME ? process.env.SUBSCRIPTION_NAME : ""
+      subscriptionClient.subscriptionName ? subscriptionClient.subscriptionName : ""
     );
 
     const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
