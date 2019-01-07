@@ -97,21 +97,29 @@ export class BatchingReceiver extends MessageReceiver {
           this._receiver.removeListener(ReceiverEvents.receiverError, onReceiveError);
           this._receiver.removeListener(ReceiverEvents.message, onReceiveMessage);
           this._receiver.session.removeListener(SessionEvents.sessionError, onSessionError);
+        }
 
-          if (this._receiver.credit > 0) {
-            log.batching("[%s] Draining leftover credits (%s).", this._context.namespace.connectionId, this._receiver.credit);
+        if (this._receiver && this._receiver.credit > 0) {
+          log.batching(
+            "[%s] Draining leftover credits (%s).",
+            this._context.namespace.connectionId,
+            this._receiver.credit
+          );
 
-            // Setting drain must be accompanied by a flow call (aliased to addCredit in this case).
-            this._receiver.drain = true;
-            this._receiver.addCredit(1);
-          } else {
-            this._receiver.removeListener(ReceiverEvents.receiverDrained, onReceiveDrain);
-            this.isReceivingMessages = false;
-            log.batching("[%s] Resolving the promise with received list of messages: %O.", this._context.namespace.connectionId, brokeredMessages);
-            resolve(brokeredMessages);
-          }
+          // Setting drain must be accompanied by a flow call (aliased to addCredit in this case).
+          this._receiver.drain = true;
+          this._receiver.addCredit(1);
         } else {
+          if (this._receiver) {
+            this._receiver.removeListener(ReceiverEvents.receiverDrained, onReceiveDrain);
+          }
+
           this.isReceivingMessages = false;
+          log.batching(
+            "[%s] Resolving the promise with received list of messages: %O.",
+            this._context.namespace.connectionId,
+            brokeredMessages
+          );
           resolve(brokeredMessages);
         }
       };
@@ -145,10 +153,16 @@ export class BatchingReceiver extends MessageReceiver {
 
         this.isReceivingMessages = false;
 
-        const returnMsg = brokeredMessages.length > 0
-          ? "partial batch of " + brokeredMessages.length + " messages"
-          : "empty batch";
-        log.batching("[%s] Receiver '%s' drained. Resolving promise with %s.", this._context.namespace.connectionId, this.name, returnMsg);
+        const returnMsg =
+          brokeredMessages.length > 0
+            ? "partial batch of " + brokeredMessages.length + " messages"
+            : "empty batch";
+        log.batching(
+          "[%s] Receiver '%s' drained. Resolving promise with %s.",
+          this._context.namespace.connectionId,
+          this.name,
+          returnMsg
+        );
 
         resolve(brokeredMessages);
       };
@@ -287,7 +301,7 @@ export class BatchingReceiver extends MessageReceiver {
           const settled = delivery.remote_settled;
           log.receiver(
             "[%s] Delivery with id %d, remote_settled: %s, remote_state: %o has been " +
-            "received.",
+              "received.",
             connectionId,
             id,
             settled,
