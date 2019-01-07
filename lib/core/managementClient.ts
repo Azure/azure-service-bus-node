@@ -23,24 +23,18 @@ import {
   SendRequestOptions
 } from "@azure/amqp-common";
 import { ClientEntityContext } from "../clientEntityContext";
-import { ReceivedMessageInfo, ServiceBusMessage, SendableMessageInfo } from "../serviceBusMessage";
+import {
+  ReceivedMessageInfo,
+  ServiceBusMessage,
+  SendableMessageInfo,
+  DispositionStatus
+} from "../serviceBusMessage";
 import { LinkEntity } from "./linkEntity";
 import * as log from "../log";
 import { ReceiveMode } from "./messageReceiver";
 import { reorderLockTokens, toBuffer } from "../util/utils";
 import { Typed } from "rhea/typings/types";
 import { max32BitNumber } from "../util/constants";
-
-/**
- * @ignore
- */
-export enum DispositionStatus {
-  completed = "completed",
-  defered = "defered",
-  suspended = "suspended",
-  abandoned = "abandoned",
-  renewed = "renewed"
-}
 
 /**
  * Represents a description of a rule.
