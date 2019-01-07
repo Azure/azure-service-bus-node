@@ -16,7 +16,7 @@ let ns: Namespace;
 
   We take for example the context of an online shopping app and see how we can use Session State
   to implement the maintaining of shopping cart information completely on server side i.e.,
-  remembering the user's shopped items even if they leave the site and return later.
+  remembering the users' shopped items even if they leave the site and return later.
 
   The scenario in sample walks through user activity of two customers Alice and Bob.
   Alice shops for 3 items and checks out, whereas Bob adds 3 items and leaves without
@@ -106,7 +106,6 @@ async function processMessageFromSession(sessionId: string): Promise<void> {
   const client = ns.createQueueClient(userEventsQueue, { receiveMode: ReceiveMode.peekLock });
   const messageSession = await client.acceptSession({ sessionId: sessionId });
 
-  // TODO: Fix bug #144
   const messages = await messageSession.receiveBatch(1, 10);
 
   // Custom logic for processing the messages
