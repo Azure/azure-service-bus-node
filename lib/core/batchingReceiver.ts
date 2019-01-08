@@ -101,8 +101,9 @@ export class BatchingReceiver extends MessageReceiver {
 
         if (this._receiver && this._receiver.credit > 0) {
           log.batching(
-            "[%s] Draining leftover credits (%s).",
+            "[%s] Receiver '%s': Draining leftover credits(%d).",
             this._context.namespace.connectionId,
+            this.name,
             this._receiver.credit
           );
 
@@ -116,9 +117,10 @@ export class BatchingReceiver extends MessageReceiver {
 
           this.isReceivingMessages = false;
           log.batching(
-            "[%s] Resolving the promise with received list of messages: %O.",
+            "[%s] Receiver '%s': Resolving receiveBatch() with %d messages.",
             this._context.namespace.connectionId,
-            brokeredMessages
+            this.name,
+            brokeredMessages.length
           );
           resolve(brokeredMessages);
         }
@@ -153,15 +155,11 @@ export class BatchingReceiver extends MessageReceiver {
 
         this.isReceivingMessages = false;
 
-        const returnMsg =
-          brokeredMessages.length > 0
-            ? "partial batch of " + brokeredMessages.length + " messages"
-            : "empty batch";
         log.batching(
-          "[%s] Receiver '%s' drained. Resolving promise with %s.",
+          "[%s] Receiver '%s' drained. Resolving receiveBatch() with %d messages.",
           this._context.namespace.connectionId,
           this.name,
-          returnMsg
+          brokeredMessages.length
         );
 
         resolve(brokeredMessages);
