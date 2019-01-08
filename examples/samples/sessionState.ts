@@ -1,4 +1,4 @@
-import { generateUuid, SendableMessageInfo, ReceiveMode, Namespace } from "../../lib";
+import { generateUuid, SendableMessageInfo, Namespace } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
