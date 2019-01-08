@@ -235,9 +235,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
 
     await testPeekMsgsLength(queueClient, 0);
 
-    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(
-      queueClient.name ? queueClient.name : ""
-    );
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
     const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
 
@@ -271,14 +269,13 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await testPeekMsgsLength(subscriptionClient, 0);
 
     const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      topicClient.name ? topicClient.name : "",
-      subscriptionClient.subscriptionName ? subscriptionClient.subscriptionName : ""
+      topicClient.name,
+      subscriptionClient.subscriptionName
     );
 
-    let deadletterSubscriptionClient: SubscriptionClient;
-    deadletterSubscriptionClient = namespace.createSubscriptionClient(
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
       deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      subscriptionClient.subscriptionName ? subscriptionClient.subscriptionName : ""
+      subscriptionClient.subscriptionName
     );
 
     const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
@@ -375,9 +372,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
 
     await testPeekMsgsLength(queueClient, 0);
 
-    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(
-      queueClient.name ? queueClient.name : ""
-    );
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
     const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
 
@@ -406,14 +401,13 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await testPeekMsgsLength(subscriptionClient, 0);
 
     const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      topicClient.name ? topicClient.name : "",
-      subscriptionClient.subscriptionName ? subscriptionClient.subscriptionName : ""
+      topicClient.name,
+      subscriptionClient.subscriptionName
     );
 
-    let deadletterSubscriptionClient: SubscriptionClient;
-    deadletterSubscriptionClient = namespace.createSubscriptionClient(
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
       deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      subscriptionClient.subscriptionName ? subscriptionClient.subscriptionName : ""
+      subscriptionClient.subscriptionName
     );
 
     const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
