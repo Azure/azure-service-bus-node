@@ -476,7 +476,9 @@ export class MessageReceiver extends LinkEntity {
             bMessage.messageId,
             this.name
           );
-          await bMessage.complete();
+          if (!bMessage.delivery.remote_settled) {
+            await bMessage.complete();
+          }
         } catch (completeError) {
           const translatedError = translate(completeError);
           log.error(
