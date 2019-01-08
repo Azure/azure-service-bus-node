@@ -479,7 +479,7 @@ export class MessageSession extends LinkEntity {
    */
   isOpen(): boolean {
     const result: boolean = this._receiver! && this._receiver!.isOpen();
-    log.error(
+    log.messageSession(
       "[%s] Receiver '%s' for sessionId '%s' is open? -> %s",
       this._context.namespace.connectionId,
       this.name,
@@ -822,7 +822,7 @@ export class MessageSession extends LinkEntity {
    * Gets the state of the MessageSession.
    * @returns Promise<any> The state of that session
    */
-  async getState(): Promise<void> {
+  async getState(): Promise<any> {
     return this._context.managementClient!.getSessionState(this.sessionId!);
   }
 
