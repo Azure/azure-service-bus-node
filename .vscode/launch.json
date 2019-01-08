@@ -23,15 +23,13 @@
             "args": [
                 "-u",
                 "tdd",
-                "-r",
-                "ts-node/register",
-                "-t",
+                "--timeout",
                 "999999",
                 "--colors",
-                "${workspaceFolder}/test/test-file-to-debug.spec.ts"
+                "${workspaceFolder}/test-dist/index.js"
             ],
             "internalConsoleOptions": "openOnSessionStart",
-            "envFile": "${workspaceFolder}/.env" 
+            "preLaunchTask": "npm: build-test"
         }
     ]
 }

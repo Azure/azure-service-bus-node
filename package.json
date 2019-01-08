@@ -70,7 +70,7 @@
     "build-node": "tsc -p . && cross-env ONLY_NODE=true rollup -c",
     "build-test": "tsc -p . && cross-env ONLY_NODE=true rollup -c rollup.test.config.js",
     "test": "npm run build",
-    "unit": "nyc --reporter=lcov --reporter=text-lcov mocha -t 5000 test-dist/index.js",
+    "unit": "npm run build-test && nyc --reporter=lcov --reporter=text-lcov mocha -t 50000 test-dist/index.js",
     "prepack": "npm i && npm run build"
   }
 }
