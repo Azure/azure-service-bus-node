@@ -19,7 +19,7 @@ let ns: Namespace;
   remembering the users' shopped items even if they leave the site and return later.
 
   The scenario in sample walks through user activity of two customers Alice and Bob.
-  Alice shops for 3 items and checks out, whereas Bob adds 3 items and leaves without
+  Alice adds 3 items to the shopping cart and checks out, whereas Bob adds 3 items and leaves without
   checking out to likely return later.
   The session state keeps track of the cart items accordingly.
 */
@@ -73,7 +73,7 @@ async function runScenario(): Promise<void> {
 }
 
 async function getSessionState(sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueue, { receiveMode: ReceiveMode.peekLock });
+  const client = ns.createQueueClient(userEventsQueue);
   const messageSession = await client.acceptSession({ sessionId: sessionId });
 
   const sessionState = await messageSession.getState();
@@ -85,9 +85,7 @@ async function getSessionState(sessionId: string): Promise<void> {
 }
 
 async function sendMessagesForSession(shoppingEvents: any[], sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueue, {
-    receiveMode: ReceiveMode.peekLock
-  });
+  const client = ns.createQueueClient(userEventsQueue);
 
   for (let index = 0; index < shoppingEvents.length; index++) {
     const message: SendableMessageInfo = {
@@ -103,7 +101,7 @@ async function sendMessagesForSession(shoppingEvents: any[], sessionId: string):
 }
 
 async function processMessageFromSession(sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueue, { receiveMode: ReceiveMode.peekLock });
+  const client = ns.createQueueClient(userEventsQueue);
   const messageSession = await client.acceptSession({ sessionId: sessionId });
 
   const messages = await messageSession.receiveBatch(1, 10);
