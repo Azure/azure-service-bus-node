@@ -468,7 +468,11 @@ export class MessageReceiver extends LinkEntity {
 
       // If we've made it this far, then user's message handler completed fine. Let us try
       // completing the message.
-      if (this.autoComplete && this.receiveMode === ReceiveMode.peekLock) {
+      if (
+        this.autoComplete &&
+        this.receiveMode === ReceiveMode.peekLock &&
+        !bMessage.delivery.remote_settled
+      ) {
         try {
           log[this.receiverType](
             "[%s] Auto completing the message with id '%s' on " + "the receiver '%s'.",
@@ -476,9 +480,7 @@ export class MessageReceiver extends LinkEntity {
             bMessage.messageId,
             this.name
           );
-          if (!bMessage.delivery.remote_settled) {
-            await bMessage.complete();
-          }
+          await bMessage.complete();
         } catch (completeError) {
           const translatedError = translate(completeError);
           log.error(
