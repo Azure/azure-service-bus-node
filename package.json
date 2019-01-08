@@ -24,7 +24,7 @@
     "node": ">=6.0.0"
   },
   "dependencies": {
-    "@azure/amqp-common": "^0.1.9",
+    "@azure/amqp-common": "AlexGhiondea/amqp-common-js#esModuleInterop",
     "debug": "^3.1.0",
     "is-buffer": "^2.0.3",
     "long": "^4.0.0",

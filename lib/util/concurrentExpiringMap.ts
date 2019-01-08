@@ -14,7 +14,7 @@ export class ConcurrentExpiringMap<TKey> {
   private _cleanupScheduled: boolean = false;
   private _delayBetweenCleanupInSeconds: number;
   private _lockId: string = generate_uuid();
-  private _lockStore: AsyncLock = new AsyncLock.default({ maxPending: 1000000 });
+  private _lockStore: AsyncLock = new AsyncLock({ maxPending: 1000000 });
 
   constructor(options?: { delayBetweenCleanupInSeconds?: number }) {
     if (!options) options = {};
