@@ -77,8 +77,12 @@ async function getSessionState(sessionId: string): Promise<void> {
   const messageSession = await client.acceptSession({ sessionId: sessionId });
 
   const sessionState = await messageSession.getState();
-  // Get list of items
-  console.log(`\nItems in cart for ${sessionId}: ${sessionState}\n`);
+  if (sessionState) {
+    // Get list of items
+    console.log(`\nItems in cart for ${sessionId}: ${sessionState}\n`);
+  } else {
+    console.log(`\nNo Items were added to cart for ${sessionId}\n`);
+  }
 
   await messageSession.close();
   await client.close();
@@ -111,7 +115,7 @@ async function processMessageFromSession(sessionId: string): Promise<void> {
     // Update sessionState
     if (messages[0].body.event_name === "Checkout") {
       // Clear cart if customer exits, else retain items.
-      await messageSession.setState(undefined);
+      await messageSession.setState(JSON.stringify([]));
     } else if (messages[0].body.event_name === "Add Item") {
       // Update cart if customer adds items and store it in session state.
       const currentSessionState = await messageSession.getState();
