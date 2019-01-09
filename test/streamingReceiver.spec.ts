@@ -46,7 +46,9 @@ async function testPeekMsgsLength(
   should.equal(peekedMsgs.length, expectedPeekLength);
 }
 
-describe("ReceiveBatch from Queue/Subscription", function(): void {
+const maxDeliveryCount = 10;
+
+describe("Streaming Receiver from Queue/Subscription", function(): void {
   let namespace: Namespace;
   let queueClient: QueueClient;
   let topicClient: TopicClient;
@@ -246,5 +248,62 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await testPeekMsgsLength(subscriptionClient, 0);
 
     await receiveListener.stop();
+  });
+
+  it("Abandoned message is retained in the Queue with incremented deliveryCount. After 10 times, you can only get it from the dead letter queue.", async function(): Promise<
+    void
+  > {
+    await queueClient.sendBatch(testMessages);
+
+    let peekedMsgs = await queueClient.peek(2);
+    should.equal(peekedMsgs.length, 2);
+    should.equal(peekedMsgs[0].deliveryCount, 0);
+    should.equal(peekedMsgs[1].deliveryCount, 0);
+    let checkDeliveryCount0 = 0;
+    let checkDeliveryCount1 = 0;
+
+    const receiveListener = await queueClient.receive(
+      (msg: ServiceBusMessage) => {
+        if (msg.messageId === testMessages[0].messageId) {
+          should.equal(msg.deliveryCount, checkDeliveryCount0);
+        } else if (msg.messageId === testMessages[1].messageId) {
+          should.equal(msg.deliveryCount, checkDeliveryCount1);
+        }
+        msg.abandon();
+        checkDeliveryCount0++;
+        checkDeliveryCount1++;
+        return Promise.resolve();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      },
+      { autoComplete: false }
+    );
+
+    await delay(5000);
+
+    await receiveListener.stop();
+
+    should.equal(checkDeliveryCount0, maxDeliveryCount);
+    should.equal(checkDeliveryCount1, maxDeliveryCount);
+
+    peekedMsgs = await queueClient.peek(2);
+    should.equal(peekedMsgs.toString(), ""); // No messages in the queue
+
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
+    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
+
+    await testPeekMsgsLength(deadletterQueueClient, 2); // Two messages in the DLQ
+
+    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
+    should.equal(Array.isArray(deadLetterMsgs), true);
+    should.equal(deadLetterMsgs.length, 2);
+    should.equal(deadLetterMsgs[0].deliveryCount, 10);
+    should.equal(deadLetterMsgs[1].deliveryCount, 10);
+
+    await deadLetterMsgs[0].complete();
+    await deadLetterMsgs[1].complete();
+
+    await testPeekMsgsLength(deadletterQueueClient, 0);
   });
 });
