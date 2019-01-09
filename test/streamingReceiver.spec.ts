@@ -314,7 +314,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     let checkDeliveryCount0 = 0;
     let checkDeliveryCount1 = 0;
-    const receiveListener = subscriptionClient.receive(
+    const receiveListener = await subscriptionClient.receive(
       (msg: ServiceBusMessage) => {
         if (msg.messageId === testMessages[0].messageId) {
           should.equal(msg.deliveryCount, checkDeliveryCount0);
@@ -364,5 +364,51 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await deadLetterMsgs[1].complete();
 
     await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+  });
+
+  it("With auto-complete enabled, manual completion in the Queue by the user should not result in errors", async function(): Promise<
+    void
+  > {
+    await queueClient.sendBatch(testMessages);
+    let peekedMsgs = await queueClient.peek(2);
+    should.equal(peekedMsgs.length, 2); // Two messages in the queue
+
+    const receiveListener = await queueClient.receive(
+      (msg: ServiceBusMessage) => {
+        return msg.complete();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+
+    await delay(4000);
+
+    await receiveListener.stop();
+
+    peekedMsgs = await queueClient.peek(2);
+    should.equal(peekedMsgs.length, 0); // No messages in the queue
+  });
+
+  it("With auto-complete enabled, manual completion in the Subscription by the user should not result in errors", async function(): Promise<
+    void
+  > {
+    await topicClient.sendBatch(testMessages);
+
+    const receiveListener = await subscriptionClient.receive(
+      (msg: ServiceBusMessage) => {
+        return msg.complete();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+
+    await delay(4000);
+
+    await receiveListener.stop();
+
+    const peekedMsgs = await subscriptionClient.peek(2);
+    should.equal(peekedMsgs.length, 0);
   });
 });
