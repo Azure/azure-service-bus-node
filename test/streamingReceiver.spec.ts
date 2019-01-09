@@ -298,8 +298,8 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
     should.equal(deadLetterMsgs.length, 2);
-    should.equal(deadLetterMsgs[0].deliveryCount, 10);
-    should.equal(deadLetterMsgs[1].deliveryCount, 10);
+    should.equal(deadLetterMsgs[0].deliveryCount, maxDeliveryCount);
+    should.equal(deadLetterMsgs[1].deliveryCount, maxDeliveryCount);
 
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
