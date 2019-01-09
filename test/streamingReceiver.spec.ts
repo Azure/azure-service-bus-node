@@ -22,11 +22,11 @@ import {
 const testMessages: SendableMessageInfo[] = [
   {
     body: "hello1",
-    messageId: `test message ${generateUuid}`
+    messageId: `test message ${generateUuid()}`
   },
   {
     body: "hello2",
-    messageId: `test message ${generateUuid}`
+    messageId: `test message ${generateUuid()}`
   }
 ];
 
@@ -266,12 +266,12 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
       (msg: ServiceBusMessage) => {
         if (msg.messageId === testMessages[0].messageId) {
           should.equal(msg.deliveryCount, checkDeliveryCount0);
+          checkDeliveryCount0++;
         } else if (msg.messageId === testMessages[1].messageId) {
           should.equal(msg.deliveryCount, checkDeliveryCount1);
+          checkDeliveryCount1++;
         }
         msg.abandon();
-        checkDeliveryCount0++;
-        checkDeliveryCount1++;
         return Promise.resolve();
       },
       (err: Error) => {
@@ -280,7 +280,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
       { autoComplete: false }
     );
 
-    await delay(5000);
+    await delay(4000);
 
     await receiveListener.stop();
 
@@ -288,7 +288,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     should.equal(checkDeliveryCount1, maxDeliveryCount);
 
     peekedMsgs = await queueClient.peek(2);
-    should.equal(peekedMsgs.toString(), ""); // No messages in the queue
+    should.equal(peekedMsgs.length, 0); // No messages in the queue
 
     const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
     const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
@@ -305,5 +305,64 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await deadLetterMsgs[1].complete();
 
     await testPeekMsgsLength(deadletterQueueClient, 0);
+  });
+
+  it("Abandoned message is retained in the Subsrciption with incremented deliveryCount. After 10 times, you can only get it from the dead letter.", async function(): Promise<
+    void
+  > {
+    await topicClient.sendBatch(testMessages);
+
+    let checkDeliveryCount0 = 0;
+    let checkDeliveryCount1 = 0;
+    const receiveListener = subscriptionClient.receive(
+      (msg: ServiceBusMessage) => {
+        if (msg.messageId === testMessages[0].messageId) {
+          should.equal(msg.deliveryCount, checkDeliveryCount0);
+          checkDeliveryCount0++;
+        } else if (msg.messageId === testMessages[1].messageId) {
+          should.equal(msg.deliveryCount, checkDeliveryCount1);
+          checkDeliveryCount1++;
+        }
+        msg.abandon();
+        return Promise.resolve();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      },
+      { autoComplete: false }
+    );
+
+    await delay(4000);
+
+    await receiveListener.stop();
+
+    should.equal(checkDeliveryCount0, maxDeliveryCount);
+    should.equal(checkDeliveryCount1, maxDeliveryCount);
+
+    const peekedMsgs = await subscriptionClient.peek(2);
+    should.equal(peekedMsgs.length, 0);
+
+    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    );
+
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
+      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
+      subscriptionClient.subscriptionName
+    );
+
+    await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DLQ
+
+    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
+    should.equal(Array.isArray(deadLetterMsgs), true);
+    should.equal(deadLetterMsgs.length, 2);
+    should.equal(deadLetterMsgs[0].deliveryCount, maxDeliveryCount);
+    should.equal(deadLetterMsgs[1].deliveryCount, maxDeliveryCount);
+
+    await deadLetterMsgs[0].complete();
+    await deadLetterMsgs[1].complete();
+
+    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
   });
 });
