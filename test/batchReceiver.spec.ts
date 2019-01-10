@@ -424,7 +424,9 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await testPeekMsgsLength(deadletterSubscriptionClient, 0);
   });
 
-  it("No settlement of the message is retained in the Queue", async function(): Promise<void> {
+  it("No settlement of the message is retained in the Queue with incremented deliveryCount", async function(): Promise<
+    void
+  > {
     await queueClient.send(testMessages[0]);
 
     let receivedMsgs = await queueClient.receiveBatch(1);
@@ -444,7 +446,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await receivedMsgs[0].complete();
   });
 
-  it("No settlement of the message is retained in the Subscriptions", async function(): Promise<
+  it("No settlement of the message is retained in the Subscriptions with incremented deliveryCount", async function(): Promise<
     void
   > {
     await topicClient.send(testMessages[0]);
