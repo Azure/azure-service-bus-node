@@ -255,10 +255,6 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
   > {
     await queueClient.sendBatch(testMessages);
 
-    let peekedMsgs = await queueClient.peek(2);
-    should.equal(peekedMsgs.length, 2);
-    should.equal(peekedMsgs[0].deliveryCount, 0);
-    should.equal(peekedMsgs[1].deliveryCount, 0);
     let checkDeliveryCount0 = 0;
     let checkDeliveryCount1 = 0;
 
@@ -271,8 +267,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
           should.equal(msg.deliveryCount, checkDeliveryCount1);
           checkDeliveryCount1++;
         }
-        msg.abandon();
-        return Promise.resolve();
+        return msg.abandon();
       },
       (err: Error) => {
         should.not.exist(err);
@@ -287,13 +282,10 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     should.equal(checkDeliveryCount0, maxDeliveryCount);
     should.equal(checkDeliveryCount1, maxDeliveryCount);
 
-    peekedMsgs = await queueClient.peek(2);
-    should.equal(peekedMsgs.length, 0); // No messages in the queue
+    await testPeekMsgsLength(queueClient, 0); // No messages in the queue
 
     const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
     const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
-
-    await testPeekMsgsLength(deadletterQueueClient, 2); // Two messages in the DLQ
 
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
@@ -323,8 +315,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
           should.equal(msg.deliveryCount, checkDeliveryCount1);
           checkDeliveryCount1++;
         }
-        msg.abandon();
-        return Promise.resolve();
+        return msg.abandon();
       },
       (err: Error) => {
         should.not.exist(err);
@@ -352,7 +343,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
       subscriptionClient.subscriptionName
     );
 
-    await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DLQ
+    await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DL
 
     const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
@@ -370,9 +361,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     void
   > {
     await queueClient.sendBatch(testMessages);
-    let peekedMsgs = await queueClient.peek(2);
-    should.equal(peekedMsgs.length, 2); // Two messages in the queue
-
+    await testPeekMsgsLength(queueClient, 2);
     const receiveListener = await queueClient.receive(
       (msg: ServiceBusMessage) => {
         return msg.complete();
@@ -383,11 +372,9 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     );
 
     await delay(4000);
-
     await receiveListener.stop();
 
-    peekedMsgs = await queueClient.peek(2);
-    should.equal(peekedMsgs.length, 0); // No messages in the queue
+    await testPeekMsgsLength(queueClient, 0);
   });
 
   it("With auto-complete enabled, manual completion in the Subscription by the user should not result in errors", async function(): Promise<
@@ -408,7 +395,74 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     await receiveListener.stop();
 
-    const peekedMsgs = await subscriptionClient.peek(2);
-    should.equal(peekedMsgs.length, 0);
+    await testPeekMsgsLength(subscriptionClient, 0);
+  });
+
+  it("With auto-complete enabled, manual abandon in the Queue by the user should not result in errors", async function(): Promise<
+    void
+  > {
+    await queueClient.sendBatch(testMessages);
+    const receiveListener = await queueClient.receive(
+      (msg: ServiceBusMessage) => {
+        return msg.abandon();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+
+    await delay(4000);
+
+    await receiveListener.stop();
+    await testPeekMsgsLength(queueClient, 0); // No messages in the queue
+
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
+    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
+    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
+
+    await deadLetterMsgs[0].complete();
+    await deadLetterMsgs[1].complete();
+
+    await testPeekMsgsLength(deadletterQueueClient, 0);
+  });
+
+  it("With auto-complete enabled, manual abandon in the Subscription by the user should not result in errors", async function(): Promise<
+    void
+  > {
+    await topicClient.sendBatch(testMessages);
+
+    const receiveListener = await subscriptionClient.receive(
+      (msg: ServiceBusMessage) => {
+        return msg.abandon();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+
+    await delay(4000);
+
+    await receiveListener.stop();
+
+    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    );
+
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
+      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
+      subscriptionClient.subscriptionName
+    );
+
+    await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DL
+
+    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
+    should.equal(Array.isArray(deadLetterMsgs), true);
+    should.equal(deadLetterMsgs.length, 2);
+
+    await deadLetterMsgs[0].complete();
+    await deadLetterMsgs[1].complete();
+
+    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
   });
 });
