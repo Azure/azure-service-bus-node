@@ -250,7 +250,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await receiveListener.stop();
   });
 
-  it("Abandoned message is retained in the Queue with incremented deliveryCount. After 10 times, you can only get it from the dead letter queue.", async function(): Promise<
+  it.only("Abandoned message is retained in the Queue with incremented deliveryCount. After 10 times, you can only get it from the dead letter queue.", async function(): Promise<
     void
   > {
     await queueClient.sendBatch(testMessages);
@@ -292,6 +292,8 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     should.equal(deadLetterMsgs.length, 2);
     should.equal(deadLetterMsgs[0].deliveryCount, maxDeliveryCount);
     should.equal(deadLetterMsgs[1].deliveryCount, maxDeliveryCount);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
 
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
