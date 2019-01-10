@@ -43,6 +43,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
   let queueClient: QueueClient;
   let topicClient: TopicClient;
   let subscriptionClient: SubscriptionClient;
+  let errorWasThrown: boolean;
 
   beforeEach(async () => {
     // The tests in this file expect the env variables to contain the connection string and
@@ -82,6 +83,7 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     if (peekedSubscriptionMsg.length) {
       throw new Error("Please use an empty Subscription for integration testing");
     }
+    errorWasThrown = false;
   });
 
   afterEach(async () => {
@@ -420,5 +422,532 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
     await deadLetterMsgs[0].complete();
 
     await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+  });
+
+  it("No settlement of the message is retained in the Queue", async function(): Promise<void> {
+    await queueClient.send(testMessages[0]);
+
+    let receivedMsgs = await queueClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].deliveryCount, 0);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await testPeekMsgsLength(queueClient, 1);
+
+    receivedMsgs = await queueClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].deliveryCount, 1);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].complete();
+  });
+
+  it("No settlement of the message is retained in the Subscriptions", async function(): Promise<
+    void
+  > {
+    await topicClient.send(testMessages[0]);
+    let receivedMsgs = await subscriptionClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await testPeekMsgsLength(subscriptionClient, 1);
+
+    receivedMsgs = await subscriptionClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].complete();
+  });
+
+  it("Receive n messages but queue only has m messages, where m < n", async function(): Promise<
+    void
+  > {
+    await queueClient.send(testMessages[0]);
+    const receivedMsgs = await queueClient.receiveBatch(2);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].complete();
+
+    await testPeekMsgsLength(queueClient, 0);
+  });
+
+  it("Receive n messages but subscription only has m messages, where m < n", async function(): Promise<
+    void
+  > {
+    await topicClient.send(testMessages[0]);
+    const receivedMsgs = await subscriptionClient.receiveBatch(2);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].complete();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+  });
+
+  async function deferMsgAndGetSequenceNum(
+    client: QueueClient | SubscriptionClient
+  ): Promise<Long> {
+    const receivedMsgs = await client.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    if (!receivedMsgs[0].sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    const sequenceNumber = receivedMsgs[0].sequenceNumber;
+    await receivedMsgs[0].defer();
+    return sequenceNumber;
+  }
+
+  it("Abandon a message received from recevieDefferedMessage using queue", async function(): Promise<
+    void
+  > {
+    await queueClient.send(testMessages[0]);
+    const sequenceNumber = await deferMsgAndGetSequenceNum(queueClient);
+
+    const deferredMsgs = await queueClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.abandon();
+
+    await testPeekMsgsLength(queueClient, 1);
+
+    if (!sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    const abandonedMsgs = await queueClient.receiveDeferredMessage(sequenceNumber);
+    if (!abandonedMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(abandonedMsgs.body, testMessages[0].body);
+    should.equal(abandonedMsgs.messageId, testMessages[0].messageId);
+
+    await abandonedMsgs.complete();
+
+    await testPeekMsgsLength(queueClient, 0);
+  });
+
+  it("Abandon a message received from recevieDefferedMessage using subscription", async function(): Promise<
+    void
+  > {
+    await topicClient.send(testMessages[0]);
+    const sequenceNumber = await deferMsgAndGetSequenceNum(subscriptionClient);
+
+    const deferredMsgs = await subscriptionClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.abandon();
+
+    await testPeekMsgsLength(subscriptionClient, 1);
+
+    if (!sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    const abandonedMsgs = await subscriptionClient.receiveDeferredMessage(sequenceNumber);
+    if (!abandonedMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(abandonedMsgs.body, testMessages[0].body);
+    should.equal(abandonedMsgs.messageId, testMessages[0].messageId);
+
+    await abandonedMsgs.complete();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+  });
+
+  it("Dead letter a message received from recevieDefferedMessage using queue", async function(): Promise<
+    void
+  > {
+    await queueClient.send(testMessages[0]);
+    const sequenceNumber = await deferMsgAndGetSequenceNum(queueClient);
+
+    const deferredMsgs = await queueClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.deadLetter();
+
+    await testPeekMsgsLength(queueClient, 0);
+
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
+    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
+    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].complete();
+
+    await testPeekMsgsLength(deadletterQueueClient, 0);
+  });
+
+  it("Dead letter a message received from recevieDefferedMessage using subscription", async function(): Promise<
+    void
+  > {
+    await topicClient.send(testMessages[0]);
+    const sequenceNumber = await deferMsgAndGetSequenceNum(subscriptionClient);
+
+    const deferredMsgs = await subscriptionClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.deadLetter();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+
+    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    );
+
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
+      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
+      subscriptionClient.subscriptionName
+    );
+
+    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].complete();
+    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+  });
+
+  it("Defer a message received from recevieDefferedMessage using queue", async function(): Promise<
+    void
+  > {
+    await queueClient.send(testMessages[0]);
+    const sequenceNumber = await deferMsgAndGetSequenceNum(queueClient);
+
+    let deferredMsgs = await queueClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.defer();
+
+    await testPeekMsgsLength(queueClient, 1);
+
+    if (!sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    deferredMsgs = await queueClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.complete();
+
+    await testPeekMsgsLength(queueClient, 0);
+  });
+
+  it("Defer a message received from recevieDefferedMessage using subscription", async function(): Promise<
+    void
+  > {
+    await topicClient.send(testMessages[0]);
+    const sequenceNumber = await deferMsgAndGetSequenceNum(subscriptionClient);
+
+    let deferredMsgs = await subscriptionClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.defer();
+
+    await testPeekMsgsLength(subscriptionClient, 1);
+
+    if (!sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    deferredMsgs = await subscriptionClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.complete();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+  });
+
+  it("Abandon a message received from dead letter queue", async function(): Promise<void> {
+    await queueClient.send(testMessages[0]);
+    const receivedMsgs = await queueClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].deadLetter();
+
+    await testPeekMsgsLength(queueClient, 0);
+
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
+    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
+    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].abandon();
+
+    const abandonedMsgs = await deadletterQueueClient.receiveBatch(1);
+
+    should.equal(abandonedMsgs.length, 1);
+    should.equal(abandonedMsgs[0].body, testMessages[0].body);
+    should.equal(abandonedMsgs[0].messageId, testMessages[0].messageId);
+
+    await abandonedMsgs[0].complete();
+
+    await testPeekMsgsLength(deadletterQueueClient, 0);
+  });
+
+  it("Abandon a message received from dead letter subscription", async function(): Promise<void> {
+    await topicClient.send(testMessages[0]);
+    const receivedMsgs = await subscriptionClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].deadLetter();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+
+    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    );
+
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
+      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
+      subscriptionClient.subscriptionName
+    );
+
+    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].abandon();
+
+    const abandonedMsgs = await deadletterSubscriptionClient.receiveBatch(1);
+
+    should.equal(abandonedMsgs.length, 1);
+    should.equal(abandonedMsgs[0].body, testMessages[0].body);
+    should.equal(abandonedMsgs[0].messageId, testMessages[0].messageId);
+
+    await abandonedMsgs[0].complete();
+
+    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+  });
+
+  it("Defer a message received from dead letter queue", async function(): Promise<void> {
+    await queueClient.send(testMessages[0]);
+    const receivedMsgs = await queueClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].deadLetter();
+
+    await testPeekMsgsLength(queueClient, 0);
+
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
+    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
+    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    if (!deadLetterMsgs[0].sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    const sequenceNumber = deadLetterMsgs[0].sequenceNumber;
+    await deadLetterMsgs[0].defer();
+
+    const deferredMsgs = await deadletterQueueClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.complete();
+
+    await testPeekMsgsLength(queueClient, 0);
+
+    await testPeekMsgsLength(deadletterQueueClient, 0);
+  });
+
+  it("Defer a message received from dead letter subscription", async function(): Promise<void> {
+    await topicClient.send(testMessages[0]);
+    const receivedMsgs = await subscriptionClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].deadLetter();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+
+    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    );
+
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
+      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
+      subscriptionClient.subscriptionName
+    );
+
+    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    if (!deadLetterMsgs[0].sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    const sequenceNumber = deadLetterMsgs[0].sequenceNumber;
+    await deadLetterMsgs[0].defer();
+
+    const deferredMsgs = await deadletterSubscriptionClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.complete();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+
+    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+  });
+
+  const testError = (err: Error) => {
+    should.equal(err.name, "InvalidOperationError");
+    errorWasThrown = true;
+  };
+
+  it("Dead letter a message received from dead letter queue", async function(): Promise<void> {
+    await queueClient.send(testMessages[0]);
+    const receivedMsgs = await queueClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].deadLetter();
+
+    await testPeekMsgsLength(queueClient, 0);
+
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
+    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
+    let deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].deadLetter().catch((err) => testError(err));
+
+    should.equal(errorWasThrown, true);
+
+    deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].complete();
+    await testPeekMsgsLength(deadletterQueueClient, 0);
+  });
+
+  it("dead letter a message received from dead letter subscription", async function(): Promise<
+    void
+  > {
+    await topicClient.send(testMessages[0]);
+    const receivedMsgs = await subscriptionClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].deadLetter();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+
+    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    );
+
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
+      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
+      subscriptionClient.subscriptionName
+    );
+
+    let deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].deadLetter().catch((err) => testError(err));
+
+    should.equal(errorWasThrown, true);
+
+    deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].complete();
   });
 });
