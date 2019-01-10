@@ -35,11 +35,11 @@
   "compileOnSave": true,
   "exclude": [
     "node_modules",
-    "typings/**"
+    "typings/**",
+    "./examples/**/*.ts"
   ],
   "include": [
     "./lib/**/*.ts",
     "./test/**/*.ts",
-    "./examples/**/*.ts"
   ]
 }
