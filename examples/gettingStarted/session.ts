@@ -15,7 +15,7 @@ const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queueName = process.env.QUEUE_NAME || "";
 const topicName = process.env.TOPIC_NAME || "";
 const subscriptionName = process.env.SUBSCRIPTION_NAME || "";
-const receiveClienTimeoutInMilliseconds = 10000;
+const receiveClienTimeoutInMilliseconds = 1000;
 
 console.log("Connection string value: ", connectionString);
 console.log("Queue name: ", queueName);

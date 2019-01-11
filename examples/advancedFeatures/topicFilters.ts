@@ -13,10 +13,10 @@ import * as dotenv from "dotenv";
 dotenv.config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const topic = process.env.TOPIC_NAME || "";
-const subscription1 = process.env.SUBSCRIPTION_NAME1 || "";
-const subscription2 = process.env.SUBSCRIPTION_NAME2 || "";
-const subscription3 = process.env.SUBSCRIPTION_NAME3 || "";
+const topic = process.env.TOPIC_NAME || "fruitstopic";
+const subscription1 = process.env.SUBSCRIPTION_NAME1 || "red";
+const subscription2 = process.env.SUBSCRIPTION_NAME2 || "blue";
+const subscription3 = process.env.SUBSCRIPTION_NAME3 || "green";
 
 console.log(`str: ${str}`);
 console.log(`path: ${topic}`);
