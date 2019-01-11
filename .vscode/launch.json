@@ -9,11 +9,12 @@
             "request": "launch",
             "name": "Debug sample",
             "program": "${workspaceFolder}/examples/simpleSend.ts",
-            "preLaunchTask": "tsc: build - tsconfig.json",
+            "preLaunchTask": "npm: build-samples",
             "outFiles": [
-                "${workspaceFolder}/dist/**/*.js"
+                "${workspaceFolder}/dist-esm/**/*.js"
             ],
-            "envFile": "${workspaceFolder}/.env"
+            "envFile": "${workspaceFolder}/examples/.env"
+            
         },
         {
             "type": "node",
