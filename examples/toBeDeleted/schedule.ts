@@ -1,4 +1,4 @@
-import { Namespace, delay } from "../lib";
+import { Namespace, delay } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
@@ -16,7 +16,10 @@ async function main(): Promise<void> {
     { body: "Hello sb world!!" + scheduleTime.toString() },
     scheduleTime
   );
-  console.log("***********Created sender and sent the message... %d", sequenceNumber);
+  console.log(
+    "***********Created sender and sent the message... %d",
+    sequenceNumber
+  );
   await delay(3000);
   console.log(">>>> Cancelling the scheduled message");
   await client.cancelScheduledMessage(sequenceNumber);
@@ -28,6 +31,6 @@ main()
     console.log(">>>> Calling close....");
     return ns.close();
   })
-  .catch((err) => {
+  .catch(err => {
     console.log("error: ", err);
   });

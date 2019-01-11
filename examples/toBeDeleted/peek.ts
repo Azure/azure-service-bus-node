@@ -1,4 +1,4 @@
-import { ReceiveMode, Namespace } from "../lib";
+import { ReceiveMode, Namespace } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 

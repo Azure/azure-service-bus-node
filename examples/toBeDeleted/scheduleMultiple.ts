@@ -1,4 +1,4 @@
-import { Namespace, delay, ScheduleMessage } from "../lib";
+import { Namespace, delay, ScheduleMessage } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 

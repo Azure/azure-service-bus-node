@@ -6,7 +6,7 @@ import {
   ServiceBusMessage,
   ReceiveMode,
   Namespace
-} from "../lib";
+} from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
