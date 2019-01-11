@@ -479,6 +479,95 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(deadletterSubscriptionClient, 0);
   });
 
+  it("With auto-complete disabled, deferring a message results in not getting the same message again from queue. The message is then gotten using receiveDefferedMessages", async function(): Promise<
+    void
+  > {
+    await queueClient.sendBatch(testMessages);
+
+    let seq0: any = 0;
+    let seq1: any = 0;
+    const receiveListener = await queueClient.receive(
+      (msg: ServiceBusMessage) => {
+        if (msg.messageId === testMessages[0].messageId) {
+          seq0 = msg.sequenceNumber;
+        } else if (msg.messageId === testMessages[1].messageId) {
+          seq1 = msg.sequenceNumber;
+        }
+        return msg.defer();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      },
+      { autoComplete: false }
+    );
+
+    await delay(4000);
+
+    await receiveListener.stop();
+    const deferredMsg0 = await queueClient.receiveDeferredMessage(seq0);
+    const deferredMsg1 = await queueClient.receiveDeferredMessage(seq1);
+    if (!deferredMsg0) {
+      throw "No message received for sequence number";
+    }
+    if (!deferredMsg1) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsg0.body, testMessages[0].body);
+    should.equal(deferredMsg0.messageId, testMessages[0].messageId);
+
+    should.equal(deferredMsg1.body, testMessages[1].body);
+    should.equal(deferredMsg1.messageId, testMessages[1].messageId);
+    await deferredMsg0.complete();
+    await deferredMsg1.complete();
+
+    await testPeekMsgsLength(queueClient, 0);
+  });
+
+  it("With auto-complete disabled, deferring a message results in not getting the same message again from subscription. The message is then gotten using receiveDefferedMessages", async function(): Promise<
+    void
+  > {
+    await topicClient.sendBatch(testMessages);
+
+    let seq0: any = 0;
+    let seq1: any = 0;
+    const receiveListener = await subscriptionClient.receive(
+      (msg: ServiceBusMessage) => {
+        if (msg.messageId === testMessages[0].messageId) {
+          seq0 = msg.sequenceNumber;
+        } else if (msg.messageId === testMessages[1].messageId) {
+          seq1 = msg.sequenceNumber;
+        }
+        return msg.defer();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      },
+      { autoComplete: false }
+    );
+
+    await delay(4000);
+
+    await receiveListener.stop();
+
+    const deferredMsg0 = await subscriptionClient.receiveDeferredMessage(seq0);
+    const deferredMsg1 = await subscriptionClient.receiveDeferredMessage(seq1);
+    if (!deferredMsg0) {
+      throw "No message received for sequence number";
+    }
+    if (!deferredMsg1) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsg0.body, testMessages[0].body);
+    should.equal(deferredMsg0.messageId, testMessages[0].messageId);
+
+    should.equal(deferredMsg1.body, testMessages[1].body);
+    should.equal(deferredMsg1.messageId, testMessages[1].messageId);
+    await deferredMsg0.complete();
+    await deferredMsg1.complete();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+  });
+
   it("With auto-complete disabled, dead lettering the message results in not getting the same message again from queue. The message is then gotten only from the dead letter", async function(): Promise<
     void
   > {
