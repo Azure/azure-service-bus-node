@@ -1,12 +1,9 @@
-// This sample manages rules for the subscriptions using {addRules, removeAllRules} functions in the code.
-// Follow the link to do the same in other ways. Link - https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-resource-manager-namespace-topic-with-rule
 import {
   OnMessage,
   OnError,
   MessagingError,
   delay,
   ServiceBusMessage,
-  generateUuid,
   Namespace,
   SendableMessageInfo,
   SubscriptionClient,
@@ -29,51 +26,57 @@ console.log(`Subscription 3: ${subscription3}\n`);
 
 let ns: Namespace;
 
+/*
+  This sample manages rules for the subscriptions using {addRules, removeAllRules} functions in the code.
+  Follow the link to do the same in other ways.
+  Link - https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-resource-manager-namespace-topic-with-rule
+*/
+async function main(): Promise<void> {
+  ns = Namespace.createFromConnectionString(str);
+  try {
+    const client = ns.createTopicClient(topic);
+
+    const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
+    await removeAllRules(subscription1Client);
+    await subscription1Client.addRule("Priority_1", "priority = 1");
+
+    const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
+    await removeAllRules(subscription2Client);
+    await subscription2Client.addRule("Priority_2", "priority = 2");
+
+    const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
+    await removeAllRules(subscription3Client);
+    await subscription3Client.addRule("Priority_3", "priority = 3");
+
+    await sendMessages(client);
+    // Setting up receive handlers
+
+    await receiveMessages(subscription1Client);
+    await receiveMessages(subscription2Client);
+    await receiveMessages(subscription3Client);
+
+    await subscription1Client.close();
+    await subscription2Client.close();
+    await subscription3Client.close();
+
+    await client.close();
+  } finally {
+    await ns.close();
+  }
+}
+
 async function sendMessages(topicClient: TopicClient): Promise<void> {
   for (let index = 0; index < 100; index++) {
     const element = `Message#${index}`;
     const message: SendableMessageInfo = {
       body: element,
       userProperties: { priority: Math.ceil(Math.random() * 3) },
-      label: "Random String",
-      timeToLive: 2 * 60 * 1000, // 2 minutes
-      messageId: generateUuid()
+      label: "Random String"
     };
 
     console.log(` Sending message ${index} - ${message.body}`);
     await topicClient.send(message);
   }
-}
-
-async function main(): Promise<void> {
-  ns = Namespace.createFromConnectionString(str);
-  const client = ns.createTopicClient(topic);
-
-  const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
-  await removeAllRules(subscription1Client);
-  await subscription1Client.addRule("Priority_1", "priority = 1");
-
-  const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
-  await removeAllRules(subscription2Client);
-  await subscription2Client.addRule("Priority_2", "priority = 2");
-
-  const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
-  await removeAllRules(subscription3Client);
-  await subscription3Client.addRule("Priority_3", "priority = 3");
-
-  await sendMessages(client);
-  // Setting up receive handlers
-
-  await receiveMessages(subscription1Client);
-  await receiveMessages(subscription2Client);
-  await receiveMessages(subscription3Client);
-
-  await subscription1Client.close();
-  await subscription2Client.close();
-  await subscription3Client.close();
-
-  await client.close();
-  return ns.close();
 }
 
 async function receiveMessages(client: SubscriptionClient): Promise<void> {
@@ -108,11 +111,4 @@ async function removeAllRules(client: SubscriptionClient): Promise<void> {
   }
 }
 
-main()
-  .then(() => {
-    console.log("\n>>>> Sample Done!");
-  })
-  .catch((err) => {
-    console.log("error: ", err);
-    return ns.close();
-  });
+main();

@@ -1,12 +1,16 @@
-import { generateUuid, SendableMessageInfo, Namespace } from "../../lib";
+import { SendableMessageInfo, Namespace } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
 const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const userEventsQueue = process.env.QUEUE_NAME || "";
+const userEventsQueueName = process.env.QUEUE_NAME || "";
+const userEventsTopicName = process.env.TOPIC_NAME || "";
+const userEventsSubscriptionName = process.env.SUBSCRIPTION_NAME || "";
 
-console.log("connection string: ", connectionString);
-console.log("path: ", userEventsQueue);
+console.log("Connection string value: ", connectionString);
+console.log("Queue name: ", userEventsQueueName);
+console.log("Topic name: ", userEventsTopicName);
+console.log("Subscription name: ", userEventsSubscriptionName);
 
 let ns: Namespace;
 
@@ -25,11 +29,11 @@ let ns: Namespace;
 */
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
-
-  await runScenario();
-
-  await ns.close();
-  console.log("\n>>>> sample Done!!!!");
+  try {
+    await runScenario();
+  } finally {
+    await ns.close();
+  }
 }
 
 async function runScenario(): Promise<void> {
@@ -73,7 +77,9 @@ async function runScenario(): Promise<void> {
 }
 
 async function getSessionState(sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueue);
+  const client = ns.createQueueClient(userEventsQueueName); // Use this API to receive from a queue
+  // const client = ns.createSubscriptionClient(userEventsTopicName, userEventsSubscriptionName); // Use this API to receive from a topic subscription
+
   const messageSession = await client.acceptSession({ sessionId: sessionId });
 
   const sessionState = await messageSession.getState();
@@ -89,15 +95,14 @@ async function getSessionState(sessionId: string): Promise<void> {
 }
 
 async function sendMessagesForSession(shoppingEvents: any[], sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueue);
+  const client = ns.createQueueClient(userEventsQueueName); // Use this API to send to a queue
+  // const client = ns.createTopicClient(userEventsTopicName); // Use this API to send to a topic
 
   for (let index = 0; index < shoppingEvents.length; index++) {
     const message: SendableMessageInfo = {
       sessionId: sessionId,
       body: shoppingEvents[index],
-      label: "Shopping Step",
-      timeToLive: 10 * 60 * 1000, // 2 minutes
-      messageId: generateUuid()
+      label: "Shopping Step"
     };
     await client.send(message);
   }
@@ -105,7 +110,9 @@ async function sendMessagesForSession(shoppingEvents: any[], sessionId: string):
 }
 
 async function processMessageFromSession(sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueue);
+  const client = ns.createQueueClient(userEventsQueueName); // Use this API to receive from a queue
+  // const client = ns.createSubscriptionClient(userEventsTopicName, userEventsSubscriptionName); // Use this API to receive from a topic subscription
+
   const messageSession = await client.acceptSession({ sessionId: sessionId });
 
   const messages = await messageSession.receiveBatch(1, 10);
@@ -141,7 +148,4 @@ async function processMessageFromSession(sessionId: string): Promise<void> {
   await client.close();
 }
 
-main().catch((err) => {
-  console.log(">>>>> Error occurred: ", err);
-  return ns.close();
-});
+main();

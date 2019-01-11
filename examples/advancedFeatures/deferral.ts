@@ -4,27 +4,41 @@ import {
   MessagingError,
   delay,
   ServiceBusMessage,
-  ReceiveMode,
-  generateUuid,
   Namespace,
   SendableMessageInfo
 } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
 
-const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const path = process.env.QUEUE_NAME || "";
-console.log("str: ", str);
-console.log("path: ", path);
+const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
+const queueName = process.env.QUEUE_NAME || "";
+const topicName = process.env.TOPIC_NAME || "";
+const subscriptionName = process.env.SUBSCRIPTION_NAME || "";
 
+console.log("Connection string value: ", connectionString);
+console.log("Queue name: ", queueName);
+console.log("Topic name: ", topicName);
+console.log("Subscription name: ", subscriptionName);
+
+/*
+  This sample demonstrates how Service Message deferral feature can be used to defer messages to be
+  available for receiving by client at a later time.
+
+  We take for example an application receives cooking instructions that the clients need to process
+  in appropriate sequence. We simulate a common scenario where the messages are not received in
+  expected sequence. The example shows how message deferral can be used to process the messages
+  in expected sequence.
+*/
 async function main(): Promise<void> {
   await sendMessage();
   await receiveMessage();
 }
 
 async function sendMessage(): Promise<void> {
-  const nsSend = Namespace.createFromConnectionString(str);
-  const sendClient = nsSend.createQueueClient(path);
+  const nsSend = Namespace.createFromConnectionString(connectionString);
+  const sendClient = nsSend.createQueueClient(queueName); // Use this API to send to a queue
+  // const sendClient = nsSend.createTopicClient(topicName); // Use this API to send to a topic
+
   const data = [
     { step: 1, title: "Shop" },
     { step: 2, title: "Unpack" },
@@ -32,35 +46,39 @@ async function sendMessage(): Promise<void> {
     { step: 4, title: "Cook" },
     { step: 5, title: "Eat" }
   ];
-  const promises = new Array();
-  for (let index = 0; index < data.length; index++) {
-    const message: SendableMessageInfo = {
-      body: data[index],
-      label: "RecipeStep",
-      contentType: "application/json",
-      timeToLive: 2 * 60 * 1000, // 2 minutes
-      messageId: generateUuid()
-    };
-    // the way we shuffle the message order is to introduce a tiny random delay before each of the messages is sent
-    promises.push(
-      delay(Math.random() * 30).then(async () => {
-        try {
-          await sendClient.send(message);
-          console.log("Sent message step:", data[index].step);
-        } catch (err) {
-          console.log("Error while sending message", err);
-        }
-      })
-    );
+  try {
+    const promises = new Array();
+    for (let index = 0; index < data.length; index++) {
+      const message: SendableMessageInfo = {
+        body: data[index],
+        label: "RecipeStep",
+        contentType: "application/json"
+      };
+      // the way we shuffle the message order is to introduce a tiny random delay before each of the messages is sent
+      promises.push(
+        delay(Math.random() * 30).then(async () => {
+          try {
+            await sendClient.send(message);
+            console.log("Sent message step:", data[index].step);
+          } catch (err) {
+            console.log("Error while sending message", err);
+          }
+        })
+      );
+    }
+    // wait until all the send tasks are complete
+    await Promise.all(promises);
+  } finally {
+    await nsSend.close();
   }
-  // wait until all the send tasks are complete
-  await Promise.all(promises);
-  await nsSend.close();
 }
 
 async function receiveMessage(): Promise<void> {
-  const nsRcv = Namespace.createFromConnectionString(str);
-  const receiveClient = nsRcv.createQueueClient(path, { receiveMode: ReceiveMode.peekLock });
+  const nsRcv = Namespace.createFromConnectionString(connectionString);
+
+  const receiveClient = nsRcv.createQueueClient(queueName); // Use this API to receive from a queue
+  // const receiveClient = nsRcv.createSubscriptionClient(topicName, subscriptionName); // Use this API to receive from a topic subscription
+
   const deferredSteps = new Map();
   let lastProcessedRecipeStep = 0;
   try {
@@ -114,16 +132,9 @@ async function receiveMessage(): Promise<void> {
       lastProcessedRecipeStep++;
     }
     await rcvHandler.stop();
-  } catch (err) {
-    console.log("Error while receiving: ", err);
+  } finally {
+    await nsRcv.close();
   }
-  await nsRcv.close();
 }
 
-main()
-  .then(() => {
-    console.log("\n>>>> sample Done!!!!");
-  })
-  .catch((err) => {
-    console.log("error: ", err);
-  });
+main();
