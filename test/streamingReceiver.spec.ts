@@ -401,4 +401,81 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
+
+  it("With auto-complete enabled, manual deadletter in the Queue by the user should not result in errors", async function(): Promise<
+    void
+  > {
+    await queueClient.sendBatch(testMessages);
+    await testPeekMsgsLength(queueClient, 2);
+    const receiveListener = await queueClient.receive(
+      (msg: ServiceBusMessage) => {
+        return msg.deadLetter();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+
+    await delay(4000);
+    await receiveListener.stop();
+
+    await testPeekMsgsLength(queueClient, 0);
+
+    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
+    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
+
+    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
+    should.equal(Array.isArray(deadLetterMsgs), true);
+    should.equal(deadLetterMsgs.length, 2);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
+
+    await deadLetterMsgs[0].complete();
+    await deadLetterMsgs[1].complete();
+
+    await testPeekMsgsLength(deadletterQueueClient, 0);
+  });
+
+  it("With auto-complete enabled, manual deadletter in the Subscription by the user should not result in errors", async function(): Promise<
+    void
+  > {
+    await topicClient.sendBatch(testMessages);
+
+    const receiveListener = await subscriptionClient.receive(
+      (msg: ServiceBusMessage) => {
+        return msg.deadLetter();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+
+    await delay(4000);
+
+    await receiveListener.stop();
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    );
+
+    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
+      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
+      subscriptionClient.subscriptionName
+    );
+
+    await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DL
+
+    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
+    should.equal(Array.isArray(deadLetterMsgs), true);
+    should.equal(deadLetterMsgs.length, 2);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
+
+    await deadLetterMsgs[0].complete();
+    await deadLetterMsgs[1].complete();
+
+    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+  });
 });
