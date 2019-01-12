@@ -783,4 +783,63 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     await testPeekMsgsLength(deadletterSubscriptionClient, 0);
   });
+
+  it("Second Streaming Receiver call should fail if the first one is not stopped for Queues", async function(): Promise<
+    void
+  > {
+    const receiveListener: ReceiveHandler = await queueClient.receive(
+      (msg: ServiceBusMessage) => {
+        return msg.complete();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+    await delay(5000);
+    try {
+      const receiveListener2 = await queueClient.receive(
+        (msg: ServiceBusMessage) => {
+          return Promise.resolve();
+        },
+        (err: Error) => {
+          should.exist(err);
+        }
+      );
+      await receiveListener2.stop();
+    } catch (err) {
+      should.equal(!err.message.search("has already been created for the Subscription"), false);
+    }
+
+    await receiveListener.stop();
+  });
+
+  it("Second Streaming Receiver call should fail if the first one is not stopped for Subscriptions", async function(): Promise<
+    void
+  > {
+    const receiveListener: ReceiveHandler = await subscriptionClient.receive(
+      (msg: ServiceBusMessage) => {
+        return msg.complete();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+    await delay(5000);
+
+    try {
+      const receiveListener2 = await subscriptionClient.receive(
+        (msg: ServiceBusMessage) => {
+          return Promise.resolve();
+        },
+        (err: Error) => {
+          should.exist(err);
+        }
+      );
+      await receiveListener2.stop();
+    } catch (err) {
+      should.equal(!err.message.search("has already been created for the Subscription"), false);
+    }
+
+    await receiveListener.stop();
+  });
 });
