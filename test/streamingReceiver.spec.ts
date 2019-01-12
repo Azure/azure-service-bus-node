@@ -842,4 +842,62 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     await receiveListener.stop();
   });
+
+  it.only("When maxConcurrentCalls set to 1 (default value), next message is received only after the first one is settled.", async function(): Promise<
+    void
+  > {
+    await queueClient.sendBatch(testMessages);
+    const receivedMsgs: ServiceBusMessage[] = [];
+    let countMessages = 0;
+    const receiveListener: ReceiveHandler = await queueClient.receive(
+      (msg: ServiceBusMessage) => {
+        receivedMsgs.push(msg);
+        if (countMessages === 1) {
+          if (msg.messageId === testMessages[1].messageId) {
+            should.equal(receivedMsgs[0].delivery.remote_settled, true);
+          } else if (msg.messageId === testMessages[0].messageId) {
+            should.equal(receivedMsgs[1].delivery.remote_settled, true);
+          }
+        }
+        countMessages++;
+        return msg.complete();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+    await delay(5000);
+
+    await receiveListener.stop();
+    await testPeekMsgsLength(queueClient, 0);
+  });
+
+  it.only("When maxConcurrentCalls set to 1 (default value), next message is received only after the first one is settled.", async function(): Promise<
+    void
+  > {
+    await topicClient.sendBatch(testMessages);
+    const receivedMsgs: ServiceBusMessage[] = [];
+    let countMessages = 0;
+    const receiveListener: ReceiveHandler = await subscriptionClient.receive(
+      (msg: ServiceBusMessage) => {
+        receivedMsgs.push(msg);
+        if (countMessages === 1) {
+          if (msg.messageId === testMessages[1].messageId) {
+            should.equal(receivedMsgs[0].delivery.remote_settled, true);
+          } else if (msg.messageId === testMessages[0].messageId) {
+            should.equal(receivedMsgs[1].delivery.remote_settled, true);
+          }
+        }
+        countMessages++;
+        return msg.complete();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      }
+    );
+    await delay(5000);
+
+    await receiveListener.stop();
+    await testPeekMsgsLength(subscriptionClient, 0);
+  });
 });
