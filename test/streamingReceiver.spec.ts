@@ -105,7 +105,7 @@ async function afterEachTest(): Promise<void> {
   await namespace.close();
 }
 
-describe.only("Streaming Receiver Misc Tests", function(): void {
+describe("Streaming Receiver Misc Tests", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
