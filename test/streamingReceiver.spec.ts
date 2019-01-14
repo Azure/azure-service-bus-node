@@ -31,81 +31,101 @@ const testMessages: SendableMessageInfo[] = [
   }
 ];
 
-function testReceivedMessages(receivedMsgs: ServiceBusMessage[]): void {
-  should.equal(receivedMsgs.length, 2);
-  should.equal(receivedMsgs[0].body, testMessages[0].body);
-  should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-  should.equal(receivedMsgs[1].body, testMessages[1].body);
-  should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
-}
-
 async function testPeekMsgsLength(
   client: QueueClient | SubscriptionClient,
   expectedPeekLength: number
 ): Promise<void> {
   const peekedMsgs = await client.peek(expectedPeekLength + 1);
-  should.equal(peekedMsgs.length, expectedPeekLength);
+  should.equal(
+    peekedMsgs.length,
+    expectedPeekLength,
+    "Unexpected number of msgs found when peeking"
+  );
 }
 
 const maxDeliveryCount = 10;
+let namespace: Namespace;
+let queueClient: QueueClient;
+let topicClient: TopicClient;
+let subscriptionClient: SubscriptionClient;
+let deadletterQueueClient: QueueClient;
+let deadletterSubscriptionClient: SubscriptionClient;
 
-describe("Streaming Receiver from Queue/Subscription", function(): void {
-  let namespace: Namespace;
-  let queueClient: QueueClient;
-  let topicClient: TopicClient;
-  let subscriptionClient: SubscriptionClient;
+async function beforeEachTest(): Promise<void> {
+  // The tests in this file expect the env variables to contain the connection string and
+  // the names of empty queue/topic/subscription that are to be tested
 
-  beforeEach(async () => {
-    // The tests in this file expect the env variables to contain the connection string and
-    // the names of empty queue/topic/subscription that are to be tested
-
-    if (!process.env.SERVICEBUS_CONNECTION_STRING) {
-      throw new Error(
-        "Define SERVICEBUS_CONNECTION_STRING in your environment before running integration tests."
-      );
-    }
-    if (!process.env.TOPIC_NAME) {
-      throw new Error("Define TOPIC_NAME in your environment before running integration tests.");
-    }
-    if (!process.env.QUEUE_NAME) {
-      throw new Error("Define QUEUE_NAME in your environment before running integration tests.");
-    }
-    if (!process.env.SUBSCRIPTION_NAME) {
-      throw new Error(
-        "Define SUBSCRIPTION_NAME in your environment before running integration tests."
-      );
-    }
-
-    namespace = Namespace.createFromConnectionString(process.env.SERVICEBUS_CONNECTION_STRING);
-    queueClient = namespace.createQueueClient(process.env.QUEUE_NAME);
-    topicClient = namespace.createTopicClient(process.env.TOPIC_NAME);
-    subscriptionClient = namespace.createSubscriptionClient(
-      process.env.TOPIC_NAME,
-      process.env.SUBSCRIPTION_NAME
+  if (!process.env.SERVICEBUS_CONNECTION_STRING) {
+    throw new Error(
+      "Define SERVICEBUS_CONNECTION_STRING in your environment before running integration tests."
     );
+  }
+  if (!process.env.TOPIC_NAME) {
+    throw new Error("Define TOPIC_NAME in your environment before running integration tests.");
+  }
+  if (!process.env.QUEUE_NAME) {
+    throw new Error("Define QUEUE_NAME in your environment before running integration tests.");
+  }
+  if (!process.env.SUBSCRIPTION_NAME) {
+    throw new Error(
+      "Define SUBSCRIPTION_NAME in your environment before running integration tests."
+    );
+  }
 
-    const peekedQueueMsg = await queueClient.peek();
-    if (peekedQueueMsg.length) {
-      throw new Error("Please use an empty queue for integration testing");
-    }
+  namespace = Namespace.createFromConnectionString(process.env.SERVICEBUS_CONNECTION_STRING);
+  queueClient = namespace.createQueueClient(process.env.QUEUE_NAME);
+  topicClient = namespace.createTopicClient(process.env.TOPIC_NAME);
+  subscriptionClient = namespace.createSubscriptionClient(
+    process.env.TOPIC_NAME,
+    process.env.SUBSCRIPTION_NAME
+  );
+  deadletterQueueClient = namespace.createQueueClient(
+    Namespace.getDeadLetterQueuePathForQueue(queueClient.name)
+  );
+  deadletterSubscriptionClient = namespace.createSubscriptionClient(
+    Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    ),
+    subscriptionClient.subscriptionName
+  );
 
-    const peekedSubscriptionMsg = await subscriptionClient.peek();
-    if (peekedSubscriptionMsg.length) {
-      throw new Error("Please use an empty Subscription for integration testing");
-    }
+  const peekedQueueMsg = await queueClient.peek();
+  if (peekedQueueMsg.length) {
+    throw new Error("Please use an empty queue for integration testing");
+  }
+
+  const peekedSubscriptionMsg = await subscriptionClient.peek();
+  if (peekedSubscriptionMsg.length) {
+    throw new Error("Please use an empty Subscription for integration testing");
+  }
+}
+
+async function afterEachTest(): Promise<void> {
+  await namespace.close();
+}
+
+describe("Streaming Receiver Misc Tests", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
   });
 
   afterEach(async () => {
-    return namespace.close();
+    await afterEachTest();
   });
 
   it("AutoComplete removes the message from Queue", async function(): Promise<void> {
     await queueClient.sendBatch(testMessages);
+    await testPeekMsgsLength(queueClient, testMessages.length);
 
     const receivedMsgs: ServiceBusMessage[] = [];
     const receiveListener = queueClient.receive(
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
+        should.equal(
+          testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
+          true
+        );
         return Promise.resolve();
       },
       (err: Error) => {
@@ -113,9 +133,12 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
       }
     );
 
-    await delay(1000);
-
-    testReceivedMessages(receivedMsgs);
+    for (let i = 0; i < 5; i++) {
+      await delay(1000);
+      if (receivedMsgs.length === testMessages.length) {
+        break;
+      }
+    }
 
     await receiveListener.stop();
     await testPeekMsgsLength(queueClient, 0);
@@ -123,11 +146,16 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
   it("AutoComplete removes the message from Subscription", async function(): Promise<void> {
     await topicClient.sendBatch(testMessages);
+    await testPeekMsgsLength(subscriptionClient, testMessages.length);
 
     const receivedMsgs: ServiceBusMessage[] = [];
     const receiveListener = subscriptionClient.receive(
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
+        should.equal(
+          testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
+          true
+        );
         return Promise.resolve();
       },
       (err: Error) => {
@@ -135,9 +163,12 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
       }
     );
 
-    await delay(1000);
-
-    testReceivedMessages(receivedMsgs);
+    for (let i = 0; i < 5; i++) {
+      await delay(1000);
+      if (receivedMsgs.length === testMessages.length) {
+        break;
+      }
+    }
 
     await receiveListener.stop();
     await testPeekMsgsLength(subscriptionClient, 0);
@@ -152,6 +183,10 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     const receiveListener = queueClient.receive(
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
+        should.equal(
+          testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
+          true
+        );
         return Promise.resolve();
       },
       (err: Error) => {
@@ -160,9 +195,12 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
       { autoComplete: false }
     );
 
-    await delay(1000);
-
-    testReceivedMessages(receivedMsgs);
+    for (let i = 0; i < 5; i++) {
+      await delay(1000);
+      if (receivedMsgs.length === testMessages.length) {
+        break;
+      }
+    }
 
     await testPeekMsgsLength(queueClient, 2);
 
@@ -180,6 +218,10 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     const receiveListener = subscriptionClient.receive(
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
+        should.equal(
+          testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
+          true
+        );
         return Promise.resolve();
       },
       (err: Error) => {
@@ -188,66 +230,17 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
       { autoComplete: false }
     );
 
-    await delay(1000);
-
-    testReceivedMessages(receivedMsgs);
+    for (let i = 0; i < 5; i++) {
+      await delay(1000);
+      if (receivedMsgs.length === testMessages.length) {
+        break;
+      }
+    }
 
     await testPeekMsgsLength(subscriptionClient, 2);
 
     await receivedMsgs[0].complete();
     await receivedMsgs[1].complete();
-    await receiveListener.stop();
-  });
-
-  it("Disabled autoComplete, manual complete removes the message from Queue", async function(): Promise<
-    void
-  > {
-    await queueClient.sendBatch(testMessages);
-
-    const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener = queueClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        return msg.complete();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      },
-      { autoComplete: false }
-    );
-
-    await delay(1000);
-
-    testReceivedMessages(receivedMsgs);
-
-    await testPeekMsgsLength(queueClient, 0);
-
-    await receiveListener.stop();
-  });
-
-  it("Disabled autoComplete, manual complete removes the message from Subscription", async function(): Promise<
-    void
-  > {
-    await topicClient.sendBatch(testMessages);
-
-    const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener = subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        return msg.complete();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      },
-      { autoComplete: false }
-    );
-
-    await delay(1000);
-
-    testReceivedMessages(receivedMsgs);
-
-    await testPeekMsgsLength(subscriptionClient, 0);
-
     await receiveListener.stop();
   });
 
@@ -285,16 +278,13 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     await testPeekMsgsLength(queueClient, 0); // No messages in the queue
 
-    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
-    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
-
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 2);
+    should.equal(deadLetterMsgs.length, testMessages.length);
     should.equal(deadLetterMsgs[0].deliveryCount, maxDeliveryCount);
     should.equal(deadLetterMsgs[1].deliveryCount, maxDeliveryCount);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
+    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
+    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
 
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
@@ -336,35 +326,33 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     const peekedMsgs = await subscriptionClient.peek(2);
     should.equal(peekedMsgs.length, 0);
 
-    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      topicClient.name,
-      subscriptionClient.subscriptionName
-    );
-
-    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
-      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      subscriptionClient.subscriptionName
-    );
-
     await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DL
 
     const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 2);
+    should.equal(deadLetterMsgs.length, testMessages.length);
     should.equal(deadLetterMsgs[0].deliveryCount, maxDeliveryCount);
     should.equal(deadLetterMsgs[1].deliveryCount, maxDeliveryCount);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
+    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
+    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
 
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
 
     await testPeekMsgsLength(deadletterSubscriptionClient, 0);
   });
+});
 
-  it("With auto-complete enabled, manual completion in the Queue by the user should not result in errors", async function(): Promise<
-    void
-  > {
+describe("With autocomplete enabled, test Complete/Abandon/Defer/Deadletter normal message", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
+  });
+
+  it("Queue: complete() removes message", async function(): Promise<void> {
     await queueClient.sendBatch(testMessages);
     await testPeekMsgsLength(queueClient, 2);
     const receiveListener = await queueClient.receive(
@@ -382,9 +370,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(queueClient, 0);
   });
 
-  it("With auto-complete enabled, manual completion in the Subscription by the user should not result in errors", async function(): Promise<
-    void
-  > {
+  it("Subscription: complete() removes message", async function(): Promise<void> {
     await topicClient.sendBatch(testMessages);
 
     const receiveListener = await subscriptionClient.receive(
@@ -403,7 +389,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
-  it("With auto-complete enabled, manual abandon in the Queue by the user should not result in errors", async function(): Promise<
+  it("Queue: abandon() retains message with incremented deliveryCount", async function(): Promise<
     void
   > {
     await queueClient.send(testMessages[0]);
@@ -423,11 +409,12 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     const receivedMsgs = await queueClient.receiveBatch(1);
     should.equal(receivedMsgs.length, 1);
     should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+    // should.equal(receivedMsgs[0].deliveryCount, 1);
     await receivedMsgs[0].complete();
     await testPeekMsgsLength(queueClient, 0);
   });
 
-  it("With auto-complete enabled, manual abandon in the Subscription by the user should not result in errors", async function(): Promise<
+  it("Subscription: abandon() retains message with incremented deliveryCount", async function(): Promise<
     void
   > {
     await topicClient.send(testMessages[0]);
@@ -448,13 +435,12 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     const receivedMsgs = await subscriptionClient.receiveBatch(1);
     should.equal(receivedMsgs.length, 1);
     should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+    // should.equal(receivedMsgs[0].deliveryCount, 1);
     await receivedMsgs[0].complete();
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
-  it("With auto-complete enabled, manual deadletter in the Queue by the user should not result in errors", async function(): Promise<
-    void
-  > {
+  it("Queue: deadLetter() moves message to deadletter queue", async function(): Promise<void> {
     await queueClient.sendBatch(testMessages);
     await testPeekMsgsLength(queueClient, 2);
     const receiveListener = await queueClient.receive(
@@ -471,14 +457,11 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     await testPeekMsgsLength(queueClient, 0);
 
-    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
-    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
-
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 2);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
+    should.equal(deadLetterMsgs.length, testMessages.length);
+    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
+    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
 
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
@@ -486,7 +469,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(deadletterQueueClient, 0);
   });
 
-  it("With auto-complete enabled, manual deadletter in the Subscription by the user should not result in errors", async function(): Promise<
+  it("Subscription: deadLetter() moves message to deadletter queue", async function(): Promise<
     void
   > {
     await topicClient.sendBatch(testMessages);
@@ -505,23 +488,14 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await receiveListener.stop();
 
     await testPeekMsgsLength(subscriptionClient, 0);
-    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      topicClient.name,
-      subscriptionClient.subscriptionName
-    );
-
-    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
-      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      subscriptionClient.subscriptionName
-    );
 
     await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DL
 
     const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 2);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
+    should.equal(deadLetterMsgs.length, testMessages.length);
+    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
+    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
 
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
@@ -529,9 +503,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(deadletterSubscriptionClient, 0);
   });
 
-  it("With auto-complete enabled, manual defer in the Queue by the user should not result in errors", async function(): Promise<
-    void
-  > {
+  it("Queue: defer() moves message to deferred queue", async function(): Promise<void> {
     await queueClient.sendBatch(testMessages);
 
     let seq0: any = 0;
@@ -572,9 +544,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(queueClient, 0);
   });
 
-  it("With auto-complete enabled, manual defer in the Subscription by the user should not result in errors", async function(): Promise<
-    void
-  > {
+  it("Subscription: defer() moves message to deferred queue", async function(): Promise<void> {
     await topicClient.sendBatch(testMessages);
 
     let seq0: any = 0;
@@ -615,10 +585,80 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
+});
 
-  it("With auto-complete disabled, deferring a message results in not getting the same message again from queue. The message is then gotten using receiveDefferedMessages", async function(): Promise<
-    void
-  > {
+describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter normal message", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
+  });
+
+  it("Queue: complete() removes message", async function(): Promise<void> {
+    await queueClient.sendBatch(testMessages);
+
+    const receivedMsgs: ServiceBusMessage[] = [];
+    const receiveListener = queueClient.receive(
+      (msg: ServiceBusMessage) => {
+        receivedMsgs.push(msg);
+        should.equal(
+          testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
+          true
+        );
+        return msg.complete();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      },
+      { autoComplete: false }
+    );
+
+    for (let i = 0; i < 5; i++) {
+      await delay(1000);
+      if (receivedMsgs.length === testMessages.length) {
+        break;
+      }
+    }
+
+    await testPeekMsgsLength(queueClient, 0);
+
+    await receiveListener.stop();
+  });
+
+  it("Subscription: complete() removes message", async function(): Promise<void> {
+    await topicClient.sendBatch(testMessages);
+
+    const receivedMsgs: ServiceBusMessage[] = [];
+    const receiveListener = subscriptionClient.receive(
+      (msg: ServiceBusMessage) => {
+        receivedMsgs.push(msg);
+        should.equal(
+          testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
+          true
+        );
+        return msg.complete();
+      },
+      (err: Error) => {
+        should.not.exist(err);
+      },
+      { autoComplete: false }
+    );
+
+    for (let i = 0; i < 5; i++) {
+      await delay(1000);
+      if (receivedMsgs.length === testMessages.length) {
+        break;
+      }
+    }
+
+    await testPeekMsgsLength(subscriptionClient, 0);
+
+    await receiveListener.stop();
+  });
+
+  it("Queue: defer() moves message to deferred queue", async function(): Promise<void> {
     await queueClient.sendBatch(testMessages);
 
     let seq0: any = 0;
@@ -660,9 +700,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(queueClient, 0);
   });
 
-  it("With auto-complete disabled, deferring a message results in not getting the same message again from subscription. The message is then gotten using receiveDefferedMessages", async function(): Promise<
-    void
-  > {
+  it("Subscription: defer() moves message to deferred queue", async function(): Promise<void> {
     await topicClient.sendBatch(testMessages);
 
     let seq0: any = 0;
@@ -705,9 +743,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
-  it("With auto-complete disabled, dead lettering the message results in not getting the same message again from queue. The message is then gotten only from the dead letter", async function(): Promise<
-    void
-  > {
+  it("Queue: deadLetter() moves message to deadletter queue", async function(): Promise<void> {
     await queueClient.sendBatch(testMessages);
     await testPeekMsgsLength(queueClient, 2);
     const receiveListener = await queueClient.receive(
@@ -725,14 +761,11 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
     await testPeekMsgsLength(queueClient, 0);
 
-    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
-    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
-
     const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 2);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
+    should.equal(deadLetterMsgs.length, testMessages.length);
+    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
+    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
 
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
@@ -740,7 +773,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(deadletterQueueClient, 0);
   });
 
-  it("With auto-complete disabled, dead lettering the message results in not getting the same message again from subscription. The message is then gotten only from the dead letter", async function(): Promise<
+  it("Subscription: deadLetter() moves message to deadletter queue", async function(): Promise<
     void
   > {
     await topicClient.sendBatch(testMessages);
@@ -760,28 +793,29 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await receiveListener.stop();
 
     await testPeekMsgsLength(subscriptionClient, 0);
-    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      topicClient.name,
-      subscriptionClient.subscriptionName
-    );
-
-    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
-      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      subscriptionClient.subscriptionName
-    );
 
     await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DL
 
     const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 2);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(deadLetterMsgs[1].messageId, testMessages[1].messageId);
+    should.equal(deadLetterMsgs.length, testMessages.length);
+    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
+    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
 
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
 
     await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+  });
+});
+
+describe("Multiple Streaming Receivers", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
   });
 
   it("Second Streaming Receiver call should fail if the first one is not stopped for Queues", async function(): Promise<
