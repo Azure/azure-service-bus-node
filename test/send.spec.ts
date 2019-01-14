@@ -291,7 +291,7 @@ describe("Cancel Scheduled messages for sending to Queue/Subscription", function
     );
   });
 
-  it("Cancel Scheduled messages using Partitioned Queues", async function(): Promise<void> {
+  it("Cancel Scheduled messages using unPartitioned Queues", async function(): Promise<void> {
     await testCancelScheduleMessages(
       unpartitionedQueueClient,
       unpartitionedQueueClient,
