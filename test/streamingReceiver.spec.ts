@@ -549,6 +549,7 @@ describe("Multiple Streaming Receivers", function(): void {
       }
     );
     await delay(5000);
+    let ERROR_FLAG = 0;
     try {
       const receiveListener2 = await receiverClient.receive(
         (msg: ServiceBusMessage) => {
@@ -560,8 +561,10 @@ describe("Multiple Streaming Receivers", function(): void {
       );
       await receiveListener2.stop();
     } catch (err) {
+      ERROR_FLAG = 1;
       should.equal(!err.message.search("has already been created for the Subscription"), false);
     }
+    should.equal(ERROR_FLAG, 1);
 
     await receiveListener.stop();
   }
