@@ -36,15 +36,18 @@ async function testPeekMsgsLength(
   expectedPeekLength: number
 ): Promise<void> {
   const peekedMsgs = await client.peek(expectedPeekLength + 1);
-  should.equal(peekedMsgs.length, expectedPeekLength);
+  should.equal(
+    peekedMsgs.length,
+    expectedPeekLength,
+    "Unexpected number of msgs found when peeking"
+  );
 }
 
 let namespace: Namespace;
 let queueClient: QueueClient;
 let topicClient: TopicClient;
 let subscriptionClient: SubscriptionClient;
-let deadletterQueueClient: QueueClient;
-let deadletterSubscriptionClient: SubscriptionClient;
+
 let errorWasThrown: boolean;
 
 async function beforeEachTest(): Promise<void> {
@@ -79,16 +82,6 @@ async function beforeEachTest(): Promise<void> {
     {
       receiveMode: ReceiveMode.receiveAndDelete
     }
-  );
-  deadletterQueueClient = namespace.createQueueClient(
-    Namespace.getDeadLetterQueuePathForQueue(queueClient.name)
-  );
-  deadletterSubscriptionClient = namespace.createSubscriptionClient(
-    Namespace.getDeadLetterSubcriptionPathForSubcription(
-      topicClient.name,
-      subscriptionClient.subscriptionName
-    ),
-    subscriptionClient.subscriptionName
   );
 
   const peekedQueueMsg = await queueClient.peek();
@@ -158,7 +151,8 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
 
   async function sendReceiveMsg(
     senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
+    receiverClient: QueueClient | SubscriptionClient,
+    autoCompleteFlag: boolean
   ): Promise<void> {
     await senderClient.send(testMessages[0]);
     const receivedMsgs: ServiceBusMessage[] = [];
@@ -169,7 +163,8 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
       },
       (err: Error) => {
         should.not.exist(err);
-      }
+      },
+      { autoComplete: autoCompleteFlag }
     );
 
     await delay(2000);
@@ -183,24 +178,48 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await receiveListener.stop();
   }
 
-  async function testNosettlment(
+  async function testWithAutoCompleteEnabled(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    await sendReceiveMsg(senderClient, receiverClient);
+    await sendReceiveMsg(senderClient, receiverClient, true);
     await testPeekMsgsLength(receiverClient, 0);
   }
 
-  it("Queue: No settlement of the message removes message", async function(): Promise<void> {
-    await testNosettlment(queueClient, queueClient);
+  it("Queue: With auto-complete enabled, no settlement of the message removes message", async function(): Promise<
+    void
+  > {
+    await testWithAutoCompleteEnabled(queueClient, queueClient);
   });
 
-  it("Subscription: No settlement of the message removes message", async function(): Promise<void> {
-    await testNosettlment(topicClient, subscriptionClient);
+  it("Subscription: With auto-complete enabled, no settlement of the message removes message", async function(): Promise<
+    void
+  > {
+    await testWithAutoCompleteEnabled(topicClient, subscriptionClient);
+  });
+
+  async function testWithAutoCompleteDisabled(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await sendReceiveMsg(senderClient, receiverClient, false);
+    await testPeekMsgsLength(receiverClient, 0);
+  }
+
+  it("Queue: With auto-complete disabled, no settlement of the message removes message", async function(): Promise<
+    void
+  > {
+    await testWithAutoCompleteDisabled(queueClient, queueClient);
+  });
+
+  it("Subscription: With auto-complete disabled, no settlement of the message removes message", async function(): Promise<
+    void
+  > {
+    await testWithAutoCompleteDisabled(topicClient, subscriptionClient);
   });
 });
 
-describe("Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => {
+describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -230,16 +249,21 @@ describe("Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => 
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
     const msg = await sendReceiveMsg(senderClient, receiverClient);
-    await msg.complete();
+    await msg.complete().catch((err) => {
+      should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
+      errorWasThrown = true;
+    });
+
+    should.equal(errorWasThrown, true);
 
     await testPeekMsgsLength(receiverClient, 0);
   }
 
-  it("Queue: complete() message", async function(): Promise<void> {
+  it("Queue: complete() throws error", async function(): Promise<void> {
     await testComplete(queueClient, queueClient);
   });
 
-  it("Subscription: complete() message", async function(): Promise<void> {
+  it("Subscription: complete() throws error", async function(): Promise<void> {
     await testComplete(topicClient, subscriptionClient);
   });
 
@@ -248,16 +272,21 @@ describe("Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => 
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
     const msg = await sendReceiveMsg(senderClient, receiverClient);
-    await msg.abandon();
+    await msg.abandon().catch((err) => {
+      should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
+      errorWasThrown = true;
+    });
+
+    should.equal(errorWasThrown, true);
 
     await testPeekMsgsLength(receiverClient, 0);
   }
 
-  it("Queue: abandon() message", async function(): Promise<void> {
+  it("Queue: Abandoned message throws error", async function(): Promise<void> {
     await testAbandon(queueClient, queueClient);
   });
 
-  it("Subscription: abandon() message", async function(): Promise<void> {
+  it("Subscription: Abandoned message throws error", async function(): Promise<void> {
     await testAbandon(topicClient, subscriptionClient);
   });
 
@@ -266,51 +295,45 @@ describe("Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => 
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
     const msg = await sendReceiveMsg(senderClient, receiverClient);
-
-    if (!msg.sequenceNumber) {
-      throw "Sequence Number can not be null";
-    }
-    const sequenceNumber = msg.sequenceNumber;
-    await msg.defer();
-
-    await receiverClient.receiveDeferredMessage(sequenceNumber).catch((err) => {
+    await msg.defer().catch((err) => {
       should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
       errorWasThrown = true;
     });
 
     should.equal(errorWasThrown, true);
+
     await testPeekMsgsLength(receiverClient, 0);
   }
 
-  it("Queue: Receive deferred message throws error", async function(): Promise<void> {
+  it("Queue: Deferred message throws error", async function(): Promise<void> {
     await testDefer(queueClient, queueClient);
   });
 
-  it("Subscription: Receive deferred message throws error", async function(): Promise<void> {
+  it("Subscription: Deferred message throws error", async function(): Promise<void> {
     await testDefer(topicClient, subscriptionClient);
   });
 
   async function testDeadletter(
     senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient,
-    deadLetterClient: QueueClient | SubscriptionClient
+    receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
     const msg = await sendReceiveMsg(senderClient, receiverClient);
-    await msg.deadLetter();
+    await msg.deadLetter().catch((err) => {
+      should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
+      errorWasThrown = true;
+    });
+
+    should.equal(errorWasThrown, true);
 
     await testPeekMsgsLength(receiverClient, 0);
-
-    await deadLetterClient.receiveBatch(1, 10);
-
-    await testPeekMsgsLength(deadLetterClient, 0);
   }
 
-  it("Queue: Receive dead letter message", async function(): Promise<void> {
-    await testDeadletter(queueClient, queueClient, deadletterQueueClient);
+  it("Queue: Dead lettered message throws error", async function(): Promise<void> {
+    await testDeadletter(queueClient, queueClient);
   });
 
-  it("Subscription: Receive dead letter message", async function(): Promise<void> {
-    await testDeadletter(topicClient, subscriptionClient, deadletterSubscriptionClient);
+  it("Subscription: Dead lettered message throws error", async function(): Promise<void> {
+    await testDeadletter(topicClient, subscriptionClient);
   });
 
   async function sendReceiveMsgWithRenewLock(
@@ -323,12 +346,7 @@ describe("Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => 
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
         receiverClient.renewLock(msg).catch((err) => {
-          should.equal(
-            err.message.startsWith(
-              `The lock supplied is invalid. Either the lock expired, or the message has already been removed from the queue.`
-            ),
-            true
-          );
+          should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
           errorWasThrown = true;
         });
         should.equal(errorWasThrown, true);
@@ -339,7 +357,7 @@ describe("Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => 
       }
     );
 
-    await delay(1000);
+    await delay(10000);
     should.equal(errorWasThrown, true);
     should.equal(receivedMsgs.length, 2);
     should.equal(receivedMsgs[0].body, testMessages[0].body);
@@ -358,11 +376,11 @@ describe("Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => 
     await testPeekMsgsLength(receiverClient, 0);
   }
 
-  it("Queue: renew message lock throws error", async function(): Promise<void> {
+  it("Queue: Renew message lock throws error", async function(): Promise<void> {
     await testRenewLock(queueClient, queueClient);
   });
 
-  it("Subscription: renew message lock throws error", async function(): Promise<void> {
+  it("Subscription: Renew message lock throws error", async function(): Promise<void> {
     await testRenewLock(topicClient, subscriptionClient);
   });
 });

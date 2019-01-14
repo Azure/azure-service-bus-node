@@ -14,6 +14,7 @@ import * as log from "./log";
 import { ClientEntityContext } from "./clientEntityContext";
 import { DispositionStatus } from "./core/managementClient";
 import { DispositionType } from "./core/messageReceiver";
+import { ReceiveMode } from "./core/messageReceiver";
 
 /**
  * Describes the delivery annotations for ServiceBus.
@@ -854,6 +855,16 @@ export class ServiceBusMessage implements ReceivedMessage {
       this._context.namespace.connectionId,
       this.messageId
     );
+    if (this._context.batchingReceiver) {
+      if (this._context.batchingReceiver.receiveMode !== ReceiveMode.peekLock) {
+        throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+      }
+    }
+    if (this._context.streamingReceiver) {
+      if (this._context.streamingReceiver.receiveMode !== ReceiveMode.peekLock) {
+        throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+      }
+    }
     if (this._context.requestResponseLockedMessages.has(this.lockToken!)) {
       await this._context.managementClient!.updateDispositionStatus(
         [this.lockToken!],
@@ -885,6 +896,16 @@ export class ServiceBusMessage implements ReceivedMessage {
       this._context.namespace.connectionId,
       this.messageId
     );
+    if (this._context.batchingReceiver) {
+      if (this._context.batchingReceiver.receiveMode !== ReceiveMode.peekLock) {
+        throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+      }
+    }
+    if (this._context.streamingReceiver) {
+      if (this._context.streamingReceiver.receiveMode !== ReceiveMode.peekLock) {
+        throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+      }
+    }
     if (this._context.requestResponseLockedMessages.has(this.lockToken!)) {
       await this._context.managementClient!.updateDispositionStatus(
         [this.lockToken!],
@@ -921,6 +942,16 @@ export class ServiceBusMessage implements ReceivedMessage {
       this._context.namespace.connectionId,
       this.messageId
     );
+    if (this._context.batchingReceiver) {
+      if (this._context.batchingReceiver.receiveMode !== ReceiveMode.peekLock) {
+        throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+      }
+    }
+    if (this._context.streamingReceiver) {
+      if (this._context.streamingReceiver.receiveMode !== ReceiveMode.peekLock) {
+        throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+      }
+    }
     if (this._context.requestResponseLockedMessages.has(this.lockToken!)) {
       await this._context.managementClient!.updateDispositionStatus(
         [this.lockToken!],
@@ -963,6 +994,16 @@ export class ServiceBusMessage implements ReceivedMessage {
       this._context.namespace.connectionId,
       this.messageId
     );
+    if (this._context.batchingReceiver) {
+      if (this._context.batchingReceiver.receiveMode !== ReceiveMode.peekLock) {
+        throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+      }
+    }
+    if (this._context.streamingReceiver) {
+      if (this._context.streamingReceiver.receiveMode !== ReceiveMode.peekLock) {
+        throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+      }
+    }
     if (this._context.requestResponseLockedMessages.has(this.lockToken!)) {
       await this._context.managementClient!.updateDispositionStatus(
         [this.lockToken!],
