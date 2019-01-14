@@ -324,251 +324,7 @@ describe("Streaming Receiver Misc Tests", function(): void {
   });
 });
 
-describe("With autocomplete enabled, test Complete/Abandon/Defer/Deadletter normal message", function(): void {
-  beforeEach(async () => {
-    await beforeEachTest();
-  });
-
-  afterEach(async () => {
-    await afterEachTest();
-  });
-
-  it("Queue: complete() removes message", async function(): Promise<void> {
-    await queueClient.sendBatch(testMessages);
-    await testPeekMsgsLength(queueClient, 2);
-    const receiveListener = await queueClient.receive(
-      (msg: ServiceBusMessage) => {
-        return msg.complete();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      }
-    );
-
-    await delay(4000);
-    await receiveListener.stop();
-
-    await testPeekMsgsLength(queueClient, 0);
-  });
-
-  it("Subscription: complete() removes message", async function(): Promise<void> {
-    await topicClient.sendBatch(testMessages);
-
-    const receiveListener = await subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        return msg.complete();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      }
-    );
-
-    await delay(4000);
-
-    await receiveListener.stop();
-
-    await testPeekMsgsLength(subscriptionClient, 0);
-  });
-
-  it("Queue: abandon() retains message with incremented deliveryCount", async function(): Promise<
-    void
-  > {
-    await queueClient.send(testMessages[0]);
-    const receiveListener: ReceiveHandler = await queueClient.receive(
-      (msg: ServiceBusMessage) => {
-        return msg.abandon().then(() => {
-          return receiveListener.stop();
-        });
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      },
-      { maxAutoRenewDurationInSeconds: 0 }
-    );
-    await delay(4000);
-
-    const receivedMsgs = await queueClient.receiveBatch(1);
-    should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    // should.equal(receivedMsgs[0].deliveryCount, 1);
-    await receivedMsgs[0].complete();
-    await testPeekMsgsLength(queueClient, 0);
-  });
-
-  it("Subscription: abandon() retains message with incremented deliveryCount", async function(): Promise<
-    void
-  > {
-    await topicClient.send(testMessages[0]);
-    const receiveListener: ReceiveHandler = await subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        return msg.abandon().then(() => {
-          return receiveListener.stop();
-        });
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      },
-      { maxAutoRenewDurationInSeconds: 0 }
-    );
-
-    await delay(4000);
-
-    const receivedMsgs = await subscriptionClient.receiveBatch(1);
-    should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    // should.equal(receivedMsgs[0].deliveryCount, 1);
-    await receivedMsgs[0].complete();
-    await testPeekMsgsLength(subscriptionClient, 0);
-  });
-
-  it("Queue: deadLetter() moves message to deadletter queue", async function(): Promise<void> {
-    await queueClient.sendBatch(testMessages);
-    await testPeekMsgsLength(queueClient, 2);
-    const receiveListener = await queueClient.receive(
-      (msg: ServiceBusMessage) => {
-        return msg.deadLetter();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      }
-    );
-
-    await delay(4000);
-    await receiveListener.stop();
-
-    await testPeekMsgsLength(queueClient, 0);
-
-    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
-    should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, testMessages.length);
-    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
-    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
-
-    await deadLetterMsgs[0].complete();
-    await deadLetterMsgs[1].complete();
-
-    await testPeekMsgsLength(deadletterQueueClient, 0);
-  });
-
-  it("Subscription: deadLetter() moves message to deadletter queue", async function(): Promise<
-    void
-  > {
-    await topicClient.sendBatch(testMessages);
-
-    const receiveListener = await subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        return msg.deadLetter();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      }
-    );
-
-    await delay(4000);
-
-    await receiveListener.stop();
-
-    await testPeekMsgsLength(subscriptionClient, 0);
-
-    await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DL
-
-    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
-    should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, testMessages.length);
-    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
-    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
-
-    await deadLetterMsgs[0].complete();
-    await deadLetterMsgs[1].complete();
-
-    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
-  });
-
-  it("Queue: defer() moves message to deferred queue", async function(): Promise<void> {
-    await queueClient.sendBatch(testMessages);
-
-    let seq0: any = 0;
-    let seq1: any = 0;
-    const receiveListener = await queueClient.receive(
-      (msg: ServiceBusMessage) => {
-        if (msg.messageId === testMessages[0].messageId) {
-          seq0 = msg.sequenceNumber;
-        } else if (msg.messageId === testMessages[1].messageId) {
-          seq1 = msg.sequenceNumber;
-        }
-        return msg.defer();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      }
-    );
-
-    await delay(4000);
-
-    await receiveListener.stop();
-    const deferredMsg0 = await queueClient.receiveDeferredMessage(seq0);
-    const deferredMsg1 = await queueClient.receiveDeferredMessage(seq1);
-    if (!deferredMsg0) {
-      throw "No message received for sequence number";
-    }
-    if (!deferredMsg1) {
-      throw "No message received for sequence number";
-    }
-    should.equal(deferredMsg0.body, testMessages[0].body);
-    should.equal(deferredMsg0.messageId, testMessages[0].messageId);
-
-    should.equal(deferredMsg1.body, testMessages[1].body);
-    should.equal(deferredMsg1.messageId, testMessages[1].messageId);
-    await deferredMsg0.complete();
-    await deferredMsg1.complete();
-
-    await testPeekMsgsLength(queueClient, 0);
-  });
-
-  it("Subscription: defer() moves message to deferred queue", async function(): Promise<void> {
-    await topicClient.sendBatch(testMessages);
-
-    let seq0: any = 0;
-    let seq1: any = 0;
-    const receiveListener = await subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        if (msg.messageId === testMessages[0].messageId) {
-          seq0 = msg.sequenceNumber;
-        } else if (msg.messageId === testMessages[1].messageId) {
-          seq1 = msg.sequenceNumber;
-        }
-        return msg.defer();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      }
-    );
-
-    await delay(4000);
-
-    await receiveListener.stop();
-
-    const deferredMsg0 = await subscriptionClient.receiveDeferredMessage(seq0);
-    const deferredMsg1 = await subscriptionClient.receiveDeferredMessage(seq1);
-    if (!deferredMsg0) {
-      throw "No message received for sequence number";
-    }
-    if (!deferredMsg1) {
-      throw "No message received for sequence number";
-    }
-    should.equal(deferredMsg0.body, testMessages[0].body);
-    should.equal(deferredMsg0.messageId, testMessages[0].messageId);
-
-    should.equal(deferredMsg1.body, testMessages[1].body);
-    should.equal(deferredMsg1.messageId, testMessages[1].messageId);
-    await deferredMsg0.complete();
-    await deferredMsg1.complete();
-
-    await testPeekMsgsLength(subscriptionClient, 0);
-  });
-});
-
-describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter normal message", function(): void {
+describe("Complete message", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -579,7 +335,8 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
 
   async function testComplete(
     senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
+    receiverClient: QueueClient | SubscriptionClient,
+    autoComplete: boolean
   ): Promise<void> {
     await senderClient.sendBatch(testMessages);
 
@@ -596,7 +353,7 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
       (err: Error) => {
         should.not.exist(err);
       },
-      { autoComplete: false }
+      { autoComplete }
     );
 
     for (let i = 0; i < 5; i++) {
@@ -611,16 +368,35 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
     await receiveListener.stop();
   }
   it("Queue: complete() removes message", async function(): Promise<void> {
-    await testComplete(queueClient, queueClient);
+    await testComplete(queueClient, queueClient, false);
   });
 
   it("Subscription: complete() removes message", async function(): Promise<void> {
-    await testComplete(topicClient, subscriptionClient);
+    await testComplete(topicClient, subscriptionClient, false);
+  });
+
+  it("Queue with autoComplete: complete() removes message", async function(): Promise<void> {
+    await testComplete(queueClient, queueClient, true);
+  });
+
+  it("Subscription with autoComplete: complete() removes message", async function(): Promise<void> {
+    await testComplete(topicClient, subscriptionClient, true);
+  });
+});
+
+describe("Abandon message", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
   });
 
   async function testAbandon(
     senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
+    receiverClient: QueueClient | SubscriptionClient,
+    autoComplete: boolean
   ): Promise<void> {
     await senderClient.send(testMessages[0]);
     const receiveListener: ReceiveHandler = await receiverClient.receive(
@@ -632,7 +408,7 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
       (err: Error) => {
         should.not.exist(err);
       },
-      { maxAutoRenewDurationInSeconds: 0, autoComplete: false }
+      { maxAutoRenewDurationInSeconds: 0, autoComplete }
     );
     await delay(4000);
 
@@ -646,18 +422,41 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
   it("Queue: abandon() retains message with incremented deliveryCount", async function(): Promise<
     void
   > {
-    await testAbandon(queueClient, queueClient);
+    await testAbandon(queueClient, queueClient, false);
   });
 
   it("Subscription: abandon() retains message with incremented deliveryCount", async function(): Promise<
     void
   > {
-    await testAbandon(topicClient, subscriptionClient);
+    await testAbandon(topicClient, subscriptionClient, false);
+  });
+
+  it("Queue with autoComplete: abandon() retains message with incremented deliveryCount", async function(): Promise<
+    void
+  > {
+    await testAbandon(queueClient, queueClient, true);
+  });
+
+  it("Subscription with autoComplete:  abandon() retains message with incremented deliveryCount", async function(): Promise<
+    void
+  > {
+    await testAbandon(topicClient, subscriptionClient, true);
+  });
+});
+
+describe("Defer message", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
   });
 
   async function testDefer(
     senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
+    receiverClient: QueueClient | SubscriptionClient,
+    autoComplete: boolean
   ): Promise<void> {
     await senderClient.sendBatch(testMessages);
 
@@ -675,7 +474,7 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
       (err: Error) => {
         should.not.exist(err);
       },
-      { autoComplete: false }
+      { autoComplete }
     );
 
     await delay(4000);
@@ -700,17 +499,40 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
     await testPeekMsgsLength(receiverClient, 0);
   }
   it("Queue: defer() moves message to deferred queue", async function(): Promise<void> {
-    await testDefer(queueClient, queueClient);
+    await testDefer(queueClient, queueClient, false);
   });
 
   it("Subscription: defer() moves message to deferred queue", async function(): Promise<void> {
-    await testDefer(topicClient, subscriptionClient);
+    await testDefer(topicClient, subscriptionClient, false);
+  });
+
+  it("Queue with autoComplete: defer() moves message to deferred queue", async function(): Promise<
+    void
+  > {
+    await testDefer(queueClient, queueClient, true);
+  });
+
+  it("Subscription with autoComplete: defer() moves message to deferred queue", async function(): Promise<
+    void
+  > {
+    await testDefer(topicClient, subscriptionClient, true);
+  });
+});
+
+describe("Deadletter message", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
   });
 
   async function testDeadletter(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient,
-    deadletterClient: QueueClient | SubscriptionClient
+    deadletterClient: QueueClient | SubscriptionClient,
+    autoComplete: boolean
   ): Promise<void> {
     await senderClient.sendBatch(testMessages);
     await testPeekMsgsLength(receiverClient, 2);
@@ -721,7 +543,7 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
       (err: Error) => {
         should.not.exist(err);
       },
-      { autoComplete: false }
+      { autoComplete }
     );
 
     await delay(4000);
@@ -742,13 +564,25 @@ describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter nor
   }
 
   it("Queue: deadLetter() moves message to deadletter queue", async function(): Promise<void> {
-    await testDeadletter(queueClient, queueClient, deadletterQueueClient);
+    await testDeadletter(queueClient, queueClient, deadletterQueueClient, false);
   });
 
   it("Subscription: deadLetter() moves message to deadletter queue", async function(): Promise<
     void
   > {
-    await testDeadletter(topicClient, subscriptionClient, deadletterSubscriptionClient);
+    await testDeadletter(topicClient, subscriptionClient, deadletterSubscriptionClient, false);
+  });
+
+  it("Queue with autoComplete: deadLetter() moves message to deadletter queue", async function(): Promise<
+    void
+  > {
+    await testDeadletter(queueClient, queueClient, deadletterQueueClient, false);
+  });
+
+  it("Subscription with autoComplete: deadLetter() moves message to deadletter queue", async function(): Promise<
+    void
+  > {
+    await testDeadletter(topicClient, subscriptionClient, deadletterSubscriptionClient, false);
   });
 });
 
