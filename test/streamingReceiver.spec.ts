@@ -105,7 +105,7 @@ async function afterEachTest(): Promise<void> {
   await namespace.close();
 }
 
-describe("Streaming Receiver Misc Tests", function(): void {
+describe.only("Streaming Receiver Misc Tests", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -155,13 +155,14 @@ describe("Streaming Receiver Misc Tests", function(): void {
     await testAutoComplete(topicClient, subscriptionClient);
   });
 
-  it("Disabled autoComplete, no manual complete retains the message in Queue", async function(): Promise<
-    void
-  > {
-    await queueClient.sendBatch(testMessages);
+  async function testManualComplete(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.sendBatch(testMessages);
 
     const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener = queueClient.receive(
+    const receiveListener = receiverClient.receive(
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
         should.equal(
@@ -183,57 +184,36 @@ describe("Streaming Receiver Misc Tests", function(): void {
       }
     }
 
-    await testPeekMsgsLength(queueClient, 2);
+    await testPeekMsgsLength(receiverClient, 2);
 
     await receivedMsgs[0].complete();
     await receivedMsgs[1].complete();
     await receiveListener.stop();
+  }
+
+  it("Disabled autoComplete, no manual complete retains the message in Queue", async function(): Promise<
+    void
+  > {
+    await testManualComplete(queueClient, queueClient);
   });
 
   it("Disabled autoComplete, no manual complete retains the message in Subscription", async function(): Promise<
     void
   > {
-    await topicClient.sendBatch(testMessages);
-
-    const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener = subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        should.equal(
-          testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
-          true
-        );
-        return Promise.resolve();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      },
-      { autoComplete: false }
-    );
-
-    for (let i = 0; i < 5; i++) {
-      await delay(1000);
-      if (receivedMsgs.length === testMessages.length) {
-        break;
-      }
-    }
-
-    await testPeekMsgsLength(subscriptionClient, 2);
-
-    await receivedMsgs[0].complete();
-    await receivedMsgs[1].complete();
-    await receiveListener.stop();
+    await testManualComplete(topicClient, subscriptionClient);
   });
 
-  it("Abandoned message is retained in the Queue with incremented deliveryCount. After 10 times, you can only get it from the dead letter queue.", async function(): Promise<
-    void
-  > {
-    await queueClient.sendBatch(testMessages);
+  async function testMultipleAbandons(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient,
+    deadletterClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.sendBatch(testMessages);
 
     let checkDeliveryCount0 = 0;
     let checkDeliveryCount1 = 0;
 
-    const receiveListener = await queueClient.receive(
+    const receiveListener = await receiverClient.receive(
       (msg: ServiceBusMessage) => {
         if (msg.messageId === testMessages[0].messageId) {
           should.equal(msg.deliveryCount, checkDeliveryCount0);
@@ -257,9 +237,9 @@ describe("Streaming Receiver Misc Tests", function(): void {
     should.equal(checkDeliveryCount0, maxDeliveryCount);
     should.equal(checkDeliveryCount1, maxDeliveryCount);
 
-    await testPeekMsgsLength(queueClient, 0); // No messages in the queue
+    await testPeekMsgsLength(receiverClient, 0); // No messages in the queue
 
-    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(2);
+    const deadLetterMsgs = await deadletterClient.receiveBatch(2);
     should.equal(Array.isArray(deadLetterMsgs), true);
     should.equal(deadLetterMsgs.length, testMessages.length);
     should.equal(deadLetterMsgs[0].deliveryCount, maxDeliveryCount);
@@ -270,57 +250,19 @@ describe("Streaming Receiver Misc Tests", function(): void {
     await deadLetterMsgs[0].complete();
     await deadLetterMsgs[1].complete();
 
-    await testPeekMsgsLength(deadletterQueueClient, 0);
+    await testPeekMsgsLength(deadletterClient, 0);
+  }
+
+  it("Abandoned message is retained in the Queue with incremented deliveryCount. After 10 times, you can only get it from the dead letter queue.", async function(): Promise<
+    void
+  > {
+    await testMultipleAbandons(queueClient, queueClient, deadletterQueueClient);
   });
 
   it("Abandoned message is retained in the Subsrciption with incremented deliveryCount. After 10 times, you can only get it from the dead letter.", async function(): Promise<
     void
   > {
-    await topicClient.sendBatch(testMessages);
-
-    let checkDeliveryCount0 = 0;
-    let checkDeliveryCount1 = 0;
-    const receiveListener = await subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        if (msg.messageId === testMessages[0].messageId) {
-          should.equal(msg.deliveryCount, checkDeliveryCount0);
-          checkDeliveryCount0++;
-        } else if (msg.messageId === testMessages[1].messageId) {
-          should.equal(msg.deliveryCount, checkDeliveryCount1);
-          checkDeliveryCount1++;
-        }
-        return msg.abandon();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      },
-      { autoComplete: false }
-    );
-
-    await delay(4000);
-
-    await receiveListener.stop();
-
-    should.equal(checkDeliveryCount0, maxDeliveryCount);
-    should.equal(checkDeliveryCount1, maxDeliveryCount);
-
-    const peekedMsgs = await subscriptionClient.peek(2);
-    should.equal(peekedMsgs.length, 0);
-
-    await testPeekMsgsLength(deadletterSubscriptionClient, 2); // Two messages in the DL
-
-    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(2);
-    should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, testMessages.length);
-    should.equal(deadLetterMsgs[0].deliveryCount, maxDeliveryCount);
-    should.equal(deadLetterMsgs[1].deliveryCount, maxDeliveryCount);
-    should.equal(testMessages.some((x) => deadLetterMsgs[0].messageId === x.messageId), true);
-    should.equal(testMessages.some((x) => deadLetterMsgs[1].messageId === x.messageId), true);
-
-    await deadLetterMsgs[0].complete();
-    await deadLetterMsgs[1].complete();
-
-    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+    await testMultipleAbandons(topicClient, subscriptionClient, deadletterSubscriptionClient);
   });
 });
 
@@ -595,7 +537,7 @@ describe("Multiple Streaming Receivers", function(): void {
     await afterEachTest();
   });
 
-  async function testMultipleReceiveBatchCalls(
+  async function testMultipleReceiveCalls(
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
     const receiveListener: ReceiveHandler = await receiverClient.receive(
@@ -627,12 +569,12 @@ describe("Multiple Streaming Receivers", function(): void {
   it("Second Streaming Receiver call should fail if the first one is not stopped for Queues", async function(): Promise<
     void
   > {
-    await testMultipleReceiveBatchCalls(queueClient);
+    await testMultipleReceiveCalls(queueClient);
   });
 
   it("Second Streaming Receiver call should fail if the first one is not stopped for Subscriptions", async function(): Promise<
     void
   > {
-    await testMultipleReceiveBatchCalls(subscriptionClient);
+    await testMultipleReceiveCalls(subscriptionClient);
   });
 });
