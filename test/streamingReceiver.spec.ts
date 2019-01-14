@@ -587,7 +587,7 @@ describe("With autocomplete enabled, test Complete/Abandon/Defer/Deadletter norm
   });
 });
 
-describe.only("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter normal message", function(): void {
+describe("With autocomplete disabled, test Complete/Abandon/Defer/Deadletter normal message", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
