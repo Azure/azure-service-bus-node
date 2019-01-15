@@ -1,6 +1,6 @@
 import { Namespace } from "../../lib";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { config } from "dotenv";
+config();
 
 const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queueName = process.env.QUEUE_NAME || "";
@@ -50,9 +50,9 @@ async function sendScheduledMessages(): Promise<void> {
   ];
 
   for (let index = 0; index < NUM_OF_MESSAGES; index++) {
-    const element = data[index];
+    const scientist = data[index];
     const message = {
-      body: `${element.firstName} ${element.name}`,
+      body: `${scientist.firstName} ${scientist.name}`,
       label: "Scientist"
     };
     const scheduledEnqueueTimeUtc = new Date(Date.now() + 30000 + index * 1000); // scheduling message to be sent (30 + index) seconds from now

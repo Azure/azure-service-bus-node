@@ -1,6 +1,6 @@
 import { Namespace, SendableMessageInfo } from "../../lib";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { config } from "dotenv";
+config();
 
 const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queueName = process.env.QUEUE_NAME || "";

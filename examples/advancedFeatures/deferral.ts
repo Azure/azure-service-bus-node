@@ -5,12 +5,12 @@ import {
   delay,
   ServiceBusMessage,
   Namespace,
-  SendableMessageInfo,
   QueueClient,
-  TopicClient
+  TopicClient,
+  SendableMessageInfo
 } from "../../lib";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { config } from "dotenv";
+config();
 
 const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queueName = process.env.QUEUE_NAME || "";
@@ -61,7 +61,13 @@ async function sendMessages(): Promise<void> {
 async function sendMessage(body: any, sendClient: QueueClient | TopicClient): Promise<void> {
   await delay(Math.random() * 30);
   try {
-    await sendClient.send(body);
+    const message: SendableMessageInfo = {
+      body: body,
+      label: "RecipeStep",
+      contentType: "application/json"
+    };
+
+    await sendClient.send(message);
     console.log("Sent message step:", body.step);
   } catch (err) {
     console.log("Error while sending message", err);
@@ -108,11 +114,11 @@ async function receiveMessage(): Promise<void> {
       console.log(">>>>> Error occurred: ", err);
     };
 
-    /*we are disabling autoComplete because we want to control the settling of the message i.e we want to control whether the message should be completed, deferred or deadlettered.*/
+    // Disabling autoComplete so we can control when message can be completed, deferred or deadlettered.
     const rcvHandler = receiveClient.receive(onMessage, onError, { autoComplete: false });
     await delay(10000);
     console.log("Deferred Messages count:", deferredSteps.size);
-    // Now we process the deferrred messages
+    // Now we process the deferred messages
     while (deferredSteps.size > 0) {
       const step = lastProcessedRecipeStep + 1;
       const sequenceNumber = deferredSteps.get(step);

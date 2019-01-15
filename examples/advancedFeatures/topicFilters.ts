@@ -9,8 +9,8 @@ import {
   SubscriptionClient,
   TopicClient
 } from "../../lib";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { config } from "dotenv";
+config();
 
 const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const topic = process.env.TOPIC_NAME || "fruitstopic";

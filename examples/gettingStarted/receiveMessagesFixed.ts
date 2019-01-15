@@ -1,6 +1,6 @@
 import { Namespace } from "../../lib";
-import * as dotenv from "dotenv";
-dotenv.config();
+import { config } from "dotenv";
+config();
 
 const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
 const queueName = process.env.QUEUE_NAME || "";
@@ -30,8 +30,8 @@ async function main(): Promise<void> {
 }
 
 async function receiveMessages(): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to receive from a queue
-  // const client = ns.createSubscriptionClient(topicName, subscriptionName); // Use this API to receive from a topic subscription
+  // If using Topics, use createSubscriptionClient to receive from a topic subscription
+  const client = ns.createQueueClient(queueName);
 
   for (let i = 0; i < NUM_OF_MESSAGES; i++) {
     const messages = await client.receiveBatch(1); // retrieve one message at a time.
