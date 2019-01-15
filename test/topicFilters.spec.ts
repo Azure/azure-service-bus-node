@@ -74,6 +74,7 @@ describe("Topic Filters - Tests", function(): void {
   it("Add Rule with Boolean filter", async function(): Promise<void> {
     await subscriptionClient.addRule("TrueFilter", true);
     const rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "TrueFilter");
   });
 
@@ -83,6 +84,7 @@ describe("Topic Filters - Tests", function(): void {
       "(priority = 1 OR priority = 2) AND (sys.label LIKE '%String2')"
     );
     const rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "Priority_1");
   });
 
@@ -93,6 +95,7 @@ describe("Topic Filters - Tests", function(): void {
       "SET sys.body = 'MessageX'"
     );
     const rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "Priority_1");
   });
 
@@ -103,6 +106,7 @@ describe("Topic Filters - Tests", function(): void {
       "SET sys.body = 'MessageX'"
     );
     const rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "Priority_1");
   });
 
@@ -112,6 +116,7 @@ describe("Topic Filters - Tests", function(): void {
       correlationId: "high"
     });
     const rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "Correlationfilter");
   });
 
@@ -123,6 +128,7 @@ describe("Topic Filters - Tests", function(): void {
       correlationId: "high"
     });
     const rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "$Default");
   });
 
@@ -228,6 +234,7 @@ describe("Topic Filters - Tests", function(): void {
     let expr = "(priority = 1)";
     await subscriptionClient.addRule("Priority_1", expr);
     rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "Priority_1");
     should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
 
@@ -236,6 +243,7 @@ describe("Topic Filters - Tests", function(): void {
       "Priority_2",
       "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')"
     );
+    should.equal(rules.length, 2);
     rules = await subscriptionClient.getRules();
     should.equal(rules[1].name, "Priority_2");
     should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
@@ -252,6 +260,7 @@ describe("Topic Filters - Tests", function(): void {
     const expr = "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')";
     await subscriptionClient.addRule("Priority_2", expr);
     const rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "Priority_2");
     should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
   });
@@ -287,6 +296,7 @@ describe("Topic Filters - Tests", function(): void {
       contentType: null,
       userProperties: []
     };
+    should.equal(rules.length, 1);
     should.equal(JSON.stringify(rules[0].filter), JSON.stringify(matchexpr));
   });
 });
