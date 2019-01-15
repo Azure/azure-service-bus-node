@@ -1,0 +1,296 @@
+// Copyright (c) Microsoft. All rights reserved.
+// Licensed under the MIT license. See LICENSE file in the project root for full license information.
+
+import "mocha";
+import * as chai from "chai";
+const should = chai.should();
+import * as chaiAsPromised from "chai-as-promised";
+import * as dotenv from "dotenv";
+dotenv.config();
+chai.use(chaiAsPromised);
+import { Namespace, SubscriptionClient } from "../lib";
+
+// We need to remove rules before adding one because otherwise the existing default rule will let in all messages.
+async function removeAllRules(client: SubscriptionClient): Promise<void> {
+  try {
+    const rules = await client.getRules();
+    for (let i = 0; i < rules.length; i++) {
+      const rule = rules[i];
+      await client.removeRule(rule.name);
+    }
+  } catch (err) {
+    console.log("Error while removing the rule", err);
+  }
+}
+
+let namespace: Namespace;
+let subscriptionClient: SubscriptionClient;
+let defaultSubscriptionClient: SubscriptionClient;
+
+async function beforeEachTest(): Promise<void> {
+  // The tests in this file expect the env variables to contain the connection string and
+  // the names of empty queue/topic/subscription that are to be tested
+
+  if (!process.env.SERVICEBUS_CONNECTION_STRING) {
+    throw new Error(
+      "Define SERVICEBUS_CONNECTION_STRING in your environment before running integration tests."
+    );
+  }
+  if (!process.env.TOPIC_NAME) {
+    throw new Error("Define TOPIC_NAME in your environment before running integration tests.");
+  }
+  if (!process.env.SUBSCRIPTION_NAME) {
+    throw new Error(
+      "Define SUBSCRIPTION_NAME in your environment before running integration tests."
+    );
+  }
+  if (!process.env.DEFAULT_SUBSCRIPTION_NAME) {
+    throw new Error(
+      "Define DEFAULT_SUBSCRIPTION_NAME in your environment before running integration tests."
+    );
+  }
+
+  namespace = Namespace.createFromConnectionString(process.env.SERVICEBUS_CONNECTION_STRING);
+  subscriptionClient = namespace.createSubscriptionClient(
+    process.env.TOPIC_NAME,
+    process.env.SUBSCRIPTION_NAME
+  );
+  defaultSubscriptionClient = namespace.createSubscriptionClient(
+    process.env.TOPIC_NAME,
+    process.env.DEFAULT_SUBSCRIPTION_NAME
+  );
+  await removeAllRules(subscriptionClient);
+}
+
+async function afterEachTest(): Promise<void> {
+  await namespace.close();
+}
+
+describe("Topic Filters - Tests", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
+  });
+
+  it("Add Rule with Boolean filter", async function(): Promise<void> {
+    await subscriptionClient.addRule("TrueFilter", true);
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "TrueFilter");
+  });
+
+  it("Add Rule with SQL filter", async function(): Promise<void> {
+    await subscriptionClient.addRule(
+      "Priority_1",
+      "(priority = 1 OR priority = 2) AND (sys.label LIKE '%String2')"
+    );
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "Priority_1");
+  });
+
+  it("Add Rule with SQL filter and action", async function(): Promise<void> {
+    await subscriptionClient.addRule(
+      "Priority_1",
+      "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')",
+      "SET sys.body = 'MessageX'"
+    );
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "Priority_1");
+  });
+
+  it("Add Rule with SQL filter and action", async function(): Promise<void> {
+    await subscriptionClient.addRule(
+      "Priority_1",
+      "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')",
+      "SET sys.body = 'MessageX'"
+    );
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "Priority_1");
+  });
+
+  it("Add Rule with Correlation filter", async function(): Promise<void> {
+    await subscriptionClient.addRule("Correlationfilter", {
+      label: "red",
+      correlationId: "high"
+    });
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "Correlationfilter");
+  });
+
+  it("Add Default rule on a subscription that its default rule removed", async function(): Promise<
+    void
+  > {
+    await subscriptionClient.addRule("$Default", {
+      label: "red",
+      correlationId: "high"
+    });
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "$Default");
+  });
+
+  it("Adding a rule with a name which matches with existing rule", async function(): Promise<void> {
+    await subscriptionClient.addRule("Priority_1", "priority = 1");
+    let errorWasThrown = false;
+    try {
+      await subscriptionClient.addRule("Priority_1", "priority = 2");
+    } catch (error) {
+      errorWasThrown = true;
+      should.equal(!error.message.search(" already exists."), false);
+      console.log(error.message);
+    }
+    should.equal(errorWasThrown, true);
+  });
+
+  it("Adding a rule with no name", async function(): Promise<void> {
+    let errorWasThrown = false;
+    try {
+      await subscriptionClient.addRule("", "priority = 2");
+    } catch (error) {
+      errorWasThrown = true;
+      should.equal(!error.message.search("name is missing"), false);
+      console.log(error.message);
+    }
+    should.equal(errorWasThrown, true);
+  });
+
+  it("Adding a rule with no filter", async function(): Promise<void> {
+    let errorWasThrown = false;
+    try {
+      await subscriptionClient.addRule("Priority_1", "");
+    } catch (error) {
+      errorWasThrown = true;
+      should.equal(!error.message.search("Filter is missing"), false);
+      console.log(error.message);
+    }
+    should.equal(errorWasThrown, true);
+  });
+
+  it("Adding a rule with a Boolean filter whose input is not Boolean", async function(): Promise<
+    void
+  > {
+    let errorWasThrown = false;
+    try {
+      await subscriptionClient.addRule("Priority_1", "priority = 1");
+      await subscriptionClient.addRule("Priority_2", "1");
+    } catch (error) {
+      errorWasThrown = true;
+    }
+    should.equal(errorWasThrown, true);
+  });
+  /*
+  it("Adding a rule with a SQL action whose input is not a string", async function(): Promise<
+    void
+  > {
+    let errorWasThrown = false;
+    try {
+      await subscriptionClient.addRule(
+        "Priority_1",
+        "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')",
+        ""
+      );
+    } catch (error) {
+      errorWasThrown = true;
+      // should.equal(!error.message.search("Filter is missing"), false);
+      console.log(error.message);
+    }
+    should.equal(errorWasThrown, true);
+  });*/
+  it("Removing non existing rule on a subscription that doesnt have any rules should throw error", async function(): Promise<
+    void
+  > {
+    let errorWasThrown = false;
+    try {
+      await subscriptionClient.removeRule("Priority_5");
+    } catch (error) {
+      should.equal(!error.message.search("could not be found"), false);
+      errorWasThrown = true;
+    }
+    should.equal(errorWasThrown, true);
+  });
+
+  it("Removing non existing rule on a subscription that has other rules should throw error", async function(): Promise<
+    void
+  > {
+    let errorWasThrown = false;
+    try {
+      await subscriptionClient.addRule("Priority_1", "priority = 1");
+      await subscriptionClient.removeRule("Priority_5");
+    } catch (error) {
+      errorWasThrown = true;
+    }
+    should.equal(errorWasThrown, true);
+  });
+
+  it("Subscription with 0/1/multiple rules returns rules as expected", async function(): Promise<
+    void
+  > {
+    let rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 0);
+
+    let expr = "(priority = 1)";
+    await subscriptionClient.addRule("Priority_1", expr);
+    rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "Priority_1");
+    should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
+
+    expr = "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')";
+    await subscriptionClient.addRule(
+      "Priority_2",
+      "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')"
+    );
+    rules = await subscriptionClient.getRules();
+    should.equal(rules[1].name, "Priority_2");
+    should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
+  });
+
+  it("Default rule is returned for the subscription for which no rules were added", async function(): Promise<
+    void
+  > {
+    const rules = await defaultSubscriptionClient.getRules();
+    should.equal(rules[0].name, "$Default");
+  });
+
+  it("Rule with SQL filter returns expected filter expression", async function(): Promise<void> {
+    const expr = "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')";
+    await subscriptionClient.addRule("Priority_2", expr);
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "Priority_2");
+    should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
+  });
+  /*
+  it("Rule with SQL filter and action returns expected filter and action expression", async function(): Promise<
+    void
+  > {
+    await subscriptionClient.addRule(
+      "Priority_1",
+      "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')",
+      "SET sys.body = 'MessageX'"
+    );
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "Priority_1");
+    console.log(rules);
+  });*/
+
+  it("Rule with Correlation filter returns expected filter", async function(): Promise<void> {
+    await subscriptionClient.addRule("Correlationfilter", {
+      label: "red",
+      correlationId: "high"
+    });
+    const rules = await subscriptionClient.getRules();
+    should.equal(rules[0].name, "Correlationfilter");
+    const matchexpr = {
+      correlationId: "high",
+      messageId: null,
+      to: null,
+      replyTo: null,
+      label: "red",
+      sessionId: null,
+      replyToSessionId: null,
+      contentType: null,
+      userProperties: []
+    };
+    should.equal(JSON.stringify(rules[0].filter), JSON.stringify(matchexpr));
+  });
+});
