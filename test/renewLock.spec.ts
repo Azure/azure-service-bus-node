@@ -79,6 +79,59 @@ describe("Lock Renewal in PeekLock mode", function(): void {
 
   // Tests for Lock Renewal, see -  https://github.com/Azure/azure-service-bus-node/issues/103
   // Receive a msg using Batch Receiver, test renewLock()
+  async function testLockRenewalHappyCase(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.sendBatch(testMessages);
+
+    const msgs = await receiverClient.receiveBatch(1);
+
+    // Compute expected initial lock duration
+    const expectedLockExpiryTimeUtc = new Date();
+    expectedLockExpiryTimeUtc.setSeconds(
+      expectedLockExpiryTimeUtc.getSeconds() + lockDurationInMilliseconds / 1000
+    );
+
+    should.equal(Array.isArray(msgs), true);
+    should.equal(msgs.length, 1);
+    should.equal(msgs[0].body, testMessages[0].body);
+    should.equal(msgs[0].messageId, testMessages[0].messageId);
+
+    // Verify actual lock duration is reset
+    if (msgs[0].lockedUntilUtc) {
+      should.equal(msgs[0].lockedUntilUtc >= expectedLockExpiryTimeUtc, true);
+    }
+
+    console.log(`Sleeping 10 seconds...`);
+    await delay(10000);
+
+    await receiverClient.renewLock(msgs[0]);
+    console.log(`After First Renewal: ${msgs[0].lockedUntilUtc}`);
+    // Compute expected lock duration after 10 seconds of sleep
+    expectedLockExpiryTimeUtc.setSeconds(expectedLockExpiryTimeUtc.getSeconds() + 10);
+
+    // Verify actual lock duration is reset
+    if (msgs[0].lockedUntilUtc) {
+      should.equal(msgs[0].lockedUntilUtc >= expectedLockExpiryTimeUtc, true);
+    }
+
+    console.log(`Sleeping 5 more seconds...`);
+    await delay(5000);
+
+    await receiverClient.renewLock(msgs[0]);
+    console.log(`After Second Renewal: ${msgs[0].lockedUntilUtc}`);
+    // Compute expected lock duration after 5 more seconds of sleep
+    expectedLockExpiryTimeUtc.setSeconds(expectedLockExpiryTimeUtc.getSeconds() + 5);
+
+    // Verify actual lock duration is reset
+    if (msgs[0].lockedUntilUtc) {
+      should.equal(msgs[0].lockedUntilUtc >= expectedLockExpiryTimeUtc, true);
+    }
+
+    await msgs[0].complete();
+  }
+
   it("Queues - Receives a message using Batch Receiver renewLock() resets lock duration each time.", async function(): Promise<
     void
   > {
@@ -92,6 +145,35 @@ describe("Lock Renewal in PeekLock mode", function(): void {
   });
 
   // Receive a msg using Batch Receiver, wait until its lock expires, completing it now results in error
+  async function testErrorOnLockExpiry(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.sendBatch(testMessages);
+
+    const msgs = await receiverClient.receiveBatch(1);
+
+    should.equal(Array.isArray(msgs), true);
+    should.equal(msgs.length, 1);
+    should.equal(msgs[0].body, testMessages[0].body);
+    should.equal(msgs[0].messageId, testMessages[0].messageId);
+
+    console.log(`Sleeping 30 seconds...`);
+    await delay(lockDurationInMilliseconds);
+
+    let errorWasThrown: boolean = false;
+    await msgs[0].complete().catch((err) => {
+      should.equal(err.name, "MessageLockLostError");
+      errorWasThrown = true;
+    });
+
+    should.equal(errorWasThrown, true);
+
+    // Clean up any left over messages
+    const unprocessedMsgs = await receiverClient.receiveBatch(1);
+    await unprocessedMsgs[0].complete();
+  }
+
   it("Queues - Receive a msg using Batch Receiver, wait until its lock expires, completing it now results in error", async function(): Promise<
     void
   > {
@@ -104,90 +186,3 @@ describe("Lock Renewal in PeekLock mode", function(): void {
     await testErrorOnLockExpiry(topicClient, subscriptionClient);
   });
 });
-
-async function testLockRenewalHappyCase(
-  senderClient: QueueClient | TopicClient,
-  receiverClient: QueueClient | SubscriptionClient
-): Promise<void> {
-  const currentExpectedLockExpiryTimeUtc = new Date();
-
-  await senderClient.sendBatch(testMessages);
-
-  const msgs = await receiverClient.receiveBatch(1);
-
-  should.equal(Array.isArray(msgs), true);
-  should.equal(msgs.length, 1);
-  should.equal(msgs[0].body, testMessages[0].body);
-  should.equal(msgs[0].messageId, testMessages[0].messageId);
-
-  console.log(`MessageLockedUntil: ${msgs[0].lockedUntilUtc}`);
-
-  // Compute expected initial lock duration
-  currentExpectedLockExpiryTimeUtc.setSeconds(
-    currentExpectedLockExpiryTimeUtc.getSeconds() + lockDurationInMilliseconds / 1000
-  );
-
-  // Verify actual lock duration is reset
-  if (msgs[0].lockedUntilUtc) {
-    should.equal(msgs[0].lockedUntilUtc >= currentExpectedLockExpiryTimeUtc, true);
-  }
-
-  console.log(`Sleeping 10 seconds...`);
-  await delay(10000);
-
-  await receiverClient.renewLock(msgs[0]);
-  console.log(`After First Renewal: ${msgs[0].lockedUntilUtc}`);
-  // Compute expected lock duration after 10 seconds of sleep
-  currentExpectedLockExpiryTimeUtc.setSeconds(currentExpectedLockExpiryTimeUtc.getSeconds() + 10);
-
-  // Verify actual lock duration is reset
-  if (msgs[0].lockedUntilUtc) {
-    should.equal(msgs[0].lockedUntilUtc >= currentExpectedLockExpiryTimeUtc, true);
-  }
-
-  console.log(`Sleeping 5 more seconds...`);
-  await delay(5000);
-
-  await receiverClient.renewLock(msgs[0]);
-  console.log(`After Second Renewal: ${msgs[0].lockedUntilUtc}`);
-  // Compute expected lock duration after 5 more seconds of sleep
-  currentExpectedLockExpiryTimeUtc.setSeconds(currentExpectedLockExpiryTimeUtc.getSeconds() + 5);
-
-  // Verify actual lock duration is reset
-  if (msgs[0].lockedUntilUtc) {
-    should.equal(msgs[0].lockedUntilUtc >= currentExpectedLockExpiryTimeUtc, true);
-  }
-
-  await msgs[0].complete();
-}
-
-async function testErrorOnLockExpiry(
-  senderClient: QueueClient | TopicClient,
-  receiverClient: QueueClient | SubscriptionClient
-): Promise<void> {
-  await senderClient.sendBatch(testMessages);
-
-  const msgs = await receiverClient.receiveBatch(1);
-
-  should.equal(Array.isArray(msgs), true);
-  should.equal(msgs.length, 1);
-  should.equal(msgs[0].body, testMessages[0].body);
-  should.equal(msgs[0].messageId, testMessages[0].messageId);
-
-  console.log(`MessageLockedUntil: ${msgs[0].lockedUntilUtc}`);
-
-  console.log(`Sleeping 30 seconds...`);
-  await delay(lockDurationInMilliseconds);
-
-  let errorWasThrown: boolean = false;
-  await msgs[0].complete().catch((err) => {
-    should.equal(err.name, "MessageLockLostError");
-    errorWasThrown = true;
-  });
-
-  should.equal(errorWasThrown, true);
-
-  // Clean up any left over messages
-  const unprocessedMsgs = await receiverClient.receiveBatch(1);
-  await unprocessedMsgs[0].complete();
-}
