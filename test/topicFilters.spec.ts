@@ -12,14 +12,10 @@ import { Namespace, SubscriptionClient } from "../lib";
 
 // We need to remove rules before adding one because otherwise the existing default rule will let in all messages.
 async function removeAllRules(client: SubscriptionClient): Promise<void> {
-  try {
-    const rules = await client.getRules();
-    for (let i = 0; i < rules.length; i++) {
-      const rule = rules[i];
-      await client.removeRule(rule.name);
-    }
-  } catch (err) {
-    console.log("Error while removing the rule", err);
+  const rules = await client.getRules();
+  for (let i = 0; i < rules.length; i++) {
+    const rule = rules[i];
+    await client.removeRule(rule.name);
   }
 }
 
