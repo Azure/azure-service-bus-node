@@ -156,12 +156,12 @@ describe("Topic Filters -  Add Rule - Negative Test Cases", function(): void {
     should.equal(errorWasThrown, true);
   });
 
+  // TODO: Update error message after fixing https://github.com/Azure/azure-service-bus-node/issues/184
   it("Adding a rule with a Boolean filter whose input is not a Boolean, SQL expression or a Correlation filter", async function(): Promise<
     void
   > {
     let errorWasThrown = false;
     try {
-      await subscriptionClient.addRule("Priority_1", "priority = 1");
       await subscriptionClient.addRule("Priority_2", "1");
     } catch (error) {
       errorWasThrown = true;
