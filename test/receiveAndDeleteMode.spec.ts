@@ -111,7 +111,7 @@ describe("ReceiveBatch from Queue/Subscription", () => {
     await afterEachTest();
   });
 
-  async function sendReceiveMsg(
+  async function testNosettlment(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
@@ -123,13 +123,7 @@ describe("ReceiveBatch from Queue/Subscription", () => {
     should.equal(msgs[0].body, testMessages[0].body);
     should.equal(msgs[0].messageId, testMessages[0].messageId);
     should.equal(msgs[0].deliveryCount, 0);
-  }
 
-  async function testNosettlment(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    await sendReceiveMsg(senderClient, receiverClient);
     await testPeekMsgsLength(receiverClient, 0);
   }
 
@@ -151,7 +145,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await afterEachTest();
   });
 
-  async function sendReceiveMsg(
+  async function testNoSettlement(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient,
     autoCompleteFlag: boolean
@@ -182,43 +176,28 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     await testPeekMsgsLength(receiverClient, 0);
   }
 
-  async function testWithAutoCompleteEnabled(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    await sendReceiveMsg(senderClient, receiverClient, true);
-  }
-
   it("Queue: With auto-complete enabled, no settlement of the message removes message", async function(): Promise<
     void
   > {
-    await testWithAutoCompleteEnabled(queueClient, queueClient);
+    await testNoSettlement(queueClient, queueClient, true);
   });
 
   it("Subscription: With auto-complete enabled, no settlement of the message removes message", async function(): Promise<
     void
   > {
-    await testWithAutoCompleteEnabled(topicClient, subscriptionClient);
+    await testNoSettlement(topicClient, subscriptionClient, true);
   });
-
-  async function testWithAutoCompleteDisabled(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    await sendReceiveMsg(senderClient, receiverClient, false);
-    await testPeekMsgsLength(receiverClient, 0);
-  }
 
   it("Queue: With auto-complete disabled, no settlement of the message removes message", async function(): Promise<
     void
   > {
-    await testWithAutoCompleteDisabled(queueClient, queueClient);
+    await testNoSettlement(queueClient, queueClient, true);
   });
 
   it("Subscription: With auto-complete disabled, no settlement of the message removes message", async function(): Promise<
     void
   > {
-    await testWithAutoCompleteDisabled(topicClient, subscriptionClient);
+    await testNoSettlement(topicClient, subscriptionClient, true);
   });
 });
 
@@ -274,64 +253,36 @@ describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of messa
     await testPeekMsgsLength(receiverClient, 0);
   }
 
-  async function testComplete(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    await testSettlement(senderClient, receiverClient, DispositionType.complete);
-  }
-
   it("Queue: complete() throws error", async function(): Promise<void> {
-    await testComplete(queueClient, queueClient);
+    await testSettlement(queueClient, queueClient, DispositionType.complete);
   });
 
   it("Subscription: complete() throws error", async function(): Promise<void> {
-    await testComplete(topicClient, subscriptionClient);
+    await testSettlement(topicClient, subscriptionClient, DispositionType.complete);
   });
 
-  async function testAbandon(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    await testSettlement(senderClient, receiverClient, DispositionType.abandon);
-  }
-
-  it("Queue: Abandoned message throws error", async function(): Promise<void> {
-    await testAbandon(queueClient, queueClient);
+  it("Queue: abandon() throws error", async function(): Promise<void> {
+    await testSettlement(queueClient, queueClient, DispositionType.abandon);
   });
 
-  it("Subscription: Abandoned message throws error", async function(): Promise<void> {
-    await testAbandon(topicClient, subscriptionClient);
+  it("Subscription: abandon() throws error", async function(): Promise<void> {
+    await testSettlement(topicClient, subscriptionClient, DispositionType.abandon);
   });
 
-  async function testDefer(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    await testSettlement(senderClient, receiverClient, DispositionType.defer);
-  }
-
-  it("Queue: Deferred message throws error", async function(): Promise<void> {
-    await testDefer(queueClient, queueClient);
+  it("Queue: defer() throws error", async function(): Promise<void> {
+    await testSettlement(queueClient, queueClient, DispositionType.defer);
   });
 
-  it("Subscription: Deferred message throws error", async function(): Promise<void> {
-    await testDefer(topicClient, subscriptionClient);
+  it("Subscription: defer() throws error", async function(): Promise<void> {
+    await testSettlement(topicClient, subscriptionClient, DispositionType.defer);
   });
 
-  async function testDeadletter(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    await testSettlement(senderClient, receiverClient, DispositionType.deadletter);
-  }
-
-  it("Queue: Dead lettered message throws error", async function(): Promise<void> {
-    await testDeadletter(queueClient, queueClient);
+  it("Queue: deadLetter() throws error", async function(): Promise<void> {
+    await testSettlement(queueClient, queueClient, DispositionType.deadletter);
   });
 
-  it("Subscription: Dead lettered message throws error", async function(): Promise<void> {
-    await testDeadletter(topicClient, subscriptionClient);
+  it("Subscription: deadLetter()", async function(): Promise<void> {
+    await testSettlement(topicClient, subscriptionClient, DispositionType.deadletter);
   });
 
   async function testRenewLock(
