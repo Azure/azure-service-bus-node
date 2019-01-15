@@ -148,4 +148,6 @@ async function processMessageFromSession(sessionId: string): Promise<void> {
   await client.close();
 }
 
-main();
+main().catch((err) => {
+  console.log("Error occurred: ", err);
+});

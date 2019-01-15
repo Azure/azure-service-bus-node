@@ -111,4 +111,6 @@ async function removeAllRules(client: SubscriptionClient): Promise<void> {
   }
 }
 
-main();
+main().catch((err) => {
+  console.log("Error occurred: ", err);
+});

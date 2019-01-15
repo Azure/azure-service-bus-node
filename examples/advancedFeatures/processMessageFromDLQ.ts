@@ -66,4 +66,6 @@ async function fixAndResendMessage(oldMessage: ServiceBusMessage): Promise<void>
   await client.close();
 }
 
-main();
+main().catch((err) => {
+  console.log("Error occurred: ", err);
+});

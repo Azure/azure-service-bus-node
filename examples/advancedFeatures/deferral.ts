@@ -137,4 +137,6 @@ async function receiveMessage(): Promise<void> {
   }
 }
 
-main();
+main().catch((err) => {
+  console.log("Error occurred: ", err);
+});

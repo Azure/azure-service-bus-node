@@ -49,4 +49,6 @@ async function receiveMessages(): Promise<void> {
   await client.close();
 }
 
-main();
+main().catch((err) => {
+  console.log("Error occurred: ", err);
+});
