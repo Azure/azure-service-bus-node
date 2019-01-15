@@ -5,7 +5,9 @@ import {
   delay,
   ServiceBusMessage,
   Namespace,
-  SendableMessageInfo
+  SendableMessageInfo,
+  QueueClient,
+  TopicClient
 } from "../../lib";
 import * as dotenv from "dotenv";
 dotenv.config();
@@ -30,14 +32,14 @@ console.log("Subscription name: ", subscriptionName);
   in expected sequence.
 */
 async function main(): Promise<void> {
-  await sendMessage();
+  await sendMessages();
   await receiveMessage();
 }
 
-async function sendMessage(): Promise<void> {
+async function sendMessages(): Promise<void> {
   const nsSend = Namespace.createFromConnectionString(connectionString);
-  const sendClient = nsSend.createQueueClient(queueName); // Use this API to send to a queue
-  // const sendClient = nsSend.createTopicClient(topicName); // Use this API to send to a topic
+  // If using Topics, use createTopicClient to send to a topic
+  const sendClient = nsSend.createQueueClient(queueName);
 
   const data = [
     { step: 1, title: "Shop" },
@@ -47,37 +49,30 @@ async function sendMessage(): Promise<void> {
     { step: 5, title: "Eat" }
   ];
   try {
-    const promises = new Array();
-    for (let index = 0; index < data.length; index++) {
-      const message: SendableMessageInfo = {
-        body: data[index],
-        label: "RecipeStep",
-        contentType: "application/json"
-      };
-      // the way we shuffle the message order is to introduce a tiny random delay before each of the messages is sent
-      promises.push(
-        delay(Math.random() * 30).then(async () => {
-          try {
-            await sendClient.send(message);
-            console.log("Sent message step:", data[index].step);
-          } catch (err) {
-            console.log("Error while sending message", err);
-          }
-        })
-      );
-    }
-    // wait until all the send tasks are complete
+    // Shuffle and send messages
+    // The way we shuffle the message order is by introducing a tiny random delay before each of the messages is sent
+    const promises = data.map((body) => sendMessage(body, sendClient));
     await Promise.all(promises);
   } finally {
     await nsSend.close();
   }
 }
 
+async function sendMessage(body: any, sendClient: QueueClient | TopicClient): Promise<void> {
+  await delay(Math.random() * 30);
+  try {
+    await sendClient.send(body);
+    console.log("Sent message step:", body.step);
+  } catch (err) {
+    console.log("Error while sending message", err);
+  }
+}
+
 async function receiveMessage(): Promise<void> {
   const nsRcv = Namespace.createFromConnectionString(connectionString);
 
-  const receiveClient = nsRcv.createQueueClient(queueName); // Use this API to receive from a queue
-  // const receiveClient = nsRcv.createSubscriptionClient(topicName, subscriptionName); // Use this API to receive from a topic subscription
+  // If using Topics, use createSubscriptionClient to receive from a topic subscription
+  const receiveClient = nsRcv.createQueueClient(queueName);
 
   const deferredSteps = new Map();
   let lastProcessedRecipeStep = 0;

@@ -33,8 +33,8 @@ async function main(): Promise<void> {
 }
 
 async function sendScheduledMessages(): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to send to a queue
-  // const client = ns.createTopicClient(topicName); // Use this API to send to a topic
+  // If using Topics, use createTopicClient to send to a topic
+  const client = ns.createQueueClient(queueName);
 
   const data = [
     { name: "Einstein", firstName: "Albert" },
@@ -64,8 +64,8 @@ async function sendScheduledMessages(): Promise<void> {
 }
 
 async function receiveMessages(): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to receive from a queue
-  // const client = ns.createSubscriptionClient(topicName, subscriptionName); // Use this API to receive from a topic subscription
+  // If using Topics, use createSubscriptionClient to receive from a topic subscription
+  const client = ns.createQueueClient(queueName);
 
   for (let index = 0; index < NUM_OF_MESSAGES; index++) {
     // retrieve one message at a time.

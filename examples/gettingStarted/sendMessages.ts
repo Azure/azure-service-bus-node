@@ -25,8 +25,8 @@ async function main(): Promise<void> {
 }
 
 async function sendMessages(): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to send to a queue
-  // const client = ns.createTopicClient(topicName); // Use this API to send to a topic
+  // If using Topics, use createTopicClient to send to a topic
+  const client = ns.createQueueClient(queueName);
 
   const data = [
     { name: "Einstein", firstName: "Albert" },

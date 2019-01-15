@@ -77,8 +77,8 @@ async function runScenario(): Promise<void> {
 }
 
 async function getSessionState(sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueueName); // Use this API to receive from a queue
-  // const client = ns.createSubscriptionClient(userEventsTopicName, userEventsSubscriptionName); // Use this API to receive from a topic subscription
+  // If using Topics, use createSubscriptionClient to receive from a topic subscription
+  const client = ns.createQueueClient(userEventsQueueName);
 
   const messageSession = await client.acceptSession({ sessionId: sessionId });
 
@@ -95,8 +95,8 @@ async function getSessionState(sessionId: string): Promise<void> {
 }
 
 async function sendMessagesForSession(shoppingEvents: any[], sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueueName); // Use this API to send to a queue
-  // const client = ns.createTopicClient(userEventsTopicName); // Use this API to send to a topic
+  // If using Topics, use createTopicClient to send to a topic
+  const client = ns.createQueueClient(userEventsQueueName);
 
   for (let index = 0; index < shoppingEvents.length; index++) {
     const message: SendableMessageInfo = {
@@ -110,8 +110,8 @@ async function sendMessagesForSession(shoppingEvents: any[], sessionId: string):
 }
 
 async function processMessageFromSession(sessionId: string): Promise<void> {
-  const client = ns.createQueueClient(userEventsQueueName); // Use this API to receive from a queue
-  // const client = ns.createSubscriptionClient(userEventsTopicName, userEventsSubscriptionName); // Use this API to receive from a topic subscription
+  // If using Topics, use createSubscriptionClient to receive from a topic subscription
+  const client = ns.createQueueClient(userEventsQueueName);
 
   const messageSession = await client.acceptSession({ sessionId: sessionId });
 

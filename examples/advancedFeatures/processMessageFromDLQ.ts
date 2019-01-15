@@ -56,8 +56,8 @@ async function processDeadletterMessageQueue(): Promise<void> {
 
 // Send repaired message back to the current queue / topic
 async function fixAndResendMessage(oldMessage: ServiceBusMessage): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to send to a queue
-  // const client = ns.createTopicClient(topicName); // Use this API to send to a topic
+  // If using Topics, use createTopicClient to send to a topic
+  const client = ns.createQueueClient(queueName);
 
   // Inspect given message and make any changes if necessary
   const repairedMessage = oldMessage.clone();

@@ -34,8 +34,8 @@ async function main(): Promise<void> {
 }
 
 async function sendMessage(): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to send to a queue
-  // const client = ns.createTopicClient(topicName); // Use this API to send to a topic
+  // If using Topics, use createTopicClient to send to a topic
+  const client = ns.createQueueClient(queueName);
 
   const message: SendableMessageInfo = {
     body: { name: "Creamy Chicken Pasta", type: "Dinner" },
@@ -47,8 +47,8 @@ async function sendMessage(): Promise<void> {
 }
 
 async function receiveMessage(): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to receive from a queue
-  // const client = ns.createSubscriptionClient(topicName, subscriptionName); // Use this API to receive from a topic subscription
+  // If using Topics, use createSubscriptionClient to receive from a topic subscription
+  const client = ns.createQueueClient(queueName);
 
   const message = await client.receiveBatch(1);
   console.log(">>>>> Receiving one message from the main queue - ", message);

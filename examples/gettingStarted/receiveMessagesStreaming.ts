@@ -30,8 +30,8 @@ async function main(): Promise<void> {
 }
 
 async function receiveMessages(): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to receive from a queue
-  // const client = ns.createSubscriptionClient(topicName, subscriptionName); // Use this API to receive from a topic subscription
+  // If using Topics, use createSubscriptionClient to receive from a topic subscription
+  const client = ns.createQueueClient(queueName);
 
   const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
     console.log(`Received message: ${brokeredMessage.body} - ${brokeredMessage.label}`);

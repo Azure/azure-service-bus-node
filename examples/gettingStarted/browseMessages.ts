@@ -28,10 +28,10 @@ async function main(): Promise<void> {
 }
 
 async function browseMessages(): Promise<void> {
-  const client = ns.createQueueClient(queueName); // Use this API to peek from a queue
-  // const client = ns.createSubscriptionClient(topicName, subscriptionName); // Use this API to peek from a topic subscription
+  // If using Topics, use createSubscriptionClient to peek from a topic subscription
+  const client = ns.createQueueClient(queueName);
 
-  const messages = await client.peek(10); // Peeks one message
+  const messages = await client.peek(10);
   for (let i = 0; i < messages.length; i++) {
     if (messages[i]) {
       console.log(`Peeking message: ${messages[i].body} - ${messages[i].label}`);
