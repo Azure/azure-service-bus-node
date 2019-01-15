@@ -191,13 +191,13 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
   it("Queue: With auto-complete disabled, no settlement of the message removes message", async function(): Promise<
     void
   > {
-    await testNoSettlement(queueClient, queueClient, true);
+    await testNoSettlement(queueClient, queueClient, false);
   });
 
   it("Subscription: With auto-complete disabled, no settlement of the message removes message", async function(): Promise<
     void
   > {
-    await testNoSettlement(topicClient, subscriptionClient, true);
+    await testNoSettlement(topicClient, subscriptionClient, false);
   });
 });
 
