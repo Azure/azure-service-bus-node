@@ -580,13 +580,24 @@ describe("Multiple Streaming Receivers", function(): void {
   > {
     await testMultipleReceiveCalls(subscriptionClient);
   });
+});
 
-  it("When maxConcurrentCalls set to 1 (default value), next message is received only after the first one is settled - Queues", async function(): Promise<
-    void
-  > {
-    await queueClient.sendBatch(testMessages);
+describe("Tests for maxConcurrentCalls option", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
+  });
+
+  async function testMaxConcurrentCallsSetTo1(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.sendBatch(testMessages);
     const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener: ReceiveHandler = await queueClient.receive(
+    const receiveListener: ReceiveHandler = await receiverClient.receive(
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
         if (msg.messageId === testMessages[1].messageId) {
@@ -601,35 +612,25 @@ describe("Multiple Streaming Receivers", function(): void {
     await delay(5000);
 
     await receiveListener.stop();
-    await testPeekMsgsLength(queueClient, 0);
+    await testPeekMsgsLength(receiverClient, 0);
+  }
+
+  it("When maxConcurrentCalls set to 1 (default value), next message is received only after the first one is settled - Queues", async function(): Promise<
+    void
+  > {
+    await testMaxConcurrentCallsSetTo1(queueClient, queueClient);
   });
 
   it("When maxConcurrentCalls set to 1 (default value), next message is received only after the first one is settled - Subscriptions", async function(): Promise<
     void
   > {
-    await topicClient.sendBatch(testMessages);
-    const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener: ReceiveHandler = await subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        if (msg.messageId === testMessages[1].messageId) {
-          should.equal(receivedMsgs[0].delivery.remote_settled, true);
-        }
-        return msg.complete();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      }
-    );
-    await delay(5000);
-
-    await receiveListener.stop();
-    await testPeekMsgsLength(subscriptionClient, 0);
+    await testMaxConcurrentCallsSetTo1(topicClient, subscriptionClient);
   });
 
-  it("When maxConcurrentCalls set to 3 (non default value), next message is received only after the first three are settled - Queues", async function(): Promise<
-    void
-  > {
+  async function testMaxConcurrentCallsSetTo3(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
     const testMessages2: SendableMessageInfo[] = [
       {
         body: "hello1",
@@ -648,10 +649,10 @@ describe("Multiple Streaming Receivers", function(): void {
         messageId: `test message ${generateUuid()}`
       }
     ];
-    await queueClient.sendBatch(testMessages2);
+    await senderClient.sendBatch(testMessages2);
     const receivedMsgs: ServiceBusMessage[] = [];
     let countMessages = 0;
-    const receiveListener: ReceiveHandler = await queueClient.receive(
+    const receiveListener: ReceiveHandler = await receiverClient.receive(
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
         if (countMessages === 3) {
@@ -672,54 +673,17 @@ describe("Multiple Streaming Receivers", function(): void {
     await delay(5000);
 
     await receiveListener.stop();
-    await testPeekMsgsLength(queueClient, 0);
+    await testPeekMsgsLength(receiverClient, 0);
+  }
+  it("When maxConcurrentCalls set to 3 (non default value), next message is received only after the first three are settled - Queues", async function(): Promise<
+    void
+  > {
+    await testMaxConcurrentCallsSetTo3(queueClient, queueClient);
   });
 
   it("When maxConcurrentCalls set to 3 (non default value), next message is received only after the first three are settled - Subscriptions", async function(): Promise<
     void
   > {
-    const testMessages2: SendableMessageInfo[] = [
-      {
-        body: "hello1",
-        messageId: `test message ${generateUuid()}`
-      },
-      {
-        body: "hello2",
-        messageId: `test message ${generateUuid()}`
-      },
-      {
-        body: "hello3",
-        messageId: `test message ${generateUuid()}`
-      },
-      {
-        body: "hello4",
-        messageId: `test message ${generateUuid()}`
-      }
-    ];
-    await topicClient.sendBatch(testMessages);
-    const receivedMsgs: ServiceBusMessage[] = [];
-    let countMessages = 0;
-    const receiveListener: ReceiveHandler = await subscriptionClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        if (countMessages === 3) {
-          if (msg.messageId === testMessages2[3].messageId) {
-            should.equal(receivedMsgs[0].delivery.remote_settled, true);
-            should.equal(receivedMsgs[1].delivery.remote_settled, true);
-            should.equal(receivedMsgs[2].delivery.remote_settled, true);
-          }
-        }
-        countMessages++;
-        return msg.complete();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      },
-      { maxConcurrentCalls: 3 }
-    );
-    await delay(5000);
-
-    await receiveListener.stop();
-    await testPeekMsgsLength(subscriptionClient, 0);
+    await testMaxConcurrentCallsSetTo3(topicClient, subscriptionClient);
   });
 });
