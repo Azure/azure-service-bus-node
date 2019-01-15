@@ -62,7 +62,7 @@ async function afterEachTest(): Promise<void> {
   await namespace.close();
 }
 
-describe("Topic Filters - Tests", function(): void {
+describe("Topic Filters -  Add Rule - Positive Test Cases", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -107,6 +107,16 @@ describe("Topic Filters - Tests", function(): void {
     const rules = await subscriptionClient.getRules();
     should.equal(rules.length, 1);
     should.equal(rules[0].name, "Correlationfilter");
+  });
+});
+
+describe("Topic Filters -  Add Rule - Negative Test Cases", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
   });
 
   it("Adding a rule with a name which matches with existing rule", async function(): Promise<void> {
@@ -159,6 +169,16 @@ describe("Topic Filters - Tests", function(): void {
     }
     should.equal(errorWasThrown, true);
   });
+});
+
+describe("Topic Filters -  Remove Rule", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
+  });
 
   it("Removing non existing rule on a subscription that doesnt have any rules should throw error", async function(): Promise<
     void
@@ -185,6 +205,16 @@ describe("Topic Filters - Tests", function(): void {
       errorWasThrown = true;
     }
     should.equal(errorWasThrown, true);
+  });
+});
+
+describe("Topic Filters: Get Rules", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
   });
 
   it("Subscription with 0/1/multiple rules returns rules as expected", async function(): Promise<
