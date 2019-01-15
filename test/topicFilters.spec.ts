@@ -223,40 +223,31 @@ describe("Topic Filters: Get Rules", function(): void {
     let rules = await subscriptionClient.getRules();
     should.equal(rules.length, 0);
 
-    let expr = "(priority = 1)";
-    await subscriptionClient.addRule("Priority_1", expr);
+    const expr1 = "(priority = 1)";
+    await subscriptionClient.addRule("Priority_1", expr1);
     rules = await subscriptionClient.getRules();
     should.equal(rules.length, 1);
     should.equal(rules[0].name, "Priority_1");
-    should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
+    should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr1 }));
 
-    expr = "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')";
-    await subscriptionClient.addRule(
-      "Priority_2",
-      "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')"
-    );
-    should.equal(rules.length, 2);
+    const expr2 = "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')";
+    await subscriptionClient.addRule("Priority_2", expr2);
     rules = await subscriptionClient.getRules();
+    should.equal(rules.length, 2);
+    should.equal(rules[0].name, "Priority_1");
+    should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr1 }));
     should.equal(rules[1].name, "Priority_2");
-    should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
+    should.equal(JSON.stringify(rules[1].filter), JSON.stringify({ expression: expr2 }));
   });
 
   it("Default rule is returned for the subscription for which no rules were added", async function(): Promise<
     void
   > {
     const rules = await defaultSubscriptionClient.getRules();
+    should.equal(rules.length, 1);
     should.equal(rules[0].name, "$Default");
   });
 
-  it("Rule with SQL filter returns expected filter expression", async function(): Promise<void> {
-    const expr = "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')";
-    await subscriptionClient.addRule("Priority_2", expr);
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1);
-    should.equal(rules[0].name, "Priority_2");
-    should.equal(JSON.stringify(rules[0].filter), JSON.stringify({ expression: expr }));
-  });
-  /*
   it("Rule with SQL filter and action returns expected filter and action expression", async function(): Promise<
     void
   > {
@@ -267,8 +258,7 @@ describe("Topic Filters: Get Rules", function(): void {
     );
     const rules = await subscriptionClient.getRules();
     should.equal(rules[0].name, "Priority_1");
-    console.log(rules);
-  });*/
+  });
 
   it("Rule with Correlation filter returns expected filter", async function(): Promise<void> {
     await subscriptionClient.addRule("Correlationfilter", {
