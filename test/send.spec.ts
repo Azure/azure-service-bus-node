@@ -127,7 +127,7 @@ async function afterEachTest(): Promise<void> {
   await namespace.close();
 }
 
-describe.only("Send to Queue/Subscription", function(): void {
+describe("Send to Queue/Subscription", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -216,7 +216,7 @@ describe.only("Send to Queue/Subscription", function(): void {
     const scheduleTime = new Date(Date.now() + 10000); // 10 seconds from now
     await senderClient.scheduleMessages(scheduleTime, testMessages);
 
-    const msgs = await receiverClient.receiveBatch(1);
+    const msgs = await receiverClient.receiveBatch(2);
     should.equal(Array.isArray(msgs), true);
     should.equal(msgs.length, 2);
 
@@ -230,6 +230,7 @@ describe.only("Send to Queue/Subscription", function(): void {
     should.equal(msgs[1].messageId, testMessages[1].messageId);
 
     await msgs[0].complete();
+    await msgs[1].complete();
 
     await testPeekMsgsLength(receiverClient, 0);
   }
