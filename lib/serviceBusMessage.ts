@@ -855,7 +855,6 @@ export class ServiceBusMessage implements ReceivedMessage {
       this._context.namespace.connectionId,
       this.messageId
     );
-
     if (this._context.requestResponseLockedMessages.has(this.lockToken!)) {
       await this._context.managementClient!.updateDispositionStatus(
         [this.lockToken!],
@@ -867,7 +866,6 @@ export class ServiceBusMessage implements ReceivedMessage {
       return;
     }
     const receiver = this._context.getReceiver(this.delivery.link.name, this.sessionId);
-
     if (receiver) {
       if (receiver.receiveMode !== ReceiveMode.peekLock) {
         throw new Error("The operation is only supported in 'PeekLock' receive mode.");
@@ -891,7 +889,6 @@ export class ServiceBusMessage implements ReceivedMessage {
       this._context.namespace.connectionId,
       this.messageId
     );
-
     if (this._context.requestResponseLockedMessages.has(this.lockToken!)) {
       await this._context.managementClient!.updateDispositionStatus(
         [this.lockToken!],
@@ -931,7 +928,6 @@ export class ServiceBusMessage implements ReceivedMessage {
       this._context.namespace.connectionId,
       this.messageId
     );
-
     if (this._context.requestResponseLockedMessages.has(this.lockToken!)) {
       await this._context.managementClient!.updateDispositionStatus(
         [this.lockToken!],
@@ -977,7 +973,6 @@ export class ServiceBusMessage implements ReceivedMessage {
       this._context.namespace.connectionId,
       this.messageId
     );
-
     if (this._context.requestResponseLockedMessages.has(this.lockToken!)) {
       await this._context.managementClient!.updateDispositionStatus(
         [this.lockToken!],
