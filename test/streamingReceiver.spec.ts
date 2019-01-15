@@ -17,7 +17,8 @@ import {
   TopicClient,
   SubscriptionClient,
   delay,
-  ReceiveHandler
+  ReceiveHandler,
+  MessageHandlerOptions
 } from "../lib";
 
 const testMessages: SendableMessageInfo[] = [
@@ -591,25 +592,49 @@ describe("Tests for maxConcurrentCalls option", function(): void {
     await afterEachTest();
   });
 
-  async function testMaxConcurrentCallsSetTo1(
+  async function testMaxConcurrentCalls(
     senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
+    receiverClient: QueueClient | SubscriptionClient,
+    msgs: SendableMessageInfo[],
+    maxConcurrentCalls?: number
   ): Promise<void> {
-    await senderClient.sendBatch(testMessages);
+    const options: MessageHandlerOptions = {
+      autoComplete: false
+    };
+    if (typeof maxConcurrentCalls === "number") {
+      options.maxConcurrentCalls = maxConcurrentCalls;
+    }
+    await senderClient.sendBatch(msgs);
     const receivedMsgs: ServiceBusMessage[] = [];
     const receiveListener: ReceiveHandler = await receiverClient.receive(
       (msg: ServiceBusMessage) => {
         receivedMsgs.push(msg);
-        if (msg.messageId === testMessages[1].messageId) {
-          should.equal(receivedMsgs[0].delivery.remote_settled, true);
-        }
-        return msg.complete();
+        return Promise.resolve();
       },
       (err: Error) => {
         should.not.exist(err);
-      }
+      },
+      options
     );
     await delay(5000);
+
+    should.equal(
+      receivedMsgs.length,
+      maxConcurrentCalls,
+      receivedMsgs.length
+        ? "Received the next message before the previous one was settled"
+        : "Could not receive the first message in 5 seconds!"
+    );
+
+    await receivedMsgs[0].complete();
+
+    await delay(5000);
+
+    should.equal(receivedMsgs.length, msgs.length, "Unexpected number of messages received");
+
+    for (let i = 1; i < receivedMsgs.length; i++) {
+      await receivedMsgs[i].complete();
+    }
 
     await receiveListener.stop();
     await testPeekMsgsLength(receiverClient, 0);
@@ -618,72 +643,43 @@ describe("Tests for maxConcurrentCalls option", function(): void {
   it("When maxConcurrentCalls set to 1 (default value), next message is received only after the first one is settled - Queues", async function(): Promise<
     void
   > {
-    await testMaxConcurrentCallsSetTo1(queueClient, queueClient);
+    await testMaxConcurrentCalls(queueClient, queueClient, testMessages);
   });
 
   it("When maxConcurrentCalls set to 1 (default value), next message is received only after the first one is settled - Subscriptions", async function(): Promise<
     void
   > {
-    await testMaxConcurrentCallsSetTo1(topicClient, subscriptionClient);
+    await testMaxConcurrentCalls(topicClient, subscriptionClient, testMessages);
   });
 
-  async function testMaxConcurrentCallsSetTo3(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    const testMessages2: SendableMessageInfo[] = [
-      {
-        body: "hello1",
-        messageId: `test message ${generateUuid()}`
-      },
-      {
-        body: "hello2",
-        messageId: `test message ${generateUuid()}`
-      },
-      {
-        body: "hello3",
-        messageId: `test message ${generateUuid()}`
-      },
-      {
-        body: "hello4",
-        messageId: `test message ${generateUuid()}`
-      }
-    ];
-    await senderClient.sendBatch(testMessages2);
-    const receivedMsgs: ServiceBusMessage[] = [];
-    let countMessages = 0;
-    const receiveListener: ReceiveHandler = await receiverClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        if (countMessages === 3) {
-          if (msg.messageId === testMessages2[3].messageId) {
-            should.equal(receivedMsgs[0].delivery.remote_settled, true);
-            should.equal(receivedMsgs[1].delivery.remote_settled, true);
-            should.equal(receivedMsgs[2].delivery.remote_settled, true);
-          }
-        }
-        countMessages++;
-        return msg.complete();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      },
-      { maxConcurrentCalls: 3 }
-    );
-    await delay(5000);
+  const testMessages2: SendableMessageInfo[] = [
+    {
+      body: "hello1",
+      messageId: `test message ${generateUuid()}`
+    },
+    {
+      body: "hello2",
+      messageId: `test message ${generateUuid()}`
+    },
+    {
+      body: "hello3",
+      messageId: `test message ${generateUuid()}`
+    },
+    {
+      body: "hello4",
+      messageId: `test message ${generateUuid()}`
+    }
+  ];
 
-    await receiveListener.stop();
-    await testPeekMsgsLength(receiverClient, 0);
-  }
   it("When maxConcurrentCalls set to 3 (non default value), next message is received only after the first three are settled - Queues", async function(): Promise<
     void
   > {
-    await testMaxConcurrentCallsSetTo3(queueClient, queueClient);
+    await testMaxConcurrentCalls(queueClient, queueClient, testMessages2, 3);
   });
 
   it("When maxConcurrentCalls set to 3 (non default value), next message is received only after the first three are settled - Subscriptions", async function(): Promise<
     void
   > {
-    await testMaxConcurrentCallsSetTo3(topicClient, subscriptionClient);
+    await testMaxConcurrentCalls(topicClient, subscriptionClient, testMessages2, 3);
   });
 });
