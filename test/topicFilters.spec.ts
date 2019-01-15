@@ -99,17 +99,6 @@ describe("Topic Filters - Tests", function(): void {
     should.equal(rules[0].name, "Priority_1");
   });
 
-  it("Add Rule with SQL filter and action", async function(): Promise<void> {
-    await subscriptionClient.addRule(
-      "Priority_1",
-      "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')",
-      "SET sys.body = 'MessageX'"
-    );
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1);
-    should.equal(rules[0].name, "Priority_1");
-  });
-
   it("Add Rule with Correlation filter", async function(): Promise<void> {
     await subscriptionClient.addRule("Correlationfilter", {
       label: "red",
@@ -118,18 +107,6 @@ describe("Topic Filters - Tests", function(): void {
     const rules = await subscriptionClient.getRules();
     should.equal(rules.length, 1);
     should.equal(rules[0].name, "Correlationfilter");
-  });
-
-  it("Add Default rule on a subscription that its default rule removed", async function(): Promise<
-    void
-  > {
-    await subscriptionClient.addRule("$Default", {
-      label: "red",
-      correlationId: "high"
-    });
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1);
-    should.equal(rules[0].name, "$Default");
   });
 
   it("Adding a rule with a name which matches with existing rule", async function(): Promise<void> {
