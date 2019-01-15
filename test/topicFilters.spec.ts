@@ -116,8 +116,8 @@ describe("Topic Filters - Tests", function(): void {
       await subscriptionClient.addRule("Priority_1", "priority = 2");
     } catch (error) {
       errorWasThrown = true;
-      should.equal(!error.message.search(" already exists."), false);
-      console.log(error.message);
+      should.equal(!error.message.search("Priority_1' already exists."), false);
+      should.equal(error.name, "MessagingEntityAlreadyExistsError");
     }
     should.equal(errorWasThrown, true);
   });
@@ -128,8 +128,8 @@ describe("Topic Filters - Tests", function(): void {
       await subscriptionClient.addRule("", "priority = 2");
     } catch (error) {
       errorWasThrown = true;
-      should.equal(!error.message.search("name is missing"), false);
-      console.log(error.message);
+      should.equal(!error.message.search("Rule name is missing"), false);
+      should.equal(error.name, "Error");
     }
     should.equal(errorWasThrown, true);
   });
@@ -141,12 +141,12 @@ describe("Topic Filters - Tests", function(): void {
     } catch (error) {
       errorWasThrown = true;
       should.equal(!error.message.search("Filter is missing"), false);
-      console.log(error.message);
+      should.equal(error.name, "Error");
     }
     should.equal(errorWasThrown, true);
   });
 
-  it("Adding a rule with a Boolean filter whose input is not Boolean", async function(): Promise<
+  it("Adding a rule with a Boolean filter whose input is not a Boolean, SQL expression or a Correlation filter", async function(): Promise<
     void
   > {
     let errorWasThrown = false;
@@ -155,27 +155,11 @@ describe("Topic Filters - Tests", function(): void {
       await subscriptionClient.addRule("Priority_2", "1");
     } catch (error) {
       errorWasThrown = true;
+      should.equal(error.name, "InternalServerError");
     }
     should.equal(errorWasThrown, true);
   });
-  /*
-  it("Adding a rule with a SQL action whose input is not a string", async function(): Promise<
-    void
-  > {
-    let errorWasThrown = false;
-    try {
-      await subscriptionClient.addRule(
-        "Priority_1",
-        "(priority = 1 OR priority = 3) AND (sys.label LIKE '%String1')",
-        ""
-      );
-    } catch (error) {
-      errorWasThrown = true;
-      // should.equal(!error.message.search("Filter is missing"), false);
-      console.log(error.message);
-    }
-    should.equal(errorWasThrown, true);
-  });*/
+
   it("Removing non existing rule on a subscription that doesnt have any rules should throw error", async function(): Promise<
     void
   > {
@@ -183,7 +167,8 @@ describe("Topic Filters - Tests", function(): void {
     try {
       await subscriptionClient.removeRule("Priority_5");
     } catch (error) {
-      should.equal(!error.message.search("could not be found"), false);
+      should.equal(!error.message.search("Priority_5' could not be found"), false);
+      should.equal(error.name, "MessagingEntityNotFoundError");
       errorWasThrown = true;
     }
     should.equal(errorWasThrown, true);
