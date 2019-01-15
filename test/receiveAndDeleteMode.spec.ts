@@ -20,6 +20,8 @@ import {
   ReceiveMode
 } from "../lib";
 
+import { DispositionType } from "../lib/core/messageReceiver";
+
 const testMessages: SendableMessageInfo[] = [
   {
     body: "hello1",
@@ -176,6 +178,8 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
 
     await receiveListener.stop();
+
+    await testPeekMsgsLength(receiverClient, 0);
   }
 
   async function testWithAutoCompleteEnabled(
@@ -183,7 +187,6 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
     await sendReceiveMsg(senderClient, receiverClient, true);
-    await testPeekMsgsLength(receiverClient, 0);
   }
 
   it("Queue: With auto-complete enabled, no settlement of the message removes message", async function(): Promise<
@@ -219,7 +222,7 @@ describe("Streaming Receiver from Queue/Subscription", function(): void {
   });
 });
 
-describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of normal message", () => {
+describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of message", () => {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -244,19 +247,38 @@ describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of norma
     return msgs[0];
   }
 
-  async function testComplete(
+  const testError = (err: Error) => {
+    should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
+    errorWasThrown = true;
+  };
+
+  async function testSettlement(
     senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
+    receiverClient: QueueClient | SubscriptionClient,
+    operation: DispositionType
   ): Promise<void> {
     const msg = await sendReceiveMsg(senderClient, receiverClient);
-    await msg.complete().catch((err) => {
-      should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
-      errorWasThrown = true;
-    });
+
+    if (operation === DispositionType.complete) {
+      await msg.complete().catch((err) => testError(err));
+    } else if (operation === DispositionType.abandon) {
+      await msg.abandon().catch((err) => testError(err));
+    } else if (operation === DispositionType.deadletter) {
+      await msg.deadLetter().catch((err) => testError(err));
+    } else if (operation === DispositionType.defer) {
+      await msg.defer().catch((err) => testError(err));
+    }
 
     should.equal(errorWasThrown, true);
 
     await testPeekMsgsLength(receiverClient, 0);
+  }
+
+  async function testComplete(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await testSettlement(senderClient, receiverClient, DispositionType.complete);
   }
 
   it("Queue: complete() throws error", async function(): Promise<void> {
@@ -271,15 +293,7 @@ describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of norma
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    const msg = await sendReceiveMsg(senderClient, receiverClient);
-    await msg.abandon().catch((err) => {
-      should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
-      errorWasThrown = true;
-    });
-
-    should.equal(errorWasThrown, true);
-
-    await testPeekMsgsLength(receiverClient, 0);
+    await testSettlement(senderClient, receiverClient, DispositionType.abandon);
   }
 
   it("Queue: Abandoned message throws error", async function(): Promise<void> {
@@ -294,15 +308,7 @@ describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of norma
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    const msg = await sendReceiveMsg(senderClient, receiverClient);
-    await msg.defer().catch((err) => {
-      should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
-      errorWasThrown = true;
-    });
-
-    should.equal(errorWasThrown, true);
-
-    await testPeekMsgsLength(receiverClient, 0);
+    await testSettlement(senderClient, receiverClient, DispositionType.defer);
   }
 
   it("Queue: Deferred message throws error", async function(): Promise<void> {
@@ -317,15 +323,7 @@ describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of norma
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    const msg = await sendReceiveMsg(senderClient, receiverClient);
-    await msg.deadLetter().catch((err) => {
-      should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
-      errorWasThrown = true;
-    });
-
-    should.equal(errorWasThrown, true);
-
-    await testPeekMsgsLength(receiverClient, 0);
+    await testSettlement(senderClient, receiverClient, DispositionType.deadletter);
   }
 
   it("Queue: Dead lettered message throws error", async function(): Promise<void> {
@@ -336,44 +334,15 @@ describe("Throws error when Complete/Abandon/Defer/Deadletter/RenewLock of norma
     await testDeadletter(topicClient, subscriptionClient);
   });
 
-  async function sendReceiveMsgWithRenewLock(
-    senderClient: QueueClient | TopicClient,
-    receiverClient: QueueClient | SubscriptionClient
-  ): Promise<void> {
-    await senderClient.sendBatch(testMessages);
-    const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener = receiverClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        receiverClient.renewLock(msg).catch((err) => {
-          should.equal(err.message, "The operation is only supported in 'PeekLock' receive mode.");
-          errorWasThrown = true;
-        });
-        should.equal(errorWasThrown, true);
-        return Promise.resolve();
-      },
-      (err: Error) => {
-        should.not.exist(err);
-      }
-    );
-
-    await delay(10000);
-    should.equal(errorWasThrown, true);
-    should.equal(receivedMsgs.length, 2);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-    should.equal(receivedMsgs[1].body, testMessages[1].body);
-    should.equal(receivedMsgs[1].messageId, testMessages[1].messageId);
-
-    await receiveListener.stop();
-  }
-
   async function testRenewLock(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    await sendReceiveMsgWithRenewLock(senderClient, receiverClient);
-    await testPeekMsgsLength(receiverClient, 0);
+    const msg = await sendReceiveMsg(senderClient, receiverClient);
+
+    await receiverClient.renewLock(msg).catch((err) => testError(err));
+
+    should.equal(errorWasThrown, true);
   }
 
   it("Queue: Renew message lock throws error", async function(): Promise<void> {
