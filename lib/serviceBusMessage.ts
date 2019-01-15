@@ -871,7 +871,7 @@ export class ServiceBusMessage implements ReceivedMessage {
         throw new Error("The operation is only supported in 'PeekLock' receive mode.");
       }
       if (this.delivery.remote_settled) {
-        throw new Error("This Message has been already settled.");
+        throw new Error("This message has been already settled.");
       }
       return receiver.settleMessage(this, DispositionType.complete);
     } else {
@@ -909,7 +909,7 @@ export class ServiceBusMessage implements ReceivedMessage {
         throw new Error("The operation is only supported in 'PeekLock' receive mode.");
       }
       if (this.delivery.remote_settled) {
-        throw new Error("This Message has been already settled.");
+        throw new Error("This message has been already settled.");
       }
       return receiver.settleMessage(this, DispositionType.abandon, {
         propertiesToModify: propertiesToModify
@@ -951,7 +951,7 @@ export class ServiceBusMessage implements ReceivedMessage {
         throw new Error("The operation is only supported in 'PeekLock' receive mode.");
       }
       if (this.delivery.remote_settled) {
-        throw new Error("This Message has been already settled.");
+        throw new Error("This message has been already settled.");
       }
       return receiver.settleMessage(this, DispositionType.defer, {
         propertiesToModify: propertiesToModify
@@ -1002,7 +1002,7 @@ export class ServiceBusMessage implements ReceivedMessage {
         throw new Error("The operation is only supported in 'PeekLock' receive mode.");
       }
       if (this.delivery.remote_settled) {
-        throw new Error("This Message has been already settled.");
+        throw new Error("This message has been already settled.");
       }
       return receiver.settleMessage(this, DispositionType.deadletter, {
         error: error

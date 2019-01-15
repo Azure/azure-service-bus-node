@@ -553,7 +553,6 @@ describe("Multiple Streaming Receivers", function(): void {
       }
     );
     await delay(5000);
-    let errorWasThrown = false;
     try {
       const receiveListener2 = await receiverClient.receive(
         (msg: ServiceBusMessage) => {
@@ -595,7 +594,7 @@ describe("Multiple Streaming Receivers", function(): void {
     });
 
     const testError = (err: Error) => {
-      should.equal(err.message, "This Message has been already settled.");
+      should.equal(err.message, "This message has been already settled.");
       errorWasThrown = true;
     };
 
@@ -619,8 +618,6 @@ describe("Multiple Streaming Receivers", function(): void {
       await delay(2000);
 
       should.equal(receivedMsgs.length, 1);
-      should.equal(receivedMsgs[0].body, testMessages[0].body);
-      should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
       should.equal(receivedMsgs[0].body, testMessages[0].body);
       should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
 
