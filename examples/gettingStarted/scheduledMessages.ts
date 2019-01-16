@@ -59,7 +59,7 @@ async function sendScheduledMessages(): Promise<void> {
     console.log(
       `>>>> Sending message:\t ${message.body}, scheduled for UTC: ${scheduledEnqueueTimeUtc}`
     );
-    await client.scheduleMessage(message, scheduledEnqueueTimeUtc);
+    await client.scheduleMessage(scheduledEnqueueTimeUtc, message);
   }
 }
 
