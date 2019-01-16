@@ -1,5 +1,6 @@
 /*
-  This sample demonstrates how .peek() function can be used to browse a Service Bus message.
+  This sample demonstrates how .receiveBatch() function can be used to loop over a fixed number of
+  Service Bus messages.
   Please run "sendMessages.ts" sample before running this to populate the queue/topic
 */
 
@@ -13,23 +14,21 @@ let ns: Namespace;
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {
-    await browseMessages();
+    await receiveMessages();
   } finally {
     await ns.close();
   }
 }
 
-async function browseMessages(): Promise<void> {
-  // If using Topics, use createSubscriptionClient to peek from a topic subscription
+async function receiveMessages(): Promise<void> {
+  // If using Topics, use createSubscriptionClient to receive from a topic subscription
   const client = ns.createQueueClient(queueName);
 
-  const messages = await client.peek(10);
-  for (let i = 0; i < messages.length; i++) {
-    if (messages[i]) {
-      console.log(`Peeking message: ${messages[i].body} - ${messages[i].label}`);
-    }
+  for (let i = 0; i < 10; i++) {
+    const messages = await client.receiveBatch(1);
+    console.log(`Received message: ${messages[0].body} - ${messages[0].label}`);
+    await messages[0].complete();
   }
-
   await client.close();
 }
 

@@ -1,25 +1,16 @@
-import { OnMessage, OnError, MessagingError, delay, ServiceBusMessage, Namespace } from "../../lib";
-import { config } from "dotenv";
-config();
-
-const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const queueName = process.env.QUEUE_NAME || "";
-const topicName = process.env.TOPIC_NAME || "";
-const subscriptionName = process.env.SUBSCRIPTION_NAME || "";
-const receiveClienTimeoutInMilliseconds = 5000;
-
-console.log("Connection string value: ", connectionString);
-console.log("Queue name: ", queueName);
-console.log("Topic name: ", topicName);
-console.log("Subscription name: ", subscriptionName);
-
-let ns: Namespace;
-
 /*
-  This sample demonstrates how .receive() API can be used to receive Service Bus messages in a
+  This sample demonstrates how .receive() function can be used to receive Service Bus messages in a
   stream that is open for a fixed amount of time.
   Please run "sendMessages.ts" sample before running this to populate the queue/topic
 */
+
+import { OnMessage, OnError, MessagingError, delay, ServiceBusMessage, Namespace } from "../../lib";
+
+const connectionString = "Enter connection string value here";
+const queueName = "Enter queue name here";
+
+let ns: Namespace;
+
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {
@@ -42,9 +33,11 @@ async function receiveMessages(): Promise<void> {
     console.log("Error occurred: ", err);
   };
 
-  const receiveHandler = client.receive(onMessage, onError, { autoComplete: false });
-  await delay(receiveClienTimeoutInMilliseconds);
-  await receiveHandler.stop();
+  const receiveListener = client.receive(onMessage, onError, { autoComplete: false });
+  // Inducing delay to keep receiveListener open long enough to receive messages
+  // Ideally the receiveListener will remain open as long as an application is running.
+  await delay(5000);
+  await receiveListener.stop();
 
   await client.close();
 }
