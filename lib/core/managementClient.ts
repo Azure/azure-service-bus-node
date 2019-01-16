@@ -1,6 +1,6 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License. See License.txt in the project root for license information.
-import * as Long from "long";
+import Long from "long";
 import {
   EventContext,
   SenderEvents,
@@ -23,24 +23,18 @@ import {
   SendRequestOptions
 } from "@azure/amqp-common";
 import { ClientEntityContext } from "../clientEntityContext";
-import { ReceivedMessageInfo, ServiceBusMessage, SendableMessageInfo } from "../serviceBusMessage";
+import {
+  ReceivedMessageInfo,
+  ServiceBusMessage,
+  SendableMessageInfo,
+  DispositionStatus
+} from "../serviceBusMessage";
 import { LinkEntity } from "./linkEntity";
 import * as log from "../log";
-import { ReceiveMode } from "./messageReceiver";
+import { ReceiveMode } from "../serviceBusMessage";
 import { reorderLockTokens, toBuffer } from "../util/utils";
 import { Typed } from "rhea/typings/types";
 import { max32BitNumber } from "../util/constants";
-
-/**
- * @ignore
- */
-export enum DispositionStatus {
-  completed = "completed",
-  defered = "defered",
-  suspended = "suspended",
-  abandoned = "abandoned",
-  renewed = "renewed"
-}
 
 /**
  * Represents a description of a rule.
@@ -677,11 +671,30 @@ export class ManagementClient extends LinkEntity {
     }
 
     const messageList: ServiceBusMessage[] = [];
+    const messageBody: any = {};
+    messageBody[Constants.sequenceNumbers] = [];
+    for (let i = 0; i < sequenceNumbers.length; i++) {
+      const sequenceNumber = sequenceNumbers[i];
+      if (!Long.isLong(sequenceNumber)) {
+        throw new Error("An item in the 'sequenceNumbers' Array must be an instance of 'Long'.");
+      }
+      try {
+        messageBody[Constants.sequenceNumbers].push(Buffer.from(sequenceNumber.toBytesBE()));
+      } catch (err) {
+        const error = translate(err);
+        log.error(
+          "An error occurred while encoding the item at position %d in the " +
+            "sequenceNumbers array: %O",
+          i,
+          error
+        );
+        throw error;
+      }
+    }
 
     try {
-      const messageBody: any = {};
-      messageBody["sequence-numbers"] = types.wrap_array(
-        sequenceNumbers.map((i) => Buffer.from(i.toBytesBE())),
+      messageBody[Constants.sequenceNumbers] = types.wrap_array(
+        messageBody[Constants.sequenceNumbers],
         0x81,
         undefined
       );
@@ -1216,7 +1229,7 @@ export class ManagementClient extends LinkEntity {
     if (!ruleName || typeof ruleName !== "string") {
       throw new Error("Cannot add rule. Rule name is missing or is not a string.");
     }
-    if (!filter) {
+    if (filter === "" || filter === null || filter === undefined) {
       throw new Error("Cannot add rule. Filter is missing.");
     }
     if (sqlRuleActionExpression && typeof sqlRuleActionExpression !== "string") {
@@ -1251,9 +1264,10 @@ export class ManagementClient extends LinkEntity {
       }
 
       if (sqlRuleActionExpression && typeof sqlRuleActionExpression === "string") {
-        ruleDescription["sql-rule-action"] = sqlRuleActionExpression;
+        ruleDescription["sql-rule-action"] = {
+          expression: sqlRuleActionExpression
+        };
       }
-
       const request: AmqpMessage = {
         body: {
           "rule-name": types.wrap_string(ruleName),
