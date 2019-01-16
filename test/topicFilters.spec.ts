@@ -83,22 +83,22 @@ async function afterEachTest(): Promise<void> {
   await namespace.close();
 }
 
-async function sendOrders(): Promise<void> {
-  const data = [
-    { Color: "blue", Quantity: 5, Priority: "low" },
-    { Color: "red", Quantity: 10, Priority: "high" },
-    { Color: "yellow", Quantity: 5, Priority: "low" },
-    { Color: "blue", Quantity: 10, Priority: "low" },
-    { Color: "blue", Quantity: 5, Priority: "high" },
-    { Color: "blue", Quantity: 10, Priority: "low" },
-    { Color: "red", Quantity: 5, Priority: "low" },
-    { Color: "red", Quantity: 10, Priority: "low" },
-    { Color: "red", Quantity: 5, Priority: "low" },
-    { Color: "yellow", Quantity: 10, Priority: "high" },
-    { Color: "yellow", Quantity: 5, Priority: "low" },
-    { Color: "yellow", Quantity: 10, Priority: "low" }
-  ];
+const data = [
+  { Color: "blue", Quantity: 5, Priority: "low" },
+  { Color: "red", Quantity: 10, Priority: "high" },
+  { Color: "yellow", Quantity: 5, Priority: "low" },
+  { Color: "blue", Quantity: 10, Priority: "low" },
+  { Color: "blue", Quantity: 5, Priority: "high" },
+  { Color: "blue", Quantity: 10, Priority: "low" },
+  { Color: "red", Quantity: 5, Priority: "low" },
+  { Color: "red", Quantity: 10, Priority: "low" },
+  { Color: "red", Quantity: 5, Priority: "low" },
+  { Color: "yellow", Quantity: 10, Priority: "high" },
+  { Color: "yellow", Quantity: 5, Priority: "low" },
+  { Color: "yellow", Quantity: 10, Priority: "low" }
+];
 
+async function sendOrders(): Promise<void> {
   for (let index = 0; index < data.length; index++) {
     const element = data[index];
     const message: SendableMessageInfo = {
@@ -128,7 +128,7 @@ async function receiveOrders(client: SubscriptionClient): Promise<ServiceBusMess
     }
   );
 
-  await delay(3000);
+  await delay(5000);
   await receiveListener.stop();
 
   return receivedMsgs;
@@ -363,7 +363,7 @@ describe("Topic Filters: Get Rules", function(): void {
   });
 });
 
-describe("Send/Receive messages using default filters of subscription", function(): void {
+describe("Send/Receive messages using default filter of subscription", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -377,7 +377,7 @@ describe("Send/Receive messages using default filters of subscription", function
     const receivedMsgs = await receiveOrders(defaultSubscriptionClient);
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 12);
+    should.equal(receivedMsgs.length, data.length);
 
     await testPeekMsgsLength(defaultSubscriptionClient, 0);
   });
@@ -415,7 +415,7 @@ describe("Send/Receive messages using boolean filters of subscription", function
     const receivedMsgs = await addFilterAndReceiveOrders(true, subscriptionClient);
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 12);
+    should.equal(receivedMsgs.length, data.length);
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
