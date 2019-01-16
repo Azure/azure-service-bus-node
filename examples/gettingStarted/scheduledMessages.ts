@@ -3,7 +3,14 @@
   on a Service Bus entity at a specified later time.
 */
 
-import { Namespace, SendableMessageInfo } from "../../lib";
+import {
+  Namespace,
+  SendableMessageInfo,
+  OnMessage,
+  MessagingError,
+  OnError,
+  ServiceBusMessage
+} from "../../lib";
 import { delay } from "rhea-promise";
 
 // Define connection string and related Service Bus entity names here
@@ -28,10 +35,8 @@ const listOfScientists = [
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {
-    // schedule messages to appear on queue/topic at a later time.
     await sendScheduledMessages();
 
-    // retrieve all the messages that were sent to the queue
     await receiveMessages();
   } finally {
     await ns.close();
@@ -48,25 +53,48 @@ async function sendScheduledMessages(): Promise<void> {
     label: "Scientist"
   }));
 
-  const scheduledEnqueueTimeUtc = new Date(Date.now() + 30000);
-  console.log(`>>>> Sending all messages, scheduled for UTC: ${scheduledEnqueueTimeUtc}`);
+  const timeNowUtc = new Date(Date.now());
+  const scheduledEnqueueTimeUtc = new Date(Date.now() + 10000);
+  console.log(`>>>> Time now in UTC: ${timeNowUtc}`);
+  console.log(`>>>> Messages will appear in Service Bus at UTC: ${scheduledEnqueueTimeUtc}`);
+
   await client.scheduleMessages(scheduledEnqueueTimeUtc, messages);
+  for (let index = 0; index < messages.length; index++) {
+    await client.scheduleMessage(scheduledEnqueueTimeUtc, messages[index]);
+    console.log(`Sent: ${messages[index].body} - ${messages[index].label}`);
+  }
 }
 
 async function receiveMessages(): Promise<void> {
   // If using Topics, use createSubscriptionClient to receive from a topic subscription
   const client = ns.createQueueClient(queueName);
 
-  const peekedMessages = await client.peek(10);
-  console.log(`Looking up queue immediately, received ${peekedMessages.length} messages.`);
+  const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
+    numOfMessagesReceived++;
+    console.log(`Received message: ${brokeredMessage.body} - ${brokeredMessage.label}`);
 
-  await delay(30000);
+    await brokeredMessage.complete();
+  };
+  const onError: OnError = (err: MessagingError | Error) => {
+    console.log("Error occurred: ", err);
+  };
 
-  const receivedMessages = await client.receiveBatch(10);
-  console.log(`Looking up queue after scheduled time, received ${peekedMessages.length} messages.`);
-  for (let index = 0; index < receivedMessages.length; index++) {
-    console.log(`Retrieved: ${receivedMessages[0].body} - ${receivedMessages[0].label}`);
-  }
+  let numOfMessagesReceived = 0;
+  const receiveListenerFirst = client.receive(onMessage, onError);
+  await delay(5000);
+  await receiveListenerFirst.stop();
+  console.log(
+    `\nStarted looking up immediately while having receive listener wait for 5 seconds. Found ${numOfMessagesReceived} messages.\n`
+  );
+
+  await delay(5000);
+
+  const receiveListenerSecond = client.receive(onMessage, onError);
+  await delay(5000);
+  await receiveListenerSecond.stop();
+  console.log(
+    `\nStarted looking up after 10 seconds while having receive listener wait, received ${numOfMessagesReceived} messages.`
+  );
 
   await client.close();
 }
