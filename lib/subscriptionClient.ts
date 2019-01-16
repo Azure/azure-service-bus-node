@@ -6,9 +6,8 @@ import { ConnectionContext } from "./connectionContext";
 import { ReceiveOptions, OnError, OnMessage } from "./core/messageReceiver";
 import { StreamingReceiver, ReceiveHandler, MessageHandlerOptions } from "./core/streamingReceiver";
 import { BatchingReceiver } from "./core/batchingReceiver";
-import { ServiceBusMessage, ReceivedMessageInfo } from "./serviceBusMessage";
+import { ServiceBusMessage, ReceivedMessageInfo, ReceiveMode } from "./serviceBusMessage";
 import { Client } from "./client";
-import { ReceiveMode } from "./core/messageReceiver";
 import { CorrelationFilter, RuleDescription, ListSessionsResponse } from "./core/managementClient";
 import {
   MessageSession,
@@ -247,6 +246,9 @@ export class SubscriptionClient extends Client {
    * @returns Promise<Date> - New lock token expiry date and time in UTC format.
    */
   async renewLock(lockTokenOrMessage: string | ServiceBusMessage): Promise<Date> {
+    if (this.receiveMode !== ReceiveMode.peekLock) {
+      throw new Error("The operation is only supported in 'PeekLock' receive mode.");
+    }
     return this._context.managementClient!.renewLock(lockTokenOrMessage);
   }
 
