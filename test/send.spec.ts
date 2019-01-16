@@ -195,7 +195,7 @@ async function afterEachTest(): Promise<void> {
   await namespace.close();
 }
 
-describe.only("Send to Queue/Subscription", function(): void {
+describe("Send to Queue/Subscription", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -232,11 +232,11 @@ describe.only("Send to Queue/Subscription", function(): void {
     await testSimpleSend(partitionedTopicClient, partitionedSubscriptionClient);
   });
 
-  it("Simple send using unPartitioned Queues", async function(): Promise<void> {
+  it("Simple send using Unpartitioned Queues", async function(): Promise<void> {
     await testSimpleSend(unpartitionedQueueClient, unpartitionedQueueClient);
   });
 
-  it("Simple send using unPartitioned Topics and Subscriptions", async function(): Promise<void> {
+  it("Simple send using Unpartitioned Topics and Subscriptions", async function(): Promise<void> {
     await testSimpleSend(unpartitionedTopicClient, unpartitionedSubscriptionClient);
   });
 
@@ -254,11 +254,11 @@ describe.only("Send to Queue/Subscription", function(): void {
     );
   });
 
-  it.only("Simple send using unPartitioned Queues with Sessions", async function(): Promise<void> {
+  it("Simple send using Unpartitioned Queues with Sessions", async function(): Promise<void> {
     await testSimpleSend(unpartitionedQueueSessionClient, unpartitionedQueueMessageSession, true);
   });
 
-  it.only("Simple send using unPartitioned Topics and Subscriptions with Sessions", async function(): Promise<
+  it("Simple send using Unpartitioned Topics and Subscriptions with Sessions", async function(): Promise<
     void
   > {
     await testSimpleSend(
@@ -311,11 +311,11 @@ describe("Schedule a single message to Queue/Subscription", function(): void {
     await testScheduleMessage(partitionedTopicClient, partitionedSubscriptionClient);
   });
 
-  it("Schedule single message using unPartitioned Queues", async function(): Promise<void> {
+  it("Schedule single message using Unpartitioned Queues", async function(): Promise<void> {
     await testScheduleMessage(unpartitionedQueueClient, unpartitionedQueueClient);
   });
 
-  it("Schedule single message using unPartitioned Topics and Subscriptions", async function(): Promise<
+  it("Schedule single message using Unpartitioned Topics and Subscriptions", async function(): Promise<
     void
   > {
     await testScheduleMessage(unpartitionedTopicClient, unpartitionedSubscriptionClient);
@@ -337,7 +337,7 @@ describe("Schedule a single message to Queue/Subscription", function(): void {
     );
   });
 
-  it("Schedule single message using unPartitioned Queues with Sessions", async function(): Promise<
+  it("Schedule single message using Unpartitioned Queues with Sessions", async function(): Promise<
     void
   > {
     await testScheduleMessage(
@@ -347,7 +347,7 @@ describe("Schedule a single message to Queue/Subscription", function(): void {
     );
   });
 
-  it("Schedule single message using unPartitioned Topics and Subscriptions with Sessions", async function(): Promise<
+  it("Schedule single message using Unpartitioned Topics and Subscriptions with Sessions", async function(): Promise<
     void
   > {
     await testScheduleMessage(
@@ -427,7 +427,7 @@ describe("Schedule multiple messages to Queue/Subscription", function(): void {
     );
   });
 
-  it("Schedule messages using unPartitioned Queues with Sessions", async function(): Promise<void> {
+  it("Schedule messages using Unpartitioned Queues with Sessions", async function(): Promise<void> {
     await testScheduleMessages(
       unpartitionedQueueSessionClient,
       unpartitionedQueueMessageSession,
@@ -435,7 +435,7 @@ describe("Schedule multiple messages to Queue/Subscription", function(): void {
     );
   });
 
-  it("Schedule messages using unPartitioned Topics and Subscriptions with Sessions", async function(): Promise<
+  it("Schedule messages using Unpartitioned Topics and Subscriptions with Sessions", async function(): Promise<
     void
   > {
     await testScheduleMessages(
@@ -483,13 +483,13 @@ describe("Cancel a single Scheduled message for sending to Queue/Subscription", 
     await testCancelScheduleMessage(partitionedTopicClient, partitionedSubscriptionClient);
   });
 
-  it("Cancel a single Scheduled message using unPartitioned Queues", async function(): Promise<
+  it("Cancel a single Scheduled message using Unpartitioned Queues", async function(): Promise<
     void
   > {
     await testCancelScheduleMessage(unpartitionedQueueClient, unpartitionedQueueClient);
   });
 
-  it("Cancel a single Scheduled message using unPartitioned Topics and Subscriptions", async function(): Promise<
+  it("Cancel a single Scheduled message using Unpartitioned Topics and Subscriptions", async function(): Promise<
     void
   > {
     await testCancelScheduleMessage(unpartitionedTopicClient, unpartitionedSubscriptionClient);
@@ -515,7 +515,7 @@ describe("Cancel a single Scheduled message for sending to Queue/Subscription", 
     );
   });
 
-  it("Cancel a single Scheduled message using unPartitioned Queues with Sessions", async function(): Promise<
+  it("Cancel a single Scheduled message using Unpartitioned Queues with Sessions", async function(): Promise<
     void
   > {
     await testCancelScheduleMessage(
@@ -525,7 +525,7 @@ describe("Cancel a single Scheduled message for sending to Queue/Subscription", 
     );
   });
 
-  it("Cancel a single Scheduled message using unPartitioned Topics and Subscriptions with Sessions", async function(): Promise<
+  it("Cancel a single Scheduled message using Unpartitioned Topics and Subscriptions with Sessions", async function(): Promise<
     void
   > {
     await testCancelScheduleMessage(
@@ -585,7 +585,7 @@ describe("Cancel multiple Scheduled messages for sending to Queue/Subscription",
     );
   });
 
-  it("Cancel Scheduled messages using unPartitioned Queues", async function(): Promise<void> {
+  it("Cancel Scheduled messages using Unpartitioned Queues", async function(): Promise<void> {
     await testCancelScheduleMessages(
       unpartitionedQueueClient,
       unpartitionedQueueClient,
@@ -594,7 +594,7 @@ describe("Cancel multiple Scheduled messages for sending to Queue/Subscription",
     );
   });
 
-  it("Cancel Scheduled messages using unPartitioned Topics and Subscriptions", async function(): Promise<
+  it("Cancel Scheduled messages using Unpartitioned Topics and Subscriptions", async function(): Promise<
     void
   > {
     await testCancelScheduleMessages(
@@ -627,7 +627,7 @@ describe("Cancel multiple Scheduled messages for sending to Queue/Subscription",
     );
   });
 
-  it("Cancel Scheduled messages using unPartitioned Queues with Sessions", async function(): Promise<
+  it("Cancel Scheduled messages using Unpartitioned Queues with Sessions", async function(): Promise<
     void
   > {
     await testCancelScheduleMessages(
@@ -638,7 +638,7 @@ describe("Cancel multiple Scheduled messages for sending to Queue/Subscription",
     );
   });
 
-  it("Cancel Scheduled messages using unPartitioned Topics and Subscriptions with Sessions", async function(): Promise<
+  it("Cancel Scheduled messages using Unpartitioned Topics and Subscriptions with Sessions", async function(): Promise<
     void
   > {
     await testCancelScheduleMessages(
