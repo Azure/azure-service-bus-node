@@ -6,9 +6,8 @@
 import { Namespace, SendableMessageInfo } from "../../lib";
 import { delay } from "rhea-promise";
 
-const connectionString =
-  "Endpoint=sb://premiumfruitsservicebus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=CYbvyj0TXdGMRMOHbYPMvfwOXJ4lD3jdR28rQnMlCC0=";
-const queueName = "fruitsqueue";
+const connectionString = "Enter connection string value here";
+const queueName = "Enter queue name here";
 
 let ns: Namespace;
 
