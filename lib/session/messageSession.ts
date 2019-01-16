@@ -11,7 +11,6 @@ import {
 import { Receiver, OnAmqpEvent, EventContext, ReceiverOptions, ReceiverEvents } from "rhea-promise";
 import * as log from "../log";
 import {
-  ReceiveMode,
   OnError,
   OnAmqpEventAsPromise,
   PromiseLike,
@@ -20,7 +19,12 @@ import {
 import { LinkEntity } from "../core/linkEntity";
 import { ClientEntityContext } from "../clientEntityContext";
 import { convertTicksToDate, calculateRenewAfterDuration } from "../util/utils";
-import { ServiceBusMessage, ReceivedMessageInfo, DispositionType } from "../serviceBusMessage";
+import {
+  ServiceBusMessage,
+  ReceivedMessageInfo,
+  DispositionType,
+  ReceiveMode
+} from "../serviceBusMessage";
 import { messageDispositionTimeout } from "../util/constants";
 
 export enum Callee {

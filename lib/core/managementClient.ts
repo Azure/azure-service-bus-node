@@ -31,7 +31,7 @@ import {
 } from "../serviceBusMessage";
 import { LinkEntity } from "./linkEntity";
 import * as log from "../log";
-import { ReceiveMode } from "./messageReceiver";
+import { ReceiveMode } from "../serviceBusMessage";
 import { reorderLockTokens, toBuffer } from "../util/utils";
 import { Typed } from "rhea/typings/types";
 import { max32BitNumber } from "../util/constants";

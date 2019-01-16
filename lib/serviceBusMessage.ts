@@ -12,7 +12,23 @@ import {
 import { Constants, Dictionary, AmqpMessage } from "@azure/amqp-common";
 import * as log from "./log";
 import { ClientEntityContext } from "./clientEntityContext";
-import { ReceiveMode } from "./core/messageReceiver";
+
+/**
+ * The mode in which messages should be received
+ */
+export enum ReceiveMode {
+  /**
+   * Peek the message and lock it until it is settled or times out.
+   * @type {Number}
+   */
+  peekLock = 1,
+
+  /**
+   * Remove the message from the service bus upon delivery.
+   * @type {Number}
+   */
+  receiveAndDelete = 2
+}
 
 /**
  * @ignore
