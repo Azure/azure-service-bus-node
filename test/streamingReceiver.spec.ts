@@ -19,7 +19,7 @@ import {
   ReceiveHandler
 } from "../lib";
 
-import { DispositionType } from "../lib/core/messageReceiver";
+import { DispositionType } from "../lib/serviceBusMessage";
 
 const testMessages: SendableMessageInfo[] = [
   {
