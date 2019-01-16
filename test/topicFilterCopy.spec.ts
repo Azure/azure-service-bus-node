@@ -146,7 +146,7 @@ describe("Boolean filters", function(): void {
     await afterEachTest();
   });
 
-  async function addFiletterAndReceiveOrders(
+  async function addFileterAndReceiveOrders(
     bool: boolean,
     client: SubscriptionClient
   ): Promise<ServiceBusMessage[]> {
@@ -162,7 +162,7 @@ describe("Boolean filters", function(): void {
   }
 
   it("Subscription with default filter receives all messages", async function(): Promise<void> {
-    const receivedMsgs = await addFiletterAndReceiveOrders(false, defaultSubscriptionClient);
+    const receivedMsgs = await addFileterAndReceiveOrders(false, defaultSubscriptionClient);
 
     should.equal(Array.isArray(receivedMsgs), true);
     should.equal(receivedMsgs.length, 12);
@@ -173,7 +173,7 @@ describe("Boolean filters", function(): void {
   it("Subscription with false boolean filter does not receive any messages", async function(): Promise<
     void
   > {
-    const receivedMsgs = await addFiletterAndReceiveOrders(false, subscriptionClient);
+    const receivedMsgs = await addFileterAndReceiveOrders(false, subscriptionClient);
 
     should.equal(Array.isArray(receivedMsgs), true);
     should.equal(receivedMsgs.length, 0);
