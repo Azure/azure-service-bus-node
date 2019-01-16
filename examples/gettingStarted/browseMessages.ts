@@ -5,9 +5,9 @@
 
 import { Namespace } from "../../lib";
 
-const connectionString =
-  "Endpoint=sb://premiumfruitsservicebus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=CYbvyj0TXdGMRMOHbYPMvfwOXJ4lD3jdR28rQnMlCC0=";
-const queueName = "fruitsqueue";
+// Define connection string and related Service Bus entity names here
+const connectionString = "";
+const queueName = "";
 
 let ns: Namespace;
 

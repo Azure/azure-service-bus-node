@@ -4,8 +4,9 @@
 
 import { Namespace, SendableMessageInfo } from "../../lib";
 
-const connectionString = "Enter connection string value here";
-const queueName = "Enter queue name here";
+// Define connection string and related Service Bus entity names here
+const connectionString = "";
+const queueName = "";
 
 let ns: Namespace;
 
