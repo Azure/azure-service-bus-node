@@ -1,3 +1,8 @@
+/*
+  This sample demonstrates how Service Bus Messages can be sent to and received from individual
+  sessions as created on session enabled queues/topic subscriptions.
+*/
+
 import {
   SendableMessageInfo,
   OnSessionMessage,
@@ -8,26 +13,13 @@ import {
   Namespace,
   MessageSession
 } from "../../lib";
-import { config } from "dotenv";
-config();
 
-const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const queueName = process.env.QUEUE_NAME || "";
-const topicName = process.env.TOPIC_NAME || "";
-const subscriptionName = process.env.SUBSCRIPTION_NAME || "";
-const receiveClienTimeoutInMilliseconds = 1000;
-
-console.log("Connection string value: ", connectionString);
-console.log("Queue name: ", queueName);
-console.log("Topic name: ", topicName);
-console.log("Subscription name: ", subscriptionName);
+const connectionString = "Enter connection string value here";
+const queueName = "Enter queue name here";
+// Ensure on portal.azure.com that queue has Sessions feature enabled
 
 let ns: Namespace;
 
-/*
-  This sample demonstrates how Service Bus Messages can be sent to and received from individual
-  sessions as created on session enabled queues/topic subscriptions.
-*/
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {
@@ -83,7 +75,7 @@ async function receiveMessages(): Promise<void> {
     console.log(">>>>> Error occurred: ", err);
   };
   await client.receiveMessagesFromSessions(onMessage, onError);
-  await delay(receiveClienTimeoutInMilliseconds);
+  await delay(10000);
 
   await client.close();
 }

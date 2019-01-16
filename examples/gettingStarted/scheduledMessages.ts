@@ -1,24 +1,30 @@
-import { Namespace } from "../../lib";
-import { config } from "dotenv";
-config();
+/*
+  This sample demonstrates how .scheduleMessage() function can be used to schedule messages to appear
+  on a Service Bus entity at a specified later time.
+*/
 
-const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const queueName = process.env.QUEUE_NAME || "";
-const topicName = process.env.TOPIC_NAME || "";
-const subscriptionName = process.env.SUBSCRIPTION_NAME || "";
-const NUM_OF_MESSAGES = 10;
+import { Namespace, SendableMessageInfo } from "../../lib";
+import { delay } from "rhea-promise";
 
-console.log("Connection string value: ", connectionString);
-console.log("Queue name: ", queueName);
-console.log("Topic name: ", topicName);
-console.log("Subscription name: ", subscriptionName);
+const connectionString =
+  "Endpoint=sb://premiumfruitsservicebus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=CYbvyj0TXdGMRMOHbYPMvfwOXJ4lD3jdR28rQnMlCC0=";
+const queueName = "fruitsqueue";
 
 let ns: Namespace;
 
-/*
-  This sample demonstrates how .scheduleMessage() API can be used to schedule messages to appear
-  on a Service Bus entity at a specified later time.
-*/
+const listOfScientists = [
+  { name: "Einstein", firstName: "Albert" },
+  { name: "Heisenberg", firstName: "Werner" },
+  { name: "Curie", firstName: "Marie" },
+  { name: "Hawking", firstName: "Steven" },
+  { name: "Newton", firstName: "Isaac" },
+  { name: "Bohr", firstName: "Niels" },
+  { name: "Faraday", firstName: "Michael" },
+  { name: "Galilei", firstName: "Galileo" },
+  { name: "Kepler", firstName: "Johannes" },
+  { name: "Kopernikus", firstName: "Nikolaus" }
+];
+
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {
@@ -32,46 +38,34 @@ async function main(): Promise<void> {
   }
 }
 
+// Scheduling messages to be sent after 30 seconds from now
 async function sendScheduledMessages(): Promise<void> {
   // If using Topics, use createTopicClient to send to a topic
   const client = ns.createQueueClient(queueName);
 
-  const data = [
-    { name: "Einstein", firstName: "Albert" },
-    { name: "Heisenberg", firstName: "Werner" },
-    { name: "Curie", firstName: "Marie" },
-    { name: "Hawking", firstName: "Steven" },
-    { name: "Newton", firstName: "Isaac" },
-    { name: "Bohr", firstName: "Niels" },
-    { name: "Faraday", firstName: "Michael" },
-    { name: "Galilei", firstName: "Galileo" },
-    { name: "Kepler", firstName: "Johannes" },
-    { name: "Kopernikus", firstName: "Nikolaus" }
-  ];
+  const messages: SendableMessageInfo[] = listOfScientists.map((scientist) => ({
+    body: `${scientist.firstName} ${scientist.name}`,
+    label: "Scientist"
+  }));
 
-  for (let index = 0; index < NUM_OF_MESSAGES; index++) {
-    const scientist = data[index];
-    const message = {
-      body: `${scientist.firstName} ${scientist.name}`,
-      label: "Scientist"
-    };
-    const scheduledEnqueueTimeUtc = new Date(Date.now() + 30000 + index * 1000); // scheduling message to be sent (30 + index) seconds from now
-    console.log(
-      `>>>> Sending message:\t ${message.body}, scheduled for UTC: ${scheduledEnqueueTimeUtc}`
-    );
-    await client.scheduleMessage(message, scheduledEnqueueTimeUtc);
-  }
+  const scheduledEnqueueTimeUtc = new Date(Date.now() + 30000);
+  console.log(`>>>> Sending all messages, scheduled for UTC: ${scheduledEnqueueTimeUtc}`);
+  await client.scheduleMessages(scheduledEnqueueTimeUtc, messages);
 }
 
 async function receiveMessages(): Promise<void> {
   // If using Topics, use createSubscriptionClient to receive from a topic subscription
   const client = ns.createQueueClient(queueName);
 
-  for (let index = 0; index < NUM_OF_MESSAGES; index++) {
-    // retrieve one message at a time.
-    const msg = await client.receiveBatch(1, 30 + index); // (30 + index) is the maximum wait time in seconds for which the Receiver will wait to receive the message.
+  const peekedMessages = await client.peek(10);
+  console.log(`Looking up queue immediately, received ${peekedMessages.length} messages.`);
 
-    console.log(`Retrieved: ${msg[0].body} - ${msg[0].label}`);
+  await delay(30000);
+
+  const receivedMessages = await client.receiveBatch(10);
+  console.log(`Looking up queue after scheduled time, received ${peekedMessages.length} messages.`);
+  for (let index = 0; index < receivedMessages.length; index++) {
+    console.log(`Retrieved: ${receivedMessages[0].body} - ${receivedMessages[0].label}`);
   }
 
   await client.close();

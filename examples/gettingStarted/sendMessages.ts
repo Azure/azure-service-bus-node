@@ -1,20 +1,27 @@
+/*
+  This sample demonstrates how .send() function can be used to send messages to Service Bus queue/topic.
+*/
+
 import { Namespace, SendableMessageInfo } from "../../lib";
-import { config } from "dotenv";
-config();
 
-const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const queueName = process.env.QUEUE_NAME || "";
-const topicName = process.env.TOPIC_NAME || "";
-
-console.log("Connection string value: ", connectionString);
-console.log("Queue name: ", queueName);
-console.log("Topic name: ", topicName);
+const connectionString = "Enter connection string value here";
+const queueName = "Enter queue name here";
 
 let ns: Namespace;
 
-/*
-  This sample demonstrates how .send() API can be used to send messages to Service Bus queue/topic.
-*/
+const listOfScientists = [
+  { name: "Einstein", firstName: "Albert" },
+  { name: "Heisenberg", firstName: "Werner" },
+  { name: "Curie", firstName: "Marie" },
+  { name: "Hawking", firstName: "Steven" },
+  { name: "Newton", firstName: "Isaac" },
+  { name: "Bohr", firstName: "Niels" },
+  { name: "Faraday", firstName: "Michael" },
+  { name: "Galilei", firstName: "Galileo" },
+  { name: "Kepler", firstName: "Johannes" },
+  { name: "Kopernikus", firstName: "Nikolaus" }
+];
+
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {
@@ -28,23 +35,10 @@ async function sendMessages(): Promise<void> {
   // If using Topics, use createTopicClient to send to a topic
   const client = ns.createQueueClient(queueName);
 
-  const data = [
-    { name: "Einstein", firstName: "Albert" },
-    { name: "Heisenberg", firstName: "Werner" },
-    { name: "Curie", firstName: "Marie" },
-    { name: "Hawking", firstName: "Steven" },
-    { name: "Newton", firstName: "Isaac" },
-    { name: "Bohr", firstName: "Niels" },
-    { name: "Faraday", firstName: "Michael" },
-    { name: "Galilei", firstName: "Galileo" },
-    { name: "Kepler", firstName: "Johannes" },
-    { name: "Kopernikus", firstName: "Nikolaus" }
-  ];
-
-  for (let index = 0; index < data.length; index++) {
-    const element = data[index];
+  for (let index = 0; index < listOfScientists.length; index++) {
+    const scientist = listOfScientists[index];
     const message: SendableMessageInfo = {
-      body: `${element.firstName} ${element.name}`,
+      body: `${scientist.firstName} ${scientist.name}`,
       label: "Scientist"
     };
 

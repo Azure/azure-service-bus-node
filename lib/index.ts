@@ -28,10 +28,11 @@ export {
   SendableMessageInfo,
   ServiceBusDeliveryAnnotations,
   ServiceBusMessageAnnotations,
-  DeadLetterOptions
+  DeadLetterOptions,
+  ReceiveMode
 } from "./serviceBusMessage";
 export { ReceiveHandler, MessageHandlerOptions } from "./core/streamingReceiver";
-export { OnError, OnMessage, ReceiveMode } from "./core/messageReceiver";
+export { OnError, OnMessage } from "./core/messageReceiver";
 export {
   MessageSession,
   OnSessionMessage,
@@ -42,9 +43,4 @@ export { QueueClientOptions, QueueClient } from "./queueClient";
 export { Namespace, NamespaceOptions } from "./namespace";
 export { TopicClient } from "./topicClient";
 export { SubscriptionClient, SubscriptionClientOptions } from "./subscriptionClient";
-export {
-  ScheduleMessage,
-  SQLExpression,
-  CorrelationFilter,
-  RuleDescription
-} from "./core/managementClient";
+export { SQLExpression, CorrelationFilter, RuleDescription } from "./core/managementClient";

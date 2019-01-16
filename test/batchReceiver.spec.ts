@@ -1,11 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import "mocha";
-import * as chai from "chai";
+import chai from "chai";
 const should = chai.should();
-import * as chaiAsPromised from "chai-as-promised";
-import * as dotenv from "dotenv";
+import chaiAsPromised from "chai-as-promised";
+import dotenv from "dotenv";
 dotenv.config();
 chai.use(chaiAsPromised);
 import {
@@ -14,7 +13,9 @@ import {
   SendableMessageInfo,
   generateUuid,
   TopicClient,
-  SubscriptionClient
+  SubscriptionClient,
+  delay,
+  ServiceBusMessage
 } from "../lib";
 
 const testMessages: SendableMessageInfo[] = [
@@ -33,95 +34,546 @@ async function testPeekMsgsLength(
   expectedPeekLength: number
 ): Promise<void> {
   const peekedMsgs = await client.peek(expectedPeekLength + 1);
-  should.equal(peekedMsgs.length, expectedPeekLength);
+  should.equal(
+    peekedMsgs.length,
+    expectedPeekLength,
+    "Unexpected number of msgs found when peeking"
+  );
 }
 
 const maxDeliveryCount = 10;
+let namespace: Namespace;
+let queueClient: QueueClient;
+let topicClient: TopicClient;
+let subscriptionClient: SubscriptionClient;
+let deadletterQueueClient: QueueClient;
+let deadletterSubscriptionClient: SubscriptionClient;
+let errorWasThrown: boolean;
 
-describe("ReceiveBatch from Queue/Subscription", function(): void {
-  let namespace: Namespace;
-  let queueClient: QueueClient;
-  let topicClient: TopicClient;
-  let subscriptionClient: SubscriptionClient;
+async function beforeEachTest(): Promise<void> {
+  // The tests in this file expect the env variables to contain the connection string and
+  // the names of empty queue/topic/subscription that are to be tested
 
-  beforeEach(async () => {
-    // The tests in this file expect the env variables to contain the connection string and
-    // the names of empty queue/topic/subscription that are to be tested
-
-    if (!process.env.SERVICEBUS_CONNECTION_STRING) {
-      throw new Error(
-        "Define SERVICEBUS_CONNECTION_STRING in your environment before running integration tests."
-      );
-    }
-    if (!process.env.TOPIC_NAME) {
-      throw new Error("Define TOPIC_NAME in your environment before running integration tests.");
-    }
-    if (!process.env.QUEUE_NAME) {
-      throw new Error("Define QUEUE_NAME in your environment before running integration tests.");
-    }
-    if (!process.env.SUBSCRIPTION_NAME) {
-      throw new Error(
-        "Define SUBSCRIPTION_NAME in your environment before running integration tests."
-      );
-    }
-
-    namespace = Namespace.createFromConnectionString(process.env.SERVICEBUS_CONNECTION_STRING);
-    queueClient = namespace.createQueueClient(process.env.QUEUE_NAME);
-    topicClient = namespace.createTopicClient(process.env.TOPIC_NAME);
-    subscriptionClient = namespace.createSubscriptionClient(
-      process.env.TOPIC_NAME,
-      process.env.SUBSCRIPTION_NAME
+  if (!process.env.SERVICEBUS_CONNECTION_STRING) {
+    throw new Error(
+      "Define SERVICEBUS_CONNECTION_STRING in your environment before running integration tests."
     );
+  }
+  if (!process.env.TOPIC_NAME) {
+    throw new Error("Define TOPIC_NAME in your environment before running integration tests.");
+  }
+  if (!process.env.QUEUE_NAME) {
+    throw new Error("Define QUEUE_NAME in your environment before running integration tests.");
+  }
+  if (!process.env.SUBSCRIPTION_NAME) {
+    throw new Error(
+      "Define SUBSCRIPTION_NAME in your environment before running integration tests."
+    );
+  }
 
-    const peekedQueueMsg = await queueClient.peek();
-    if (peekedQueueMsg.length) {
-      throw new Error("Please use an empty queue for integration testing");
-    }
+  namespace = Namespace.createFromConnectionString(process.env.SERVICEBUS_CONNECTION_STRING);
+  queueClient = namespace.createQueueClient(process.env.QUEUE_NAME);
+  topicClient = namespace.createTopicClient(process.env.TOPIC_NAME);
+  subscriptionClient = namespace.createSubscriptionClient(
+    process.env.TOPIC_NAME,
+    process.env.SUBSCRIPTION_NAME
+  );
+  deadletterQueueClient = namespace.createQueueClient(
+    Namespace.getDeadLetterQueuePathForQueue(queueClient.name)
+  );
+  deadletterSubscriptionClient = namespace.createSubscriptionClient(
+    Namespace.getDeadLetterSubcriptionPathForSubcription(
+      topicClient.name,
+      subscriptionClient.subscriptionName
+    ),
+    subscriptionClient.subscriptionName
+  );
 
-    const peekedSubscriptionMsg = await subscriptionClient.peek();
-    if (peekedSubscriptionMsg.length) {
-      throw new Error("Please use an empty Subscription for integration testing");
-    }
+  const peekedQueueMsg = await queueClient.peek();
+  if (peekedQueueMsg.length) {
+    throw new Error("Please use an empty queue for integration testing");
+  }
+
+  const peekedSubscriptionMsg = await subscriptionClient.peek();
+  if (peekedSubscriptionMsg.length) {
+    throw new Error("Please use an empty Subscription for integration testing");
+  }
+  errorWasThrown = false;
+}
+
+async function afterEachTest(): Promise<void> {
+  await namespace.close();
+}
+
+describe("Complete/Abandon/Defer/Deadletter normal message", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
   });
 
   afterEach(async () => {
-    return namespace.close();
+    await afterEachTest();
   });
 
-  it("PeekLock: complete() removes msg from Queue", async function(): Promise<void> {
-    await queueClient.send(testMessages[0]);
-    const msgs = await queueClient.receiveBatch(1);
+  async function sendReceiveMsg(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<ServiceBusMessage> {
+    await senderClient.send(testMessages[0]);
+    const msgs = await receiverClient.receiveBatch(1);
 
     should.equal(Array.isArray(msgs), true);
     should.equal(msgs.length, 1);
     should.equal(msgs[0].body, testMessages[0].body);
     should.equal(msgs[0].messageId, testMessages[0].messageId);
+    should.equal(msgs[0].deliveryCount, 0);
 
-    await msgs[0].complete();
+    return msgs[0];
+  }
 
-    await testPeekMsgsLength(queueClient, 0);
+  async function completeMessages(
+    receiverClient: QueueClient | SubscriptionClient,
+    expectedDeliverCount: number
+  ): Promise<void> {
+    const receivedMsgs = await receiverClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].deliveryCount, expectedDeliverCount);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    await receivedMsgs[0].complete();
+
+    await testPeekMsgsLength(receiverClient, 0);
+  }
+
+  async function testComplete(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const msg = await sendReceiveMsg(senderClient, receiverClient);
+    await msg.complete();
+
+    await testPeekMsgsLength(receiverClient, 0);
+  }
+
+  it("Queue: complete() removes message", async function(): Promise<void> {
+    await testComplete(queueClient, queueClient);
   });
 
-  it("PeekLock: complete() removes msg from Subscription", async function(): Promise<void> {
-    await topicClient.send(testMessages[0]);
-    const msgs = await subscriptionClient.receiveBatch(1);
+  it("Subscription: complete() removes message", async function(): Promise<void> {
+    await testComplete(topicClient, subscriptionClient);
+  });
 
-    should.equal(Array.isArray(msgs), true);
-    should.equal(msgs.length, 1);
-    should.equal(msgs[0].body, testMessages[0].body);
-    should.equal(msgs[0].messageId, testMessages[0].messageId);
+  async function testAbandon(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const msg = await sendReceiveMsg(senderClient, receiverClient);
+    await msg.abandon();
 
-    await msgs[0].complete();
+    await testPeekMsgsLength(receiverClient, 1);
 
-    await testPeekMsgsLength(subscriptionClient, 0);
+    await completeMessages(receiverClient, 1);
+  }
+
+  it("Queue: abandon() retains message with incremented deliveryCount", async function(): Promise<
+    void
+  > {
+    await testAbandon(queueClient, queueClient);
+  });
+
+  it("Subscription: abandon() retains message with incremented deliveryCount", async function(): Promise<
+    void
+  > {
+    await testAbandon(topicClient, subscriptionClient);
+  });
+
+  async function testDefer(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const msg = await sendReceiveMsg(senderClient, receiverClient);
+
+    if (!msg.sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    const sequenceNumber = msg.sequenceNumber;
+    await msg.defer();
+
+    const deferredMsgs = await receiverClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+    should.equal(deferredMsgs.deliveryCount, 1);
+
+    await deferredMsgs.complete();
+
+    await testPeekMsgsLength(receiverClient, 0);
+  }
+
+  it("Queue: defer() moves message to deferred queue", async function(): Promise<void> {
+    await testDefer(queueClient, queueClient);
+  });
+
+  it("Subscription: defer() moves message to deferred queue", async function(): Promise<void> {
+    await testDefer(topicClient, subscriptionClient);
+  });
+
+  async function testDeadletter(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient,
+    deadLetterClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const msg = await sendReceiveMsg(senderClient, receiverClient);
+    await msg.deadLetter();
+
+    await testPeekMsgsLength(receiverClient, 0);
+
+    await completeMessages(deadLetterClient, 0);
+  }
+
+  it("Queue: deadLetter() moves message to deadletter queue", async function(): Promise<void> {
+    await testDeadletter(queueClient, queueClient, deadletterQueueClient);
+  });
+
+  it("Subscription: deadLetter() moves message to deadletter queue", async function(): Promise<
+    void
+  > {
+    await testDeadletter(topicClient, subscriptionClient, deadletterSubscriptionClient);
+  });
+});
+
+describe("Abandon/Defer/Deadletter deferred message", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
+  });
+
+  async function deferMessage(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<ServiceBusMessage> {
+    await senderClient.send(testMessages[0]);
+    const receivedMsgs = await receiverClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].deliveryCount, 0);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
+    if (!receivedMsgs[0].sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    const sequenceNumber = receivedMsgs[0].sequenceNumber;
+    await receivedMsgs[0].defer();
+
+    const deferredMsgs = await receiverClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+    should.equal(deferredMsgs.deliveryCount, 1);
+
+    return deferredMsgs;
+  }
+
+  async function completeDeferredMessage(
+    receiverClient: QueueClient | SubscriptionClient,
+    sequenceNumber: Long,
+    expectedDeliverCount: number
+  ): Promise<void> {
+    await testPeekMsgsLength(receiverClient, 1);
+
+    const deferredMsg = await receiverClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsg) {
+      throw "No message received for sequence number";
+    }
+
+    should.equal(deferredMsg.body, testMessages[0].body);
+    should.equal(deferredMsg.deliveryCount, expectedDeliverCount);
+    should.equal(deferredMsg.messageId, testMessages[0].messageId);
+
+    await deferredMsg.complete();
+
+    await testPeekMsgsLength(receiverClient, 0);
+  }
+
+  async function testDefer(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const deferredMsg = await deferMessage(senderClient, receiverClient);
+    const sequenceNumber = deferredMsg.sequenceNumber;
+    if (!sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    await deferredMsg.defer();
+    await completeDeferredMessage(receiverClient, sequenceNumber, 2);
+  }
+
+  it("Queue: Deferring a deferred message puts it back to the deferred queue.", async function(): Promise<
+    void
+  > {
+    await testDefer(queueClient, queueClient);
+  });
+
+  it("Subscription: Deferring a deferred message puts it back to the deferred queue.", async function(): Promise<
+    void
+  > {
+    await testDefer(topicClient, subscriptionClient);
+  });
+
+  async function testDeadletter(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient,
+    deadletterClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const deferredMsg = await deferMessage(senderClient, receiverClient);
+
+    await deferredMsg.deadLetter();
+
+    await testPeekMsgsLength(receiverClient, 0);
+
+    const deadLetterMsgs = await deadletterClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].deliveryCount, 1);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+
+    await deadLetterMsgs[0].complete();
+
+    await testPeekMsgsLength(deadletterClient, 0);
+  }
+
+  it("Queue: Deadlettering a deferred message moves it to dead letter queue.", async function(): Promise<
+    void
+  > {
+    await testDeadletter(queueClient, queueClient, deadletterQueueClient);
+  });
+
+  it("Subscription: Deadlettering a deferred message moves it to dead letter queue.", async function(): Promise<
+    void
+  > {
+    await testDeadletter(topicClient, subscriptionClient, deadletterSubscriptionClient);
+  });
+
+  async function testAbandon(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const deferredMsg = await deferMessage(senderClient, receiverClient);
+    const sequenceNumber = deferredMsg.sequenceNumber;
+    if (!sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+    await deferredMsg.abandon();
+    await completeDeferredMessage(receiverClient, sequenceNumber, 2);
+  }
+
+  it("Queue: Abandoning a deferred message puts it back to the deferred queue.", async function(): Promise<
+    void
+  > {
+    await testAbandon(queueClient, queueClient);
+  });
+
+  it("Subscription: Abandoning a deferred message puts it back to the deferred queue.", async function(): Promise<
+    void
+  > {
+    await testAbandon(topicClient, subscriptionClient);
+  });
+});
+
+describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
+  });
+
+  async function deadLetterMessage(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient,
+    deadletterClient: QueueClient | SubscriptionClient
+  ): Promise<ServiceBusMessage> {
+    await senderClient.send(testMessages[0]);
+    const receivedMsgs = await receiverClient.receiveBatch(1);
+
+    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs[0].body, testMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(receivedMsgs[0].deliveryCount, 0);
+
+    await receivedMsgs[0].deadLetter();
+
+    await testPeekMsgsLength(receiverClient, 0);
+
+    const deadLetterMsgs = await deadletterClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(deadLetterMsgs[0].deliveryCount, 0);
+
+    return deadLetterMsgs[0];
+  }
+
+  async function completeDeadLetteredMessage(
+    deadletterClient: QueueClient | SubscriptionClient,
+    expectedDeliverCount: number
+  ): Promise<void> {
+    const deadLetterMsgs = await deadletterClient.receiveBatch(1);
+
+    should.equal(deadLetterMsgs.length, 1);
+    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(deadLetterMsgs[0].deliveryCount, expectedDeliverCount);
+
+    await deadLetterMsgs[0].complete();
+    await testPeekMsgsLength(deadletterClient, 0);
+  }
+
+  async function testDeadLetter(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient,
+    deadletterClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const deadLetterMsg = await deadLetterMessage(senderClient, receiverClient, deadletterClient);
+
+    await deadLetterMsg.deadLetter().catch((err) => {
+      should.equal(err.name, "InvalidOperationError");
+      errorWasThrown = true;
+    });
+
+    should.equal(errorWasThrown, true);
+
+    await completeDeadLetteredMessage(deadletterClient, 0);
+  }
+
+  it("Queue: Throws error when dead lettering a dead lettered message", async function(): Promise<
+    void
+  > {
+    await testDeadLetter(queueClient, queueClient, deadletterQueueClient);
+  });
+
+  it("Subscription: Throws error when dead lettering a dead lettered message", async function(): Promise<
+    void
+  > {
+    await testDeadLetter(topicClient, subscriptionClient, deadletterSubscriptionClient);
+  });
+
+  async function testAbandon(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient,
+    deadletterClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const deadLetterMsg = await deadLetterMessage(senderClient, receiverClient, deadletterClient);
+
+    await deadLetterMsg.abandon();
+
+    await completeDeadLetteredMessage(deadletterClient, 0);
+  }
+
+  it("Queue: Abandon a message received from dead letter queue", async function(): Promise<void> {
+    await testAbandon(queueClient, queueClient, deadletterQueueClient);
+  });
+
+  it("Subscription: Abandon a message received from dead letter queue", async function(): Promise<
+    void
+  > {
+    await testAbandon(topicClient, subscriptionClient, deadletterSubscriptionClient);
+  });
+
+  async function testDefer(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient,
+    deadletterClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const deadLetterMsg = await deadLetterMessage(senderClient, receiverClient, deadletterClient);
+
+    if (!deadLetterMsg.sequenceNumber) {
+      throw "Sequence Number can not be null";
+    }
+
+    const sequenceNumber = deadLetterMsg.sequenceNumber;
+    await deadLetterMsg.defer();
+
+    const deferredMsgs = await deadletterClient.receiveDeferredMessage(sequenceNumber);
+    if (!deferredMsgs) {
+      throw "No message received for sequence number";
+    }
+    should.equal(deferredMsgs.body, testMessages[0].body);
+    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+
+    await deferredMsgs.complete();
+
+    await testPeekMsgsLength(receiverClient, 0);
+
+    await testPeekMsgsLength(deadletterClient, 0);
+  }
+
+  it("Queue: Defer a message received from dead letter queue", async function(): Promise<void> {
+    await testDefer(queueClient, queueClient, deadletterQueueClient);
+  });
+
+  it("Subscription: Defer a message received from dead letter queue", async function(): Promise<
+    void
+  > {
+    await testDefer(topicClient, subscriptionClient, deadletterSubscriptionClient);
+  });
+});
+
+describe("Multiple ReceiveBatch calls", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
+  });
+
+  afterEach(async () => {
+    await afterEachTest();
+  });
+
+  // We use an empty queue/topic here so that the first receiveBatch call takes time to return
+  async function testParallelReceiveBatchCalls(
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    const firstBatchPromise = receiverClient.receiveBatch(1, 10);
+    await delay(5000);
+    const secondBatchPromise = receiverClient.receiveBatch(1, 10).catch((err) => {
+      should.equal(err.name, "Error");
+      errorWasThrown = true;
+    });
+    await Promise.all([firstBatchPromise, secondBatchPromise]);
+    should.equal(errorWasThrown, true);
+  }
+
+  it("Queue: Throws error when ReceiveBatch is called while the previous call is not done", async function(): Promise<
+    void
+  > {
+    await testParallelReceiveBatchCalls(queueClient);
+  });
+
+  it("Subscription: Throws error when ReceiveBatch is called while the previous call is not done", async function(): Promise<
+    void
+  > {
+    await testParallelReceiveBatchCalls(subscriptionClient);
   });
 
   // We test for mutilple receiveBatch specifically to ensure that batchingRecevier on a client is reused
   // See https://github.com/Azure/azure-service-bus-node/issues/31
-  it("Multiple receiveBatch using Queues", async function(): Promise<void> {
-    await queueClient.sendBatch(testMessages);
-    const msgs1 = await queueClient.receiveBatch(1);
-    const msgs2 = await queueClient.receiveBatch(1);
+  async function testSequentialReceiveBatchCalls(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.sendBatch(testMessages);
+    const msgs1 = await receiverClient.receiveBatch(1);
+    const msgs2 = await receiverClient.receiveBatch(1);
 
     // Results are checked after both receiveBatches are done to ensure that the second call doesnt
     // affect the result from the first one.
@@ -137,93 +589,38 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
 
     await msgs1[0].complete();
     await msgs2[0].complete();
+  }
 
-    await testPeekMsgsLength(queueClient, 0);
+  it("Queue: Multiple receiveBatch using Queues/Subscriptions", async function(): Promise<void> {
+    await testSequentialReceiveBatchCalls(queueClient, queueClient);
   });
 
-  // We test for mutilple receiveBatch specifically to ensure that batchingRecevier on a client is reused
-  // See https://github.com/Azure/azure-service-bus-node/issues/31
-  it("Multiple receiveBatch using Topics and Subscriptions", async function(): Promise<void> {
-    await topicClient.sendBatch(testMessages);
-    const msgs1 = await subscriptionClient.receiveBatch(1);
-    const msgs2 = await subscriptionClient.receiveBatch(1);
-
-    // Results are checked after both receiveBatches are done to ensure that the second call doesnt
-    // affect the result from the first one.
-    should.equal(Array.isArray(msgs1), true);
-    should.equal(msgs1.length, 1);
-    should.equal(msgs1[0].body, testMessages[0].body);
-    should.equal(msgs1[0].messageId, testMessages[0].messageId);
-
-    should.equal(Array.isArray(msgs2), true);
-    should.equal(msgs2.length, 1);
-    should.equal(msgs2[0].body, testMessages[1].body);
-    should.equal(msgs2[0].messageId, testMessages[1].messageId);
-
-    await msgs1[0].complete();
-    await msgs2[0].complete();
-
-    await testPeekMsgsLength(subscriptionClient, 0);
-  });
-
-  it("Abandoned message is retained in the Queue with incremented deliveryCount", async function(): Promise<
+  it("Subscription: Multiple receiveBatch using Queues/Subscriptions", async function(): Promise<
     void
   > {
-    await queueClient.send(testMessages[0]);
+    await testSequentialReceiveBatchCalls(topicClient, subscriptionClient);
+  });
+});
 
-    let receivedMsgs = await queueClient.receiveBatch(1);
-
-    should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].deliveryCount, 0);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-
-    // TODO: This is taking 20 seconds. Why?
-    await receivedMsgs[0].abandon();
-
-    await testPeekMsgsLength(queueClient, 1);
-
-    receivedMsgs = await queueClient.receiveBatch(1);
-
-    should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].deliveryCount, 1);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-
-    await receivedMsgs[0].complete();
+describe("Batching Receiver Misc Tests", function(): void {
+  beforeEach(async () => {
+    await beforeEachTest();
   });
 
-  it("Abandoned message is retained in the Subscription with incremented deliveryCount", async function(): Promise<
-    void
-  > {
-    await topicClient.send(testMessages[0]);
-
-    let receivedMsgs = await subscriptionClient.receiveBatch(1);
-
-    should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].deliveryCount, 0);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-
-    // TODO: This is taking 20 seconds. Why?
-    await receivedMsgs[0].abandon();
-
-    await testPeekMsgsLength(subscriptionClient, 1);
-
-    receivedMsgs = await subscriptionClient.receiveBatch(1);
-
-    should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].deliveryCount, 1);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-
-    await receivedMsgs[0].complete();
+  afterEach(async () => {
+    await afterEachTest();
   });
 
-  it("Message abandoned more than maxDeliveryCount goes to dead letter queue", async function(): Promise<
-    void
-  > {
-    await queueClient.send(testMessages[0]);
+  async function testAbandonMsgsTillMaxDeliveryCount(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient,
+    deadLetterClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.send(testMessages[0]);
     let abandonMsgCount = 0;
 
     while (abandonMsgCount < maxDeliveryCount) {
-      const receivedMsgs = await queueClient.receiveBatch(1);
+      const receivedMsgs = await receiverClient.receiveBatch(1);
 
       should.equal(receivedMsgs.length, 1);
       should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
@@ -233,11 +630,9 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
       await receivedMsgs[0].abandon();
     }
 
-    await testPeekMsgsLength(queueClient, 0);
+    await testPeekMsgsLength(receiverClient, 0);
 
-    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
-    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
-    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
+    const deadLetterMsgs = await deadLetterClient.receiveBatch(1);
 
     should.equal(Array.isArray(deadLetterMsgs), true);
     should.equal(deadLetterMsgs.length, 1);
@@ -246,179 +641,98 @@ describe("ReceiveBatch from Queue/Subscription", function(): void {
 
     await deadLetterMsgs[0].complete();
 
-    await testPeekMsgsLength(deadletterQueueClient, 0);
-  });
+    await testPeekMsgsLength(deadLetterClient, 0);
+  }
 
-  it("Message abandoned more than maxDeliveryCount goes to dead letter subscriptions", async function(): Promise<
+  it("Queue: Message abandoned more than maxDeliveryCount goes to dead letter queue", async function(): Promise<
     void
   > {
-    await topicClient.send(testMessages[0]);
-    let abandonMsgCount = 0;
+    await testAbandonMsgsTillMaxDeliveryCount(queueClient, queueClient, deadletterQueueClient);
+  });
 
-    while (abandonMsgCount < maxDeliveryCount) {
-      const receivedMsgs = await subscriptionClient.receiveBatch(1);
-
-      should.equal(receivedMsgs.length, 1);
-      should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-      should.equal(receivedMsgs[0].deliveryCount, abandonMsgCount);
-      abandonMsgCount++;
-
-      await receivedMsgs[0].abandon();
-    }
-
-    await testPeekMsgsLength(subscriptionClient, 0);
-
-    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      topicClient.name,
-      subscriptionClient.subscriptionName
+  it("Subscription: Message abandoned more than maxDeliveryCount goes to dead letter queue", async function(): Promise<
+    void
+  > {
+    await testAbandonMsgsTillMaxDeliveryCount(
+      topicClient,
+      subscriptionClient,
+      deadletterSubscriptionClient
     );
-
-    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
-      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      subscriptionClient.subscriptionName
-    );
-
-    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
-
-    should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 1);
-    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-
-    await deadLetterMsgs[0].complete();
-
-    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
   });
 
-  it("Receive deferred message from queue", async function(): Promise<void> {
-    await queueClient.sendBatch(testMessages);
-    const msgs = await queueClient.receiveBatch(1);
+  async function testNoSettlement(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.send(testMessages[0]);
 
-    should.equal(Array.isArray(msgs), true);
-    should.equal(msgs.length, 1);
-    should.equal(msgs[0].body, testMessages[0].body);
-    should.equal(msgs[0].messageId, testMessages[0].messageId);
+    let receivedMsgs = await receiverClient.receiveBatch(1);
 
-    if (!msgs[0].sequenceNumber) {
-      throw "Sequence Number can not be null";
-    }
-    const sequenceNumber = msgs[0].sequenceNumber;
-    await msgs[0].defer();
-
-    const receivedMsgs = await queueClient.receiveBatch(1);
-    should.equal(Array.isArray(receivedMsgs), true);
     should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].body === testMessages[0].body, false);
-    should.equal(receivedMsgs[0].messageId === testMessages[0].messageId, false);
-    await receivedMsgs[0].complete();
+    should.equal(receivedMsgs[0].deliveryCount, 0);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
 
-    const deferredMsgs = await queueClient.receiveDeferredMessage(sequenceNumber);
-    if (!deferredMsgs) {
-      throw "No message received for sequence number";
-    }
-    should.equal(deferredMsgs.body, testMessages[0].body);
-    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+    await testPeekMsgsLength(receiverClient, 1);
 
-    await deferredMsgs.complete();
+    receivedMsgs = await receiverClient.receiveBatch(1);
 
-    await testPeekMsgsLength(queueClient, 0);
-  });
-
-  it("Receive deferred message from subscription", async function(): Promise<void> {
-    await topicClient.sendBatch(testMessages);
-    const msgs = await subscriptionClient.receiveBatch(1);
-
-    should.equal(Array.isArray(msgs), true);
-    should.equal(msgs.length, 1);
-    should.equal(msgs[0].body, testMessages[0].body);
-    should.equal(msgs[0].messageId, testMessages[0].messageId);
-
-    if (!msgs[0].sequenceNumber) {
-      throw "Sequence Number can not be null";
-    }
-    const sequenceNumber = msgs[0].sequenceNumber;
-    await msgs[0].defer();
-
-    const receivedMsgs = await subscriptionClient.receiveBatch(1);
-    should.equal(Array.isArray(receivedMsgs), true);
     should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].body === testMessages[0].body, false);
-    should.equal(receivedMsgs[0].messageId === testMessages[0].messageId, false);
+    should.equal(receivedMsgs[0].deliveryCount, 1);
+    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+
     await receivedMsgs[0].complete();
+  }
 
-    const deferredMsgs = await subscriptionClient.receiveDeferredMessage(sequenceNumber);
-    if (!deferredMsgs) {
-      throw "No message received for sequence number";
-    }
-    should.equal(deferredMsgs.body, testMessages[0].body);
-    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
-
-    await deferredMsgs.complete();
-
-    await testPeekMsgsLength(subscriptionClient, 0);
+  it("Queue: No settlement of the message is retained with incremented deliveryCount", async function(): Promise<
+    void
+  > {
+    await testNoSettlement(queueClient, queueClient);
   });
 
-  it("Receive dead letter message from queue", async function(): Promise<void> {
-    await queueClient.send(testMessages[0]);
+  it("Subscription: No settlement of the message is retained with incremented deliveryCount", async function(): Promise<
+    void
+  > {
+    await testNoSettlement(topicClient, subscriptionClient);
+  });
 
-    const receivedMsgs = await queueClient.receiveBatch(1);
+  async function testAskForMore(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.send(testMessages[0]);
+    const receivedMsgs = await receiverClient.receiveBatch(2);
 
-    should.equal(Array.isArray(receivedMsgs), true);
     should.equal(receivedMsgs.length, 1);
     should.equal(receivedMsgs[0].body, testMessages[0].body);
     should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
 
-    await receivedMsgs[0].deadLetter();
+    await receivedMsgs[0].complete();
 
-    await testPeekMsgsLength(queueClient, 0);
+    await testPeekMsgsLength(receiverClient, 0);
+  }
 
-    const deadLetterQueuePath = Namespace.getDeadLetterQueuePathForQueue(queueClient.name);
-    const deadletterQueueClient = namespace.createQueueClient(deadLetterQueuePath);
-    const deadLetterMsgs = await deadletterQueueClient.receiveBatch(1);
-
-    should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 1);
-    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-
-    await deadLetterMsgs[0].complete();
-
-    await testPeekMsgsLength(deadletterQueueClient, 0);
+  it("Queue: Receive n messages but queue only has m messages, where m < n", async function(): Promise<
+    void
+  > {
+    await testAskForMore(queueClient, queueClient);
   });
 
-  it("Receive dead letter message from subscription", async function(): Promise<void> {
-    await topicClient.send(testMessages[0]);
+  it("Subscription: Receive n messages but subscription only has m messages, where m < n", async function(): Promise<
+    void
+  > {
+    await testAskForMore(topicClient, subscriptionClient);
+  });
 
-    const receivedMsgs = await subscriptionClient.receiveBatch(1);
-
-    should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
-
-    await receivedMsgs[0].deadLetter();
-
-    await testPeekMsgsLength(subscriptionClient, 0);
-
-    const deadLetterSubscriptionPath = Namespace.getDeadLetterSubcriptionPathForSubcription(
-      topicClient.name,
-      subscriptionClient.subscriptionName
-    );
-
-    const deadletterSubscriptionClient = namespace.createSubscriptionClient(
-      deadLetterSubscriptionPath ? deadLetterSubscriptionPath : "",
-      subscriptionClient.subscriptionName
-    );
-
-    const deadLetterMsgs = await deadletterSubscriptionClient.receiveBatch(1);
-
-    should.equal(Array.isArray(deadLetterMsgs), true);
-    should.equal(deadLetterMsgs.length, 1);
-    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
-
-    await deadLetterMsgs[0].complete();
-
-    await testPeekMsgsLength(deadletterSubscriptionClient, 0);
+  it("Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
+    void
+  > {
+    const firstBatchPromise = queueClient.receiveBatch(1, 10);
+    await delay(5000);
+    const secondBatchPromise = queueClient.receiveBatch(1, 10).catch((err) => {
+      should.equal(err.name, "Error");
+      errorWasThrown = true;
+    });
+    await Promise.all([firstBatchPromise, secondBatchPromise]);
+    should.equal(errorWasThrown, true);
   });
 });
