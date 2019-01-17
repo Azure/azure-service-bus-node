@@ -43,7 +43,7 @@ async function main(): Promise<void> {
   }
 }
 
-// Scheduling messages to be sent after 30 seconds from now
+// Scheduling messages to be sent after 10 seconds from now
 async function sendScheduledMessages(): Promise<void> {
   // If using Topics, use createTopicClient to send to a topic
   const client = ns.createQueueClient(queueName);
@@ -60,7 +60,6 @@ async function sendScheduledMessages(): Promise<void> {
 
   await client.scheduleMessages(scheduledEnqueueTimeUtc, messages);
   for (let index = 0; index < messages.length; index++) {
-    await client.scheduleMessage(scheduledEnqueueTimeUtc, messages[index]);
     console.log(`Sent: ${messages[index].body} - ${messages[index].label}`);
   }
 }
