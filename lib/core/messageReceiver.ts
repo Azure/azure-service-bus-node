@@ -16,7 +16,8 @@ import {
   EventContext,
   ReceiverOptions,
   AmqpError,
-  Dictionary
+  Dictionary,
+  isAmqpError
 } from "rhea-promise";
 import * as log from "../log";
 import { LinkEntity } from "./linkEntity";
@@ -403,6 +404,11 @@ export class MessageReceiver extends LinkEntity {
         await this._onMessage(bMessage);
         this._clearMessageLockRenewTimer(bMessage.messageId as string);
       } catch (err) {
+        // This ensures we call users' error handler when users' message handler throws.
+        if (!isAmqpError(err)) {
+          this._onError!(err);
+        }
+
         // Do not want renewLock to happen unnecessarily, while abandoning the message. Hence,
         // doing this here. Otherwise, this should be done in finally.
         this._clearMessageLockRenewTimer(bMessage.messageId as string);
