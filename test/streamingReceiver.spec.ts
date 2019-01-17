@@ -386,6 +386,45 @@ describe("Streaming Receiver Misc Tests", function(): void {
       unpartitionedDeadletterSubscriptionClient
     );
   });
+
+  async function testErrorHandler(
+    senderClient: QueueClient | TopicClient,
+    receiverClient: QueueClient | SubscriptionClient
+  ): Promise<void> {
+    await senderClient.send(testMessages[0]);
+
+    const receiveListener = receiverClient.receive(
+      async (msg: ServiceBusMessage) => {
+        await msg.complete();
+        should.fail(false, true, "Testing ErrorHandler");
+      },
+      (err: Error) => {
+        if (err) {
+          errorFromErrorHandler = err;
+        }
+      }
+    );
+    await delay(5000);
+
+    await receiveListener.stop();
+    if (!errorFromErrorHandler) {
+      should.fail(!!errorFromErrorHandler, true, "Error handler not called!");
+    } else {
+      should.equal(
+        errorFromErrorHandler.message,
+        "Testing ErrorHandler",
+        "Error handler didnt get the right error"
+      );
+    }
+  }
+
+  it("Test Error Handler in Streaming Receiver for Queue", async function(): Promise<void> {
+    await testErrorHandler(partitionedQueueClient, partitionedQueueClient);
+  });
+
+  it("Test Error Handler in Streaming Receiver for Subscription", async function(): Promise<void> {
+    await testErrorHandler(partitionedTopicClient, partitionedSubscriptionClient);
+  });
 });
 
 describe("Complete message", function(): void {

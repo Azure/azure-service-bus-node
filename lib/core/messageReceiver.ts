@@ -415,6 +415,7 @@ export class MessageReceiver extends LinkEntity {
         const error = translate(err);
         // Nothing much to do if user's message handler throws. Let us try abandoning the message.
         if (
+          !bMessage.delivery.remote_settled &&
           error.name !== ConditionErrorNameMapper["com.microsoft:message-lock-lost"] &&
           this.receiveMode === ReceiveMode.peekLock &&
           this.isOpen() // only try to abandon the messages if the connection is still open
