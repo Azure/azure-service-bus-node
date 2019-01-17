@@ -287,17 +287,17 @@ describe("Complete/Abandon/Defer/Deadletter normal message", function(): void {
     await testDefer(partitionedTopicClient, partitionedSubscriptionClient);
   });
 
-  it("Unpartitioned Queues: defer() moves message to deferred queue", async function(): Promise<
-    void
-  > {
-    await testDefer(unpartitionedQueueClient, unpartitionedQueueClient);
-  });
+  // it("Unpartitioned Queues: defer() moves message to deferred queue", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(unpartitionedQueueClient, unpartitionedQueueClient);
+  // });
 
-  it("Unpartitioned Topics and Subscription: defer() moves message to deferred queue", async function(): Promise<
-    void
-  > {
-    await testDefer(unpartitionedTopicClient, unpartitionedSubscriptionClient);
-  });
+  // it("Unpartitioned Topics and Subscription: defer() moves message to deferred queue", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(unpartitionedTopicClient, unpartitionedSubscriptionClient);
+  // });
 
   async function testDeadletter(
     senderClient: QueueClient | TopicClient,
@@ -437,17 +437,17 @@ describe("Abandon/Defer/Deadletter deferred message", function(): void {
     await testDefer(partitionedTopicClient, partitionedSubscriptionClient);
   });
 
-  it("Unpartitioned Queues: Deferring a deferred message puts it back to the deferred queue.", async function(): Promise<
-    void
-  > {
-    await testDefer(unpartitionedQueueClient, unpartitionedQueueClient);
-  });
+  // it("Unpartitioned Queues: Deferring a deferred message puts it back to the deferred queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(unpartitionedQueueClient, unpartitionedQueueClient);
+  // });
 
-  it("Unpartitioned Topics and Subscription: Deferring a deferred message puts it back to the deferred queue.", async function(): Promise<
-    void
-  > {
-    await testDefer(unpartitionedTopicClient, unpartitionedSubscriptionClient);
-  });
+  // it("Unpartitioned Topics and Subscription: Deferring a deferred message puts it back to the deferred queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(unpartitionedTopicClient, unpartitionedSubscriptionClient);
+  // });
 
   async function testDeadletter(
     senderClient: QueueClient | TopicClient,
@@ -492,25 +492,25 @@ describe("Abandon/Defer/Deadletter deferred message", function(): void {
     );
   });
 
-  it("Unpartitioned Queues: Deadlettering a deferred message moves it to dead letter queue.", async function(): Promise<
-    void
-  > {
-    await testDeadletter(
-      unpartitionedQueueClient,
-      unpartitionedQueueClient,
-      unpartitionedDeadletterQueueClient
-    );
-  });
+  // it("Unpartitioned Queues: Deadlettering a deferred message moves it to dead letter queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testDeadletter(
+  //     unpartitionedQueueClient,
+  //     unpartitionedQueueClient,
+  //     unpartitionedDeadletterQueueClient
+  //   );
+  // });
 
-  it("Unpartitioned Topics and Subscription: Deadlettering a deferred message moves it to dead letter queue.", async function(): Promise<
-    void
-  > {
-    await testDeadletter(
-      unpartitionedTopicClient,
-      unpartitionedSubscriptionClient,
-      unpartitionedDeadletterSubscriptionClient
-    );
-  });
+  // it("Unpartitioned Topics and Subscription: Deadlettering a deferred message moves it to dead letter queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testDeadletter(
+  //     unpartitionedTopicClient,
+  //     unpartitionedSubscriptionClient,
+  //     unpartitionedDeadletterSubscriptionClient
+  //   );
+  // });
 
   async function testAbandon(
     senderClient: QueueClient | TopicClient,
@@ -537,17 +537,17 @@ describe("Abandon/Defer/Deadletter deferred message", function(): void {
     await testAbandon(partitionedTopicClient, partitionedSubscriptionClient);
   });
 
-  it("Unpartitioned Queues: Abandoning a deferred message puts it back to the deferred queue.", async function(): Promise<
-    void
-  > {
-    await testAbandon(unpartitionedQueueClient, unpartitionedQueueClient);
-  });
+  // it("Unpartitioned Queues: Abandoning a deferred message puts it back to the deferred queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testAbandon(unpartitionedQueueClient, unpartitionedQueueClient);
+  // });
 
-  it("Unpartitioned Topics and Subscription: Abandoning a deferred message puts it back to the deferred queue.", async function(): Promise<
-    void
-  > {
-    await testAbandon(unpartitionedTopicClient, unpartitionedSubscriptionClient);
-  });
+  // it("Unpartitioned Topics and Subscription: Abandoning a deferred message puts it back to the deferred queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testAbandon(unpartitionedTopicClient, unpartitionedSubscriptionClient);
+  // });
 });
 
 describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
@@ -758,25 +758,25 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
     );
   });
 
-  it("Unpartitioned Queues: Defer a message received from dead letter queue", async function(): Promise<
-    void
-  > {
-    await testDefer(
-      unpartitionedQueueClient,
-      unpartitionedQueueClient,
-      unpartitionedDeadletterQueueClient
-    );
-  });
+  // it("Unpartitioned Queues: Defer a message received from dead letter queue", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(
+  //     unpartitionedQueueClient,
+  //     unpartitionedQueueClient,
+  //     unpartitionedDeadletterQueueClient
+  //   );
+  // });
 
-  it("Unpartitioned Topics and Subscription: Defer a message received from dead letter queue", async function(): Promise<
-    void
-  > {
-    await testDefer(
-      unpartitionedTopicClient,
-      unpartitionedSubscriptionClient,
-      unpartitionedDeadletterSubscriptionClient
-    );
-  });
+  // it("Unpartitioned Topics and Subscription: Defer a message received from dead letter queue", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(
+  //     unpartitionedTopicClient,
+  //     unpartitionedSubscriptionClient,
+  //     unpartitionedDeadletterSubscriptionClient
+  //   );
+  // });
 });
 
 describe("Multiple ReceiveBatch calls", function(): void {
