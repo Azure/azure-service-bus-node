@@ -521,8 +521,15 @@ describe("Send/Receive messages using sql filters of subscription", function(): 
   it("SQL rule filter with action", async function(): Promise<void> {
     await subscriptionClient.addRule("SqlRuleWithAction", "color='blue'", "SET priority = 'High'");
     const rules = await subscriptionClient.getRules();
+    const action = rules[0].action
+      ? rules[0].action.expression
+        ? rules[0].action.expression
+        : ""
+      : "";
+
     should.equal(rules.length, 1);
     should.equal(rules[0].name, "SqlRuleWithAction");
+    should.equal(action, "SET priority = 'High'");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
@@ -599,8 +606,15 @@ describe("Send/Receive messages using correlation filters of subscription", func
     );
 
     const rules = await subscriptionClient.getRules();
+    const action = rules[0].action
+      ? rules[0].action.expression
+        ? rules[0].action.expression
+        : ""
+      : "";
+
     should.equal(rules.length, 1, "rule");
     should.equal(rules[0].name, "CorrelationRuleWithAction");
+    should.equal(action, "SET priority = 'High'");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
