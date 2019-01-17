@@ -42,7 +42,7 @@ export function nodeConfig(test = false) {
     baseConfig.output.file = "test-dist/index.js";
 
     // mark assert as external
-    baseConfig.external.push("assert");
+    baseConfig.external.push("assert", "fs", "path");
   } else if (production) {
     baseConfig.plugins.push(uglify());
   }
