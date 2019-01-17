@@ -1,11 +1,10 @@
 // Copyright (c) Microsoft. All rights reserved.
 // Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-import "mocha";
-import * as chai from "chai";
+import chai from "chai";
 const should = chai.should();
-import * as chaiAsPromised from "chai-as-promised";
-import * as dotenv from "dotenv";
+import chaiAsPromised from "chai-as-promised";
+import dotenv from "dotenv";
 dotenv.config();
 chai.use(chaiAsPromised);
 import {
@@ -18,12 +17,10 @@ import {
 } from "../lib";
 import { delay } from "rhea-promise";
 
-const testMessages: SendableMessageInfo[] = [
-  {
-    body: "hello-world-1",
-    messageId: generateUuid()
-  }
-];
+const testMessage: SendableMessageInfo = {
+  body: "hello-world-1",
+  messageId: generateUuid()
+};
 
 const lockDurationInMilliseconds = 30000;
 
@@ -83,7 +80,7 @@ describe("Lock Renewal in PeekLock mode", function(): void {
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    await senderClient.sendBatch(testMessages);
+    await senderClient.send(testMessage);
 
     const msgs = await receiverClient.receiveBatch(1);
 
@@ -95,8 +92,8 @@ describe("Lock Renewal in PeekLock mode", function(): void {
 
     should.equal(Array.isArray(msgs), true);
     should.equal(msgs.length, 1);
-    should.equal(msgs[0].body, testMessages[0].body);
-    should.equal(msgs[0].messageId, testMessages[0].messageId);
+    should.equal(msgs[0].body, testMessage.body);
+    should.equal(msgs[0].messageId, testMessage.messageId);
 
     // Verify actual lock duration is reset
     if (msgs[0].lockedUntilUtc) {
@@ -149,14 +146,14 @@ describe("Lock Renewal in PeekLock mode", function(): void {
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    await senderClient.sendBatch(testMessages);
+    await senderClient.send(testMessage);
 
     const msgs = await receiverClient.receiveBatch(1);
 
     should.equal(Array.isArray(msgs), true);
     should.equal(msgs.length, 1);
-    should.equal(msgs[0].body, testMessages[0].body);
-    should.equal(msgs[0].messageId, testMessages[0].messageId);
+    should.equal(msgs[0].body, testMessage.body);
+    should.equal(msgs[0].messageId, testMessage.messageId);
 
     console.log(`Sleeping 30 seconds...`);
     await delay(lockDurationInMilliseconds);
