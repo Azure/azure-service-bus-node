@@ -529,7 +529,9 @@ describe("Send/Receive messages using sql filters of subscription", function(): 
 
     should.equal(Array.isArray(receivedMsgs), true);
     should.equal(receivedMsgs.length, 4);
-
+    if (receivedMsgs[0].userProperties) {
+      should.equal(receivedMsgs[0].userProperties.priority, "High");
+    }
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 });
@@ -590,7 +592,7 @@ describe("Send/Receive messages using correlation filters of subscription", func
       "CorrelationRuleWithAction",
       {
         userProperties: {
-          color: "red"
+          color: "blue"
         }
       },
       "SET priority = 'High'"
@@ -605,6 +607,9 @@ describe("Send/Receive messages using correlation filters of subscription", func
 
     should.equal(Array.isArray(receivedMsgs), true);
     should.equal(receivedMsgs.length, 4);
+    if (receivedMsgs[0].userProperties) {
+      should.equal(receivedMsgs[0].userProperties.priority, "High");
+    }
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
