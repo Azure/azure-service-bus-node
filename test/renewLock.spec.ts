@@ -100,11 +100,11 @@ describe("Lock Renewal in PeekLock mode", function(): void {
       should.equal(msgs[0].lockedUntilUtc >= expectedLockExpiryTimeUtc, true);
     }
 
-    console.log(`Sleeping 10 seconds...`);
+    // Sleeping 10 seconds...
     await delay(10000);
 
     await receiverClient.renewLock(msgs[0]);
-    console.log(`After First Renewal: ${msgs[0].lockedUntilUtc}`);
+
     // Compute expected lock duration after 10 seconds of sleep
     expectedLockExpiryTimeUtc.setSeconds(expectedLockExpiryTimeUtc.getSeconds() + 10);
 
@@ -113,11 +113,11 @@ describe("Lock Renewal in PeekLock mode", function(): void {
       should.equal(msgs[0].lockedUntilUtc >= expectedLockExpiryTimeUtc, true);
     }
 
-    console.log(`Sleeping 5 more seconds...`);
+    // Sleeping 5 more seconds...
     await delay(5000);
 
     await receiverClient.renewLock(msgs[0]);
-    console.log(`After Second Renewal: ${msgs[0].lockedUntilUtc}`);
+
     // Compute expected lock duration after 5 more seconds of sleep
     expectedLockExpiryTimeUtc.setSeconds(expectedLockExpiryTimeUtc.getSeconds() + 5);
 
@@ -155,7 +155,7 @@ describe("Lock Renewal in PeekLock mode", function(): void {
     should.equal(msgs[0].body, testMessage.body);
     should.equal(msgs[0].messageId, testMessage.messageId);
 
-    console.log(`Sleeping 30 seconds...`);
+    // Sleeping 30 seconds...
     await delay(lockDurationInMilliseconds);
 
     let errorWasThrown: boolean = false;
