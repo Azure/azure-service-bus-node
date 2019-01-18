@@ -1,46 +1,44 @@
 /*
-  This sample demonstrates how .receive() function can be used to receive Service Bus messages in a
-  stream that is open for a fixed amount of time.
-  Please run "sendMessages.ts" sample before running this to populate the queue/topic
+  This sample demonstrates how the receive() function can be used to receive Service Bus messages
+  in a stream.
+
+  Setup: Please run "sendMessages.ts" sample before running this to populate the queue/topic
 */
 
-import { OnMessage, OnError, MessagingError, delay, ServiceBusMessage, Namespace } from "../../lib";
+import { OnMessage, OnError, delay, Namespace } from "../../lib";
 
 // Define connection string and related Service Bus entity names here
 const connectionString = "";
 const queueName = "";
 
-let ns: Namespace;
-
 async function main(): Promise<void> {
-  ns = Namespace.createFromConnectionString(connectionString);
-  try {
-    await receiveMessages();
-  } finally {
-    await ns.close();
-  }
-}
+  const ns = Namespace.createFromConnectionString(connectionString);
 
-async function receiveMessages(): Promise<void> {
   // If using Topics, use createSubscriptionClient to receive from a topic subscription
   const client = ns.createQueueClient(queueName);
 
-  const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log(`Received message: ${brokeredMessage.body} - ${brokeredMessage.label}`);
-
+  const onMessageHandler: OnMessage = async (brokeredMessage) => {
+    console.log(`Received message: ${brokeredMessage.body}`);
     await brokeredMessage.complete();
   };
-  const onError: OnError = (err: MessagingError | Error) => {
+  const onErrorHandler: OnError = (err) => {
     console.log("Error occurred: ", err);
   };
 
-  const receiveListener = client.receive(onMessage, onError, { autoComplete: false });
-  // Inducing delay to keep receiveListener open long enough to receive messages
-  // Ideally the receiveListener will remain open as long as an application is running.
-  await delay(5000);
-  await receiveListener.stop();
+  try {
+    const receiveListener = client.receive(onMessageHandler, onErrorHandler, {
+      autoComplete: false
+    });
 
-  await client.close();
+    // Inducing delay to keep receiveListener open long enough to receive messages
+    // Ideally the receiveListener will remain open as long as an application is running.
+    await delay(5000);
+
+    await receiveListener.stop();
+    await client.close();
+  } finally {
+    await ns.close();
+  }
 }
 
 main().catch((err) => {

@@ -1,41 +1,35 @@
 /*
-  This sample demonstrates how Service Bus Messages can be sent to and received from individual
-  sessions as created on session enabled queues/topic subscriptions.
+  This sample demonstrates how to send/receive messages to/from session enabled queues/subscriptions
+  in Service Bus.
+
+  Setup: To run this sample, you would need session enabled Queue/Subscription.
+
+  See https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-sessions to learn about
+  sessions in Service Bus.
 */
 
-import {
-  SendableMessageInfo,
-  OnSessionMessage,
-  OnError,
-  MessagingError,
-  delay,
-  ServiceBusMessage,
-  Namespace,
-  MessageSession
-} from "../../lib";
+import { OnSessionMessage, OnError, delay, Namespace } from "../../lib";
 
 // Define connection string and related Service Bus entity names here
 // Ensure on portal.azure.com that queue/topic has Sessions feature enabled
 const connectionString = "";
 const queueName = "";
 
-let ns: Namespace;
-
 async function main(): Promise<void> {
-  ns = Namespace.createFromConnectionString(connectionString);
+  const ns = Namespace.createFromConnectionString(connectionString);
   try {
-    await sendMessages("session-1");
-    await sendMessages("session-2");
-    await sendMessages("session-3");
-    await sendMessages("session-4");
+    await sendMessages(ns, "session-1");
+    await sendMessages(ns, "session-2");
+    await sendMessages(ns, "session-3");
+    await sendMessages(ns, "session-4");
 
-    await receiveMessages();
+    await receiveMessages(ns);
   } finally {
     await ns.close();
   }
 }
 
-async function sendMessages(sessionId: string): Promise<void> {
+async function sendMessages(ns: Namespace, sessionId: string): Promise<void> {
   // If using Topics, use createTopicClient to send to a topic
   const client = ns.createQueueClient(queueName);
   const data = [
@@ -48,7 +42,7 @@ async function sendMessages(sessionId: string): Promise<void> {
 
   for (let index = 0; index < data.length; index++) {
     const element = data[index];
-    const message: SendableMessageInfo = {
+    const message = {
       sessionId: sessionId,
       body: `${element.step} ${element.title}`,
       label: "RecipeStep"
@@ -60,19 +54,16 @@ async function sendMessages(sessionId: string): Promise<void> {
   await client.close();
 }
 
-async function receiveMessages(): Promise<void> {
+async function receiveMessages(ns: Namespace): Promise<void> {
   // If using Topics, use createSubscriptionClient to receive from a topic subscription
   const client = ns.createQueueClient(queueName);
 
-  const onMessage: OnSessionMessage = async (
-    messageSession: MessageSession,
-    brokeredMessage: ServiceBusMessage
-  ) => {
+  const onMessage: OnSessionMessage = async (messageSession, brokeredMessage) => {
     console.log(
       `Message received: ${brokeredMessage.body} SessionId : ${brokeredMessage.sessionId}`
     );
   };
-  const onError: OnError = (err: MessagingError | Error) => {
+  const onError: OnError = (err) => {
     console.log(">>>>> Error occurred: ", err);
   };
   await client.receiveMessagesFromSessions(onMessage, onError);

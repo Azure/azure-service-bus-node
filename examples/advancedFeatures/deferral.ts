@@ -1,41 +1,25 @@
-import {
-  OnMessage,
-  OnError,
-  MessagingError,
-  delay,
-  ServiceBusMessage,
-  Namespace,
-  QueueClient,
-  TopicClient,
-  SendableMessageInfo
-} from "../../lib";
-import { config } from "dotenv";
-config();
-
-const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const queueName = process.env.QUEUE_NAME || "";
-const topicName = process.env.TOPIC_NAME || "";
-const subscriptionName = process.env.SUBSCRIPTION_NAME || "";
-
-console.log("Connection string value: ", connectionString);
-console.log("Queue name: ", queueName);
-console.log("Topic name: ", topicName);
-console.log("Subscription name: ", subscriptionName);
-
 /*
-  This sample demonstrates how Service Message deferral feature can be used to defer messages to be
-  available for receiving by client at a later time.
+  This sample demonstrates how the defer() function can be used to defer a message for later processing.
 
-  We take for example an application receives cooking instructions that the clients need to process
-  in appropriate sequence. We simulate a common scenario where the messages are not received in
-  expected sequence. The example shows how message deferral can be used to process the messages
-  in expected sequence.
+  In this sample, we have an application that gets cooking instructions out of order. It uses
+  message deferral to defer the instruction that is out of order, and then processes it in order.
+
+  See https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-deferral to learn about
+  message deferral.
 */
+
+import { Namespace, OnMessage, OnError, delay } from "../../lib";
+
+// Define connection string and related Service Bus entity names here
+const connectionString = "";
+const queueName = "";
+
 async function main(): Promise<void> {
   await sendMessages();
   await receiveMessage();
 }
 
+// Shuffle and send messages
 async function sendMessages(): Promise<void> {
   const nsSend = Namespace.createFromConnectionString(connectionString);
   // If using Topics, use createTopicClient to send to a topic
@@ -49,28 +33,24 @@ async function sendMessages(): Promise<void> {
     { step: 5, title: "Eat" }
   ];
   try {
-    // Shuffle and send messages
-    // The way we shuffle the message order is by introducing a tiny random delay before each of the messages is sent
-    const promises = data.map((body) => sendMessage(body, sendClient));
+    // The way we shuffle the message order is by using the scheduledEnqueueTimeUtc property
+    // to schedule the queueing of the message at different times
+
+    const now = Date.now();
+    const promises: Promise<any>[] = [];
+    for (let index = 0; index < data.length; index++) {
+      const message = {
+        body: data[index],
+        label: "RecipeStep",
+        contentType: "application/json",
+        scheduledEnqueueTimeUtc: new Date(now + index * 30000)
+      };
+      promises.push(sendClient.send(message));
+    }
+
     await Promise.all(promises);
   } finally {
     await nsSend.close();
-  }
-}
-
-async function sendMessage(body: any, sendClient: QueueClient | TopicClient): Promise<void> {
-  await delay(Math.random() * 30);
-  try {
-    const message: SendableMessageInfo = {
-      body: body,
-      label: "RecipeStep",
-      contentType: "application/json"
-    };
-
-    await sendClient.send(message);
-    console.log("Sent message step:", body.step);
-  } catch (err) {
-    console.log("Error while sending message", err);
   }
 }
 
@@ -83,7 +63,7 @@ async function receiveMessage(): Promise<void> {
   const deferredSteps = new Map();
   let lastProcessedRecipeStep = 0;
   try {
-    const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
+    const onMessage: OnMessage = async (brokeredMessage) => {
       if (
         brokeredMessage.label === "RecipeStep" &&
         brokeredMessage.contentType === "application/json"
@@ -110,7 +90,7 @@ async function receiveMessage(): Promise<void> {
         await brokeredMessage.deadLetter();
       }
     };
-    const onError: OnError = (err: MessagingError | Error) => {
+    const onError: OnError = (err) => {
       console.log(">>>>> Error occurred: ", err);
     };
 

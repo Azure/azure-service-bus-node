@@ -1,22 +1,5 @@
-import { SendableMessageInfo, Namespace } from "../../lib";
-import { config } from "dotenv";
-config();
-
-const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const userEventsQueueName = process.env.QUEUE_NAME || "";
-const userEventsTopicName = process.env.TOPIC_NAME || "";
-const userEventsSubscriptionName = process.env.SUBSCRIPTION_NAME || "";
-
-console.log("Connection string value: ", connectionString);
-console.log("Queue name: ", userEventsQueueName);
-console.log("Topic name: ", userEventsTopicName);
-console.log("Subscription name: ", userEventsSubscriptionName);
-
-let ns: Namespace;
-
 /*
   This sample demonstrates usage of SessionState.
-  Ref - https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-sessions
 
   We take for example the context of an online shopping app and see how we can use Session State
   to implement the maintaining of shopping cart information completely on server side i.e.,
@@ -26,7 +9,21 @@ let ns: Namespace;
   Alice adds 3 items to the shopping cart and checks out, whereas Bob adds 3 items and leaves without
   checking out to likely return later.
   The session state keeps track of the cart items accordingly.
+
+  Setup: To run this sample, you would need session enabled Queue/Subscription.
+
+  See https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-sessions#message-session-state
+  to learn about session state.
 */
+
+import { Namespace } from "../../lib";
+
+// Define connection string and related Service Bus entity names here
+const connectionString = "";
+const userEventsQueueName = "";
+
+let ns: Namespace;
+
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {
@@ -99,7 +96,7 @@ async function sendMessagesForSession(shoppingEvents: any[], sessionId: string):
   const client = ns.createQueueClient(userEventsQueueName);
 
   for (let index = 0; index < shoppingEvents.length; index++) {
-    const message: SendableMessageInfo = {
+    const message = {
       sessionId: sessionId,
       body: shoppingEvents[index],
       label: "Shopping Step"

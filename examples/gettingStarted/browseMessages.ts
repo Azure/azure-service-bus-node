@@ -1,6 +1,10 @@
 /*
-  This sample demonstrates how .peek() function can be used to browse a Service Bus message.
-  Please run "sendMessages.ts" sample before running this to populate the queue/topic
+  This sample demonstrates how the peek() function can be used to browse a Service Bus message.
+
+  See https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-browsing to learn
+  about message browsing.
+
+  Setup: Please run "sendMessages.ts" sample before running this to populate the queue/topic
 */
 
 import { Namespace } from "../../lib";
@@ -9,29 +13,21 @@ import { Namespace } from "../../lib";
 const connectionString = "";
 const queueName = "";
 
-let ns: Namespace;
-
 async function main(): Promise<void> {
-  ns = Namespace.createFromConnectionString(connectionString);
-  try {
-    await browseMessages();
-  } finally {
-    await ns.close();
-  }
-}
+  const ns = Namespace.createFromConnectionString(connectionString);
 
-async function browseMessages(): Promise<void> {
   // If using Topics, use createSubscriptionClient to peek from a topic subscription
   const client = ns.createQueueClient(queueName);
 
-  const messages = await client.peek(10);
-  for (let i = 0; i < messages.length; i++) {
-    if (messages[i]) {
-      console.log(`Peeking message: ${messages[i].body} - ${messages[i].label}`);
+  try {
+    const messages = await client.peek(10);
+    for (let i = 0; i < messages.length; i++) {
+      console.log(`Peeking message #${i}: ${messages[i].body}`);
     }
+    await client.close();
+  } finally {
+    await ns.close();
   }
-
-  await client.close();
 }
 
 main().catch((err) => {

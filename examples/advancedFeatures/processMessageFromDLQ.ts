@@ -1,24 +1,3 @@
-import { ServiceBusMessage, Namespace } from "../../lib";
-import { config } from "dotenv";
-config();
-
-const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const queueName = process.env.QUEUE_NAME || "";
-const topicName = process.env.TOPIC_NAME || "";
-const subscriptionName = process.env.SUBSCRIPTION_NAME || "";
-
-console.log("Connection string value: ", connectionString);
-console.log("Queue name: ", queueName);
-console.log("Topic name: ", topicName);
-console.log("Subscription name: ", subscriptionName);
-
-const deadLetterQueueName = Namespace.getDeadLetterQueuePathForQueue(queueName);
-// const deadLetterQueueName = Namespace.getDeadLetterSubcriptionPathForSubcription(topicName, subscriptionName);
-
-console.log("Dead Letter Queue name: ", deadLetterQueueName);
-
-let ns: Namespace;
-
 /*
   This sample demonstrates retrieving a message from a dead letter queue, editing it and
   sending it back to the main queue.
@@ -26,6 +5,18 @@ let ns: Namespace;
   Prior to running this sample, run the sample in movingMessagesToDLQ.ts file to move a message
   to the Dead Letter Queue
 */
+
+import { ServiceBusMessage, Namespace } from "../../lib";
+
+// Define connection string and related Service Bus entity names here
+const connectionString = "";
+const queueName = "";
+
+const deadLetterQueueName = Namespace.getDeadLetterQueuePathForQueue(queueName);
+// const deadLetterQueueName = Namespace.getDeadLetterSubcriptionPathForSubcription(topicName, subscriptionName);
+
+let ns: Namespace;
+
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {

@@ -1,77 +1,63 @@
-import {
-  OnMessage,
-  OnError,
-  MessagingError,
-  delay,
-  ServiceBusMessage,
-  Namespace,
-  SendableMessageInfo,
-  SubscriptionClient,
-  TopicClient
-} from "../../lib";
-import { config } from "dotenv";
-config();
-
-const str = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const topic = process.env.TOPIC_NAME || "";
-const subscription1 = process.env.SUBSCRIPTION_NAME1 || "";
-const subscription2 = process.env.SUBSCRIPTION_NAME2 || "";
-const subscription3 = process.env.SUBSCRIPTION_NAME3 || "";
-
-console.log(`str: ${str}`);
-console.log(`path: ${topic}`);
-console.log(`Subscription 1: ${subscription1}`);
-console.log(`Subscription 2: ${subscription2}`);
-console.log(`Subscription 3: ${subscription3}\n`);
-
-let ns: Namespace;
-
 /*
-  This sample manages rules for the subscriptions using {addRules, removeAllRules} functions in the code.
-  Follow the link to do the same in other ways.
-  Link - https://docs.microsoft.com/en-us/azure/service-bus-messaging/service-bus-resource-manager-namespace-topic-with-rule
+  This sample illustrates how to use topic subscriptions and filters for splitting
+  up a message stream into multiple streams based on message properties.
+
+  In this sample, we will send messages with property "priority" of 1 and 2 to two separate subscriptions,
+  and the rest of the messages to the third subscription.
+
+  Setup: To run this sample, you would need a Topic with 3 subscriptions.
+
+  See https://docs.microsoft.com/en-us/azure/service-bus-messaging/topic-filters to learn aboout
+  Topic filters and actions.
 */
+
+import { Namespace, SendableMessageInfo, SubscriptionClient } from "../../lib";
+
+// Define connection string and related Service Bus entity names here
+const connectionString = "";
+const topicName = "";
+const subscriptionName1 = "";
+const subscriptionName2 = "";
+const subscriptionName3 = "";
+
 async function main(): Promise<void> {
-  ns = Namespace.createFromConnectionString(str);
+  const ns = Namespace.createFromConnectionString(connectionString);
   try {
-    const client = ns.createTopicClient(topic);
+    await addRules(ns);
 
-    const subscription1Client = ns.createSubscriptionClient(topic, subscription1);
-    await removeAllRules(subscription1Client);
-    await subscription1Client.addRule("Priority_1", "priority = 1");
+    await sendMessages(ns);
 
-    const subscription2Client = ns.createSubscriptionClient(topic, subscription2);
-    await removeAllRules(subscription2Client);
-    await subscription2Client.addRule("Priority_2", "priority = 2");
-
-    const subscription3Client = ns.createSubscriptionClient(topic, subscription3);
-    await removeAllRules(subscription3Client);
-    await subscription3Client.addRule("Priority_3", "priority = 3");
-
-    await sendMessages(client);
-    // Setting up receive handlers
-
-    await receiveMessages(subscription1Client);
-    await receiveMessages(subscription2Client);
-    await receiveMessages(subscription3Client);
-
-    await subscription1Client.close();
-    await subscription2Client.close();
-    await subscription3Client.close();
-
-    await client.close();
+    await receiveMessages(ns);
   } finally {
     await ns.close();
   }
 }
 
-async function sendMessages(topicClient: TopicClient): Promise<void> {
+// Adds Rules on subscriptions to route messages from a topic to different subscriptions
+async function addRules(ns: Namespace): Promise<void> {
+  const subscription1Client = ns.createSubscriptionClient(topicName, subscriptionName1);
+  const subscription2Client = ns.createSubscriptionClient(topicName, subscriptionName2);
+  const subscription3Client = ns.createSubscriptionClient(topicName, subscriptionName3);
+
+  // The default rule on the subscription allows all messages in.
+  // So, remove existing rules before adding new ones
+  await removeAllRules(subscription1Client);
+  await removeAllRules(subscription2Client);
+  await removeAllRules(subscription3Client);
+
+  await subscription1Client.addRule("Priority_1", "priority = 1");
+  await subscription2Client.addRule("Priority_2", "priority = 2");
+  await subscription3Client.addRule("Priority_3", "priority >= 3");
+}
+
+// Sends 100 messages with a user property called "priority" whose value is between 1 and 4
+async function sendMessages(ns: Namespace): Promise<void> {
+  const topicClient = ns.createTopicClient(topicName);
   for (let index = 0; index < 100; index++) {
-    const element = `Message#${index}`;
+    const priority = Math.ceil(Math.random() * 4);
     const message: SendableMessageInfo = {
-      body: element,
-      userProperties: { priority: Math.ceil(Math.random() * 3) },
-      label: "Random String"
+      body: `Message#${index} with priority ${priority}`,
+      userProperties: { priority: priority }
     };
 
     console.log(` Sending message ${index} - ${message.body}`);
@@ -79,35 +65,38 @@ async function sendMessages(topicClient: TopicClient): Promise<void> {
   }
 }
 
-async function receiveMessages(client: SubscriptionClient): Promise<void> {
-  // retrieve messages from the queue
-  const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
-    console.log(
-      `### Received message- Subscription: ${client.name}, Priority: ${
-        brokeredMessage.userProperties ? brokeredMessage.userProperties["priority"] : undefined
-      }`
-    );
-  };
+// Prints messages from the 3 subscriptions
+async function receiveMessages(ns: Namespace): Promise<void> {
+  const subscription1Client = ns.createSubscriptionClient(topicName, subscriptionName1);
+  const subscription2Client = ns.createSubscriptionClient(topicName, subscriptionName2);
+  const subscription3Client = ns.createSubscriptionClient(topicName, subscriptionName3);
 
-  const onError: OnError = (err: MessagingError | Error) => {
-    console.log("\n>>>>> Error occurred: ", err);
-  };
+  const messagesFromFirstSubscription = await subscription1Client.receiveBatch(100);
+  console.log("Messages from the first subscription:");
+  for (let i = 0; i < messagesFromFirstSubscription.length; i++) {
+    console.log(messagesFromFirstSubscription[i].body);
+  }
+  await subscription1Client.close();
 
-  const rcvHandler = client.receive(onMessage, onError);
-  await delay(10000);
-  await rcvHandler.stop();
+  const messagesFromSecondSubscription = await subscription1Client.receiveBatch(100);
+  console.log("Messages from the first subscription:");
+  for (let i = 0; i < messagesFromSecondSubscription.length; i++) {
+    console.log(messagesFromSecondSubscription[i].body);
+  }
+  await subscription2Client.close();
+
+  const messagesFromThirdSubscription = await subscription1Client.receiveBatch(100);
+  console.log("Messages from the first subscription:");
+  for (let i = 0; i < messagesFromThirdSubscription.length; i++) {
+    console.log(messagesFromThirdSubscription[i].body);
+  }
+  await subscription3Client.close();
 }
 
-// We need to remove rules before adding one because otherwise the existing default rule will let in all messages.
 async function removeAllRules(client: SubscriptionClient): Promise<void> {
-  try {
-    const rules = await client.getRules();
-    for (let i = 0; i < rules.length; i++) {
-      const rule = rules[i];
-      await client.removeRule(rule.name);
-    }
-  } catch (err) {
-    console.log("Error while removing the rule", err);
+  const rules = await client.getRules();
+  for (let i = 0; i < rules.length; i++) {
+    await client.removeRule(rules[i].name);
   }
 }
 

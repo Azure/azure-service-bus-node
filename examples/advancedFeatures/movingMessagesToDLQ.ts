@@ -1,19 +1,3 @@
-import { SendableMessageInfo, Namespace } from "../../lib";
-import { config } from "dotenv";
-config();
-
-const connectionString = process.env.SERVICEBUS_CONNECTION_STRING || "";
-const queueName = process.env.QUEUE_NAME || "";
-const topicName = process.env.TOPIC_NAME || "";
-const subscriptionName = process.env.SUBSCRIPTION_NAME || "";
-
-console.log("Connection string value: ", connectionString);
-console.log("Queue name: ", queueName);
-console.log("Topic name: ", topicName);
-console.log("Subscription name: ", subscriptionName);
-
-let ns: Namespace;
-
 /*
     This sample demonstrates scenarios as to how a Service Bus message can be explicitly moved to
     the DLQ. For other implicit ways when Service Bus messages get moved to DLQ, refer to -
@@ -21,6 +5,15 @@ let ns: Namespace;
 
     Run processMessagesInDLQ example after this to see how the messages in DLQ can be reprocessed.
 */
+
+import { Namespace } from "../../lib";
+
+// Define connection string and related Service Bus entity names here
+const connectionString = "";
+const queueName = "";
+
+let ns: Namespace;
+
 async function main(): Promise<void> {
   ns = Namespace.createFromConnectionString(connectionString);
   try {
@@ -37,7 +30,7 @@ async function sendMessage(): Promise<void> {
   // If using Topics, use createTopicClient to send to a topic
   const client = ns.createQueueClient(queueName);
 
-  const message: SendableMessageInfo = {
+  const message = {
     body: { name: "Creamy Chicken Pasta", type: "Dinner" },
     contentType: "application/json",
     label: "Recipe"

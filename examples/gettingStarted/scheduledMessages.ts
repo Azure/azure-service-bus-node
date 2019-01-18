@@ -1,23 +1,17 @@
 /*
-  This sample demonstrates how .scheduleMessage() function can be used to schedule messages to appear
-  on a Service Bus entity at a specified later time.
+  This sample demonstrates how the scheduleMessage() function can be used to schedule messages to
+  appear on a Service Bus Queue/Subscription at a later time.
+
+  See https://docs.microsoft.com/en-us/azure/service-bus-messaging/message-sequencing#scheduled-messages
+  to learn about scheduling messages.
 */
 
-import {
-  Namespace,
-  SendableMessageInfo,
-  OnMessage,
-  MessagingError,
-  OnError,
-  ServiceBusMessage
-} from "../../lib";
+import { Namespace, SendableMessageInfo, OnMessage, OnError } from "../../lib";
 import { delay } from "rhea-promise";
 
 // Define connection string and related Service Bus entity names here
 const connectionString = "";
 const queueName = "";
-
-let ns: Namespace;
 
 const listOfScientists = [
   { name: "Einstein", firstName: "Albert" },
@@ -33,18 +27,18 @@ const listOfScientists = [
 ];
 
 async function main(): Promise<void> {
-  ns = Namespace.createFromConnectionString(connectionString);
+  const ns = Namespace.createFromConnectionString(connectionString);
   try {
-    await sendScheduledMessages();
+    await sendScheduledMessages(ns);
 
-    await receiveMessages();
+    await receiveMessages(ns);
   } finally {
     await ns.close();
   }
 }
 
 // Scheduling messages to be sent after 10 seconds from now
-async function sendScheduledMessages(): Promise<void> {
+async function sendScheduledMessages(ns: Namespace): Promise<void> {
   // If using Topics, use createTopicClient to send to a topic
   const client = ns.createQueueClient(queueName);
 
@@ -64,22 +58,22 @@ async function sendScheduledMessages(): Promise<void> {
   }
 }
 
-async function receiveMessages(): Promise<void> {
+async function receiveMessages(ns: Namespace): Promise<void> {
   // If using Topics, use createSubscriptionClient to receive from a topic subscription
   const client = ns.createQueueClient(queueName);
 
-  const onMessage: OnMessage = async (brokeredMessage: ServiceBusMessage) => {
+  const onMessageHandler: OnMessage = async (brokeredMessage) => {
     numOfMessagesReceived++;
     console.log(`Received message: ${brokeredMessage.body} - ${brokeredMessage.label}`);
 
     await brokeredMessage.complete();
   };
-  const onError: OnError = (err: MessagingError | Error) => {
+  const onErrorHandler: OnError = (err) => {
     console.log("Error occurred: ", err);
   };
 
   let numOfMessagesReceived = 0;
-  const receiveListenerFirst = client.receive(onMessage, onError);
+  const receiveListenerFirst = client.receive(onMessageHandler, onErrorHandler);
   await delay(5000);
   await receiveListenerFirst.stop();
   console.log(
@@ -88,7 +82,7 @@ async function receiveMessages(): Promise<void> {
 
   await delay(5000);
 
-  const receiveListenerSecond = client.receive(onMessage, onError);
+  const receiveListenerSecond = client.receive(onMessageHandler, onErrorHandler);
   await delay(5000);
   await receiveListenerSecond.stop();
   console.log(
