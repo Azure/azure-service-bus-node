@@ -135,6 +135,7 @@ async function sendOrders(): Promise<void> {
 }
 
 async function receiveOrders(client: SubscriptionClient): Promise<ServiceBusMessage[]> {
+  let errorFromErrorHandler: Error | undefined;
   const receivedMsgs: ServiceBusMessage[] = [];
   const receiveListener = client.receive(
     (msg: ServiceBusMessage) => {
@@ -142,12 +143,15 @@ async function receiveOrders(client: SubscriptionClient): Promise<ServiceBusMess
       return Promise.resolve();
     },
     (err: Error) => {
-      should.not.exist(err);
+      if (err) {
+        errorFromErrorHandler = err;
+      }
     }
   );
 
   await delay(5000);
   await receiveListener.stop();
+  chai.assert.fail(errorFromErrorHandler && errorFromErrorHandler.message);
 
   return receivedMsgs;
 }
