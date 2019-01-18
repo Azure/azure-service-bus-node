@@ -44,12 +44,6 @@ async function testPeekMsgsLength(
   );
 }
 
-function unExpectedErrorHandler(err: Error): void {
-  if (err) {
-    unexpectedError = err;
-  }
-}
-
 const maxDeliveryCount = 10;
 
 let namespace: Namespace;
@@ -66,6 +60,12 @@ let unpartitionedDeadletterQueueClient: QueueClient;
 let unpartitionedDeadletterSubscriptionClient: SubscriptionClient;
 let errorWasThrown: boolean;
 let unexpectedError: Error | undefined;
+
+function unExpectedErrorHandler(err: Error): void {
+  if (err) {
+    unexpectedError = err;
+  }
+}
 
 async function beforeEachTest(): Promise<void> {
   // The tests in this file expect the env variables to contain the connection string and
