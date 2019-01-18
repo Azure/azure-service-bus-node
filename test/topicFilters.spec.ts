@@ -630,6 +630,7 @@ describe("Send/Receive messages using correlation filters of subscription", func
 
     should.equal(Array.isArray(receivedMsgs), true);
     should.equal(receivedMsgs.length, dataLength);
+
     if (receivedMsgs[0].userProperties) {
       should.equal(receivedMsgs[0].userProperties.priority, "High");
     }
