@@ -44,6 +44,12 @@ async function testPeekMsgsLength(
   );
 }
 
+function unExpectedErrorHandler(err: Error): void {
+  if (err) {
+    unexpectedError = err;
+  }
+}
+
 const maxDeliveryCount = 10;
 
 let namespace: Namespace;
@@ -59,7 +65,7 @@ let partitionedDeadletterSubscriptionClient: SubscriptionClient;
 let unpartitionedDeadletterQueueClient: QueueClient;
 let unpartitionedDeadletterSubscriptionClient: SubscriptionClient;
 let errorWasThrown: boolean;
-let errorFromErrorHandler: Error | undefined;
+let unexpectedError: Error | undefined;
 
 async function beforeEachTest(): Promise<void> {
   // The tests in this file expect the env variables to contain the connection string and
@@ -142,7 +148,7 @@ async function beforeEachTest(): Promise<void> {
     throw new Error("Please use an empty unpartitioned Subscription for integration testing");
   }
   errorWasThrown = false;
-  errorFromErrorHandler = undefined;
+  unexpectedError = undefined;
 }
 
 async function afterEachTest(): Promise<void> {
@@ -166,22 +172,15 @@ describe("Streaming Receiver Misc Tests", function(): void {
     await testPeekMsgsLength(receiverClient, testMessages.length);
 
     const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener = receiverClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        should.equal(
-          testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
-          true,
-          "Received Message doesnt match any of the test messages"
-        );
-        return Promise.resolve();
-      },
-      (err: Error) => {
-        if (err) {
-          errorFromErrorHandler = err;
-        }
-      }
-    );
+    const receiveListener = receiverClient.receive((msg: ServiceBusMessage) => {
+      receivedMsgs.push(msg);
+      should.equal(
+        testMessages.some((x) => msg.body === x.body && msg.messageId === x.messageId),
+        true,
+        "Received Message doesnt match any of the test messages"
+      );
+      return Promise.resolve();
+    }, unExpectedErrorHandler);
 
     for (let i = 0; i < 5; i++) {
       await delay(1000);
@@ -191,9 +190,8 @@ describe("Streaming Receiver Misc Tests", function(): void {
     }
 
     await receiveListener.stop();
-    if (errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-    }
+
+    chai.assert.fail(unexpectedError && unexpectedError.message);
 
     await testPeekMsgsLength(receiverClient, 0);
   }
@@ -235,11 +233,7 @@ describe("Streaming Receiver Misc Tests", function(): void {
         );
         return Promise.resolve();
       },
-      (err: Error) => {
-        if (err) {
-          errorFromErrorHandler = err;
-        }
-      },
+      unExpectedErrorHandler,
       { autoComplete: false }
     );
 
@@ -255,9 +249,8 @@ describe("Streaming Receiver Misc Tests", function(): void {
     await receivedMsgs[0].complete();
     await receivedMsgs[1].complete();
     await receiveListener.stop();
-    if (errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-    }
+
+    chai.assert.fail(unexpectedError && unexpectedError.message);
   }
 
   it("Disabled autoComplete, no manual complete retains the message in Partitioned Queues", async function(): Promise<
@@ -313,20 +306,14 @@ describe("Streaming Receiver Misc Tests", function(): void {
         }
         return msg.abandon();
       },
-      (err: Error) => {
-        if (err) {
-          errorFromErrorHandler = err;
-        }
-      },
+      unExpectedErrorHandler,
       { autoComplete: false }
     );
 
     await delay(4000);
 
     await receiveListener.stop();
-    if (errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-    }
+    chai.assert.fail(unexpectedError && unexpectedError.message);
 
     should.equal(checkDeliveryCount0, maxDeliveryCount);
     should.equal(checkDeliveryCount1, maxDeliveryCount);
@@ -391,30 +378,27 @@ describe("Streaming Receiver Misc Tests", function(): void {
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient
   ): Promise<void> {
+    let expectedError: Error | undefined;
     await senderClient.send(testMessages[0]);
 
     const receiveListener = receiverClient.receive(
       async (msg: ServiceBusMessage) => {
         await msg.complete();
-        should.fail(false, true, "Testing ErrorHandler");
+        chai.assert.fail("Testing ErrorHandler");
       },
       (err: Error) => {
         if (err) {
-          errorFromErrorHandler = err;
+          expectedError = err;
         }
       }
     );
     await delay(5000);
 
     await receiveListener.stop();
-    if (!errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, true, "Error handler not called!");
+    if (!expectedError) {
+      chai.assert.fail("Error handler not called!");
     } else {
-      should.equal(
-        errorFromErrorHandler.message,
-        "Testing ErrorHandler",
-        "Error handler didnt get the right error"
-      );
+      should.equal(expectedError.message, "Testing ErrorHandler");
     }
   }
 
@@ -454,11 +438,7 @@ describe("Complete message", function(): void {
         );
         return msg.complete();
       },
-      (err: Error) => {
-        if (err) {
-          errorFromErrorHandler = err;
-        }
-      },
+      unExpectedErrorHandler,
       { autoComplete }
     );
 
@@ -470,9 +450,7 @@ describe("Complete message", function(): void {
     }
 
     await receiveListener.stop();
-    if (errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-    }
+    chai.assert.fail(unexpectedError && unexpectedError.message);
 
     await testPeekMsgsLength(receiverClient, 0);
   }
@@ -542,18 +520,12 @@ describe("Abandon message", function(): void {
           return receiveListener.stop();
         });
       },
-      (err: Error) => {
-        if (err) {
-          errorFromErrorHandler = err;
-        }
-      },
+      unExpectedErrorHandler,
       { maxAutoRenewDurationInSeconds: 0, autoComplete }
     );
     await delay(4000);
 
-    if (errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-    }
+    chai.assert.fail(unexpectedError && unexpectedError.message);
 
     const receivedMsgs = await receiverClient.receiveBatch(1);
     should.equal(receivedMsgs.length, 1);
@@ -638,20 +610,14 @@ describe("Defer message", function(): void {
         }
         return msg.defer();
       },
-      (err: Error) => {
-        if (err) {
-          errorFromErrorHandler = err;
-        }
-      },
+      unExpectedErrorHandler,
       { autoComplete }
     );
 
     await delay(4000);
 
     await receiveListener.stop();
-    if (errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-    }
+    chai.assert.fail(unexpectedError && unexpectedError.message);
 
     const deferredMsg0 = await receiverClient.receiveDeferredMessage(seq0);
     const deferredMsg1 = await receiverClient.receiveDeferredMessage(seq1);
@@ -741,19 +707,13 @@ describe("Deadletter message", function(): void {
       (msg: ServiceBusMessage) => {
         return msg.deadLetter();
       },
-      (err: Error) => {
-        if (err) {
-          errorFromErrorHandler = err;
-        }
-      },
+      unExpectedErrorHandler,
       { autoComplete }
     );
 
     await delay(4000);
     await receiveListener.stop();
-    if (errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-    }
+    chai.assert.fail(unexpectedError && unexpectedError.message);
 
     await testPeekMsgsLength(receiverClient, 0);
 
@@ -874,9 +834,7 @@ describe("Multiple Streaming Receivers", function(): void {
       (msg: ServiceBusMessage) => {
         return msg.complete();
       },
-      (err: Error) => {
-        should.not.exist(err);
-      }
+      unExpectedErrorHandler
     );
     await delay(5000);
     try {
@@ -944,22 +902,13 @@ describe("Settle an already Settled message throws error", () => {
   ): Promise<void> {
     await senderClient.send(testMessages[0]);
     const receivedMsgs: ServiceBusMessage[] = [];
-    const receiveListener = receiverClient.receive(
-      (msg: ServiceBusMessage) => {
-        receivedMsgs.push(msg);
-        return Promise.resolve();
-      },
-      (err: Error) => {
-        if (err) {
-          errorFromErrorHandler = err;
-        }
-      }
-    );
+    const receiveListener = receiverClient.receive((msg: ServiceBusMessage) => {
+      receivedMsgs.push(msg);
+      return Promise.resolve();
+    }, unExpectedErrorHandler);
 
     await delay(5000);
-    if (errorFromErrorHandler) {
-      should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-    }
+    chai.assert.fail(unexpectedError && unexpectedError.message);
 
     should.equal(receivedMsgs.length, 1);
     should.equal(receivedMsgs[0].body, testMessages[0].body);

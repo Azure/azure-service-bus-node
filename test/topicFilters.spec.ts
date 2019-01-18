@@ -133,9 +133,7 @@ async function receiveOrders(client: SubscriptionClient): Promise<ServiceBusMess
 
   await delay(5000);
   await receiveListener.stop();
-  if (errorFromErrorHandler) {
-    should.fail(!!errorFromErrorHandler, false, errorFromErrorHandler.message);
-  }
+  chai.assert.fail(errorFromErrorHandler && errorFromErrorHandler.message);
 
   return receivedMsgs;
 }
