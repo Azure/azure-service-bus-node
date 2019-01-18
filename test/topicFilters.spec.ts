@@ -161,15 +161,14 @@ async function addRules(
 
   const rules = await subscriptionClient.getRules();
   should.equal(rules.length, 1);
-  should.equal(rules[0].name, ruleName);
+  should.equal(rules[0].name, ruleName, "Expected Rule not found");
 
   if (sqlRuleActionExpression) {
-    const action = rules[0].action
-      ? rules[0].action.expression
-        ? rules[0].action.expression
-        : ""
-      : "";
-    should.equal(action, sqlRuleActionExpression);
+    should.equal(
+      rules[0].action!.expression,
+      sqlRuleActionExpression,
+      "Action not set on the rule."
+    );
   }
 }
 
@@ -497,7 +496,7 @@ describe("Send/Receive messages using sql filters of subscription", function(): 
   });
 
   it("SQL rule filter on the custom properties", async function(): Promise<void> {
-    await addRules("SQLCustomRule", "sys.label = 'red'");
+    await addRules("SQLCustomRule", "color = 'red'");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
@@ -546,6 +545,8 @@ describe("Send/Receive messages using sql filters of subscription", function(): 
     should.equal(receivedMsgs.length, dataLength);
     if (receivedMsgs[0].userProperties) {
       should.equal(receivedMsgs[0].userProperties.priority, "High");
+    } else {
+      chai.assert.fail("Received message doesnt have user properties");
     }
     await testPeekMsgsLength(subscriptionClient, 0);
   });
@@ -564,6 +565,8 @@ describe("Send/Receive messages using sql filters of subscription", function(): 
     should.equal(receivedMsgs.length, dataLength);
     if (receivedMsgs[0].userProperties) {
       should.equal(receivedMsgs[0].userProperties.priority, "High");
+    } else {
+      chai.assert.fail("Received message doesnt have user properties");
     }
     await testPeekMsgsLength(subscriptionClient, 0);
   });*/
@@ -633,6 +636,8 @@ describe("Send/Receive messages using correlation filters of subscription", func
 
     if (receivedMsgs[0].userProperties) {
       should.equal(receivedMsgs[0].userProperties.priority, "High");
+    } else {
+      chai.assert.fail("Received message doesnt have user properties");
     }
 
     await testPeekMsgsLength(subscriptionClient, 0);
