@@ -245,7 +245,7 @@ async function beforeEachTest(): Promise<void> {
 async function afterEachTest(): Promise<void> {
   await namespace.close();
 }
-describe.only("Complete/Abandon/Defer/Deadletter normal message", function(): void {
+describe("Complete/Abandon/Defer/Deadletter normal message", function(): void {
   beforeEach(async () => {
     await beforeEachTest();
   });
@@ -1126,7 +1126,7 @@ describe("Multiple ReceiveBatch calls", function(): void {
   it("Partitioned Queues with Sessions: Throws error when ReceiveBatch is called while the previous call is not done", async function(): Promise<
     void
   > {
-    await testParallelReceiveBatchCalls(partitionedQueueSessionClient);
+    await testParallelReceiveBatchCalls(partitionedQueueMessageSession);
   });
 
   it("Partitioned Topics and Subscription with Sessions: Throws error when ReceiveBatch is called while the previous call is not done", async function(): Promise<
@@ -1527,8 +1527,7 @@ describe("Batching Receiver Misc Tests", function(): void {
   });
 
   async function simulatenousReceiveBatch(
-    receiverClient: QueueClient | SubscriptionClient | MessageSession,
-    useSessions?: boolean
+    receiverClient: QueueClient | SubscriptionClient | MessageSession
   ): Promise<void> {
     const firstBatchPromise = receiverClient.receiveBatch(1, 10);
     await delay(5000);
@@ -1567,7 +1566,7 @@ describe("Batching Receiver Misc Tests", function(): void {
   it("Partitioned Queues with Sessions: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
     void
   > {
-    await simulatenousReceiveBatch(partitionedQueueSessionClient);
+    await simulatenousReceiveBatch(partitionedQueueMessageSession);
   });
 
   it("Partitioned Topics and Subscription with Sessions: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
