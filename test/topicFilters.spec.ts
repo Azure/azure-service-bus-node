@@ -91,6 +91,13 @@ async function beforeEachTest(): Promise<void> {
 }
 
 async function afterEachTest(): Promise<void> {
+  await removeAllRules(subscriptionClient);
+  await subscriptionClient.addRule("DefaultFilter", true);
+
+  const rules = await subscriptionClient.getRules();
+  should.equal(rules.length, 1);
+  should.equal(rules[0].name, "DefaultFilter");
+
   await namespace.close();
 }
 
