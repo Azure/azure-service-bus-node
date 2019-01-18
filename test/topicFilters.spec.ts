@@ -14,7 +14,8 @@ import {
   generateUuid,
   TopicClient,
   SendableMessageInfo,
-  delay
+  delay,
+  CorrelationFilter
 } from "../lib";
 
 // We need to remove rules before adding one because otherwise the existing default rule will let in all messages.
@@ -142,6 +143,27 @@ async function receiveOrders(client: SubscriptionClient): Promise<ServiceBusMess
   await receiveListener.stop();
 
   return receivedMsgs;
+}
+
+async function addRules(
+  ruleName: string,
+  filter: boolean | string | CorrelationFilter,
+  sqlRuleActionExpression?: string
+): Promise<void> {
+  await subscriptionClient.addRule(ruleName, filter, sqlRuleActionExpression);
+
+  const rules = await subscriptionClient.getRules();
+  should.equal(rules.length, 1);
+  should.equal(rules[0].name, ruleName);
+
+  if (sqlRuleActionExpression) {
+    const action = rules[0].action
+      ? rules[0].action.expression
+        ? rules[0].action.expression
+        : ""
+      : "";
+    should.equal(action, sqlRuleActionExpression);
+  }
 }
 
 describe("Topic Filters -  Add Rule - Positive Test Cases", function(): void {
@@ -455,92 +477,89 @@ describe("Send/Receive messages using sql filters of subscription", function(): 
   });
 
   it("SQL rule filter on the message properties", async function(): Promise<void> {
-    await subscriptionClient.addRule("SQLMsgPropertyRule", "sys.label = 'red'");
-
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1, "rule");
-    should.equal(rules[0].name, "SQLMsgPropertyRule");
+    await addRules("SQLMsgPropertyRule", "sys.label = 'red'");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "red").length;
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 4);
+    should.equal(receivedMsgs.length, dataLength);
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
   it("SQL rule filter on the custom properties", async function(): Promise<void> {
-    await subscriptionClient.addRule("SQLCustomRule", "color='red'");
-
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1, "rule");
-    should.equal(rules[0].name, "SQLCustomRule");
+    await addRules("SQLCustomRule", "sys.label = 'red'");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "red").length;
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 4);
+    should.equal(receivedMsgs.length, dataLength);
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
   it("SQL rule filter using AND operator ", async function(): Promise<void> {
-    await subscriptionClient.addRule("SqlRuleWithAND", "color = 'blue' and quantity = 10");
-
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1, "rule");
-    should.equal(rules[0].name, "SqlRuleWithAND");
+    await addRules("SqlRuleWithAND", "color = 'blue' and quantity = 10");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "blue" && x.Quantity === 10).length;
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 2);
+    should.equal(receivedMsgs.length, dataLength);
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
   it("SQL rule filter using OR operator ", async function(): Promise<void> {
-    await subscriptionClient.addRule("SqlRuleWithOR", "color = 'blue' OR quantity = 10");
-
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1, "rule");
-    should.equal(rules[0].name, "SqlRuleWithOR");
+    await addRules("SqlRuleWithOR", "color = 'blue' OR quantity = 10");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "blue" || x.Quantity === 10).length;
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 8);
+    should.equal(receivedMsgs.length, dataLength);
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
-  it("SQL rule filter with action", async function(): Promise<void> {
-    await subscriptionClient.addRule("SqlRuleWithAction", "color='blue'", "SET priority = 'High'");
-    const rules = await subscriptionClient.getRules();
-    const action = rules[0].action
-      ? rules[0].action.expression
-        ? rules[0].action.expression
-        : ""
-      : "";
-
-    should.equal(rules.length, 1);
-    should.equal(rules[0].name, "SqlRuleWithAction");
-    should.equal(action, "SET priority = 'High'");
+  it("SQL rule filter with action with custom properties", async function(): Promise<void> {
+    await addRules("SqlRuleWithAction", "color='blue'", "SET priority = 'High'");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "blue").length;
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 4);
+    should.equal(receivedMsgs.length, dataLength);
     if (receivedMsgs[0].userProperties) {
       should.equal(receivedMsgs[0].userProperties.priority, "High");
     }
     await testPeekMsgsLength(subscriptionClient, 0);
   });
+
+  // Standard subscription : Update message properties in random order.
+  // Premium subscription : Update message properties only first time when you create new subscription.
+
+  /* it("SQL rule filter with action with message properties", async function(): Promise<void> {
+    await addRules("SqlRuleWithAction", "color='blue'", "SET sys.label = 'color blue'");
+
+    await sendOrders();
+    const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "blue").length;
+
+    should.equal(Array.isArray(receivedMsgs), true);
+    should.equal(receivedMsgs.length, dataLength);
+    if (receivedMsgs[0].userProperties) {
+      should.equal(receivedMsgs[0].userProperties.priority, "High");
+    }
+    await testPeekMsgsLength(subscriptionClient, 0);
+  });*/
 });
 
 describe("Send/Receive messages using correlation filters of subscription", function(): void {
@@ -556,46 +575,39 @@ describe("Send/Receive messages using correlation filters of subscription", func
   });
 
   it("Correlation filter on the message properties", async function(): Promise<void> {
-    await subscriptionClient.addRule("CorrelationMsgPropertyRule", {
-      label: "red",
-      correlationId: "high"
+    await addRules("CorrelationMsgPropertyRule", {
+      label: "red"
     });
-
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1, "rule");
-    should.equal(rules[0].name, "CorrelationMsgPropertyRule");
 
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "red").length;
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 1);
+    should.equal(receivedMsgs.length, dataLength);
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
   it("Correlation filter on the custom properties", async function(): Promise<void> {
-    await subscriptionClient.addRule("CorrelationCustomRule", {
+    await addRules("CorrelationCustomRule", {
       userProperties: {
         color: "red"
       }
     });
 
-    const rules = await subscriptionClient.getRules();
-    should.equal(rules.length, 1, "rule");
-    should.equal(rules[0].name, "CorrelationCustomRule");
-
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "red").length;
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 4);
+    should.equal(receivedMsgs.length, dataLength);
 
     await testPeekMsgsLength(subscriptionClient, 0);
   });
 
   it("Correlation filter with SQL action", async function(): Promise<void> {
-    await subscriptionClient.addRule(
+    await addRules(
       "CorrelationRuleWithAction",
       {
         userProperties: {
@@ -605,22 +617,12 @@ describe("Send/Receive messages using correlation filters of subscription", func
       "SET priority = 'High'"
     );
 
-    const rules = await subscriptionClient.getRules();
-    const action = rules[0].action
-      ? rules[0].action.expression
-        ? rules[0].action.expression
-        : ""
-      : "";
-
-    should.equal(rules.length, 1, "rule");
-    should.equal(rules[0].name, "CorrelationRuleWithAction");
-    should.equal(action, "SET priority = 'High'");
-
     await sendOrders();
     const receivedMsgs = await receiveOrders(subscriptionClient);
+    const dataLength = data.filter((x) => x.Color === "blue").length;
 
     should.equal(Array.isArray(receivedMsgs), true);
-    should.equal(receivedMsgs.length, 4);
+    should.equal(receivedMsgs.length, dataLength);
     if (receivedMsgs[0].userProperties) {
       should.equal(receivedMsgs[0].userProperties.priority, "High");
     }
