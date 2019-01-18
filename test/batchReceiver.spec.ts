@@ -476,6 +476,18 @@ describe("Complete/Abandon/Defer/Deadletter normal message", function(): void {
   //   await testDefer(unpartitionedTopicClient, unpartitionedSubscriptionClient);
   // });
 
+  // it("Unpartitioned Queues with Sessions: defer() moves message to deferred queue", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(unpartitionedQueueSessionClient, unpartitionedQueueMessageSession, true);
+  // });
+
+  // it("Unpartitioned Topics and Subscription with Sessions: defer() moves message to deferred queue", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(unpartitionedTopicSessionClient, unpartitionedSubscriptionMessageSession, true);
+  // });
+
   async function testDeadletter(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient | MessageSession,
@@ -688,6 +700,18 @@ describe("Abandon/Defer/Deadletter deferred message", function(): void {
   //   await testDefer(unpartitionedTopicClient, unpartitionedSubscriptionClient);
   // });
 
+  // it("Unpartitioned Queues with Sessions: Deferring a deferred message puts it back to the deferred queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(unpartitionedQueueSessionClient, unpartitionedQueueMessageSession, true);
+  // });
+
+  // it("Unpartitioned Topics and Subscription with Sessions: Deferring a deferred message puts it back to the deferred queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testDefer(unpartitionedTopicSessionClient, unpartitionedSubscriptionMessageSession, true);
+  // });
+
   async function testDeadletter(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient | MessageSession,
@@ -775,6 +799,28 @@ describe("Abandon/Defer/Deadletter deferred message", function(): void {
   //   );
   // });
 
+  // it("Unpartitioned Queues with Sessions: Deadlettering a deferred message moves it to dead letter queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testDeadletter(
+  //     unpartitionedQueueSessionClient,
+  //     unpartitionedQueueMessageSession,
+  //     unpartitionedDeadletterQueueSessionClient,
+  //     true
+  //   );
+  // });
+
+  // it("Unpartitioned Topics and Subscription with Sessions: Deadlettering a deferred message moves it to dead letter queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testDeadletter(
+  //     unpartitionedTopicSessionClient,
+  //     unpartitionedSubscriptionMessageSession,
+  //     unpartitionedDeadletterSubscriptionSessionClient,
+  //     true
+  //   );
+  // });
+
   async function testAbandon(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient | MessageSession,
@@ -825,6 +871,18 @@ describe("Abandon/Defer/Deadletter deferred message", function(): void {
   // > {
   //   await testAbandon(unpartitionedTopicClient, unpartitionedSubscriptionClient);
   // });
+
+  // it("Unpartitioned Queues with Sessions:: Abandoning a deferred message puts it back to the deferred queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testAbandon(unpartitionedQueueSessionClient, unpartitionedQueueMessageSession, true);
+  // });
+
+  // it("Unpartitioned Topics and Subscription with Sessions:: Abandoning a deferred message puts it back to the deferred queue.", async function(): Promise<
+  //   void
+  // > {
+  //   await testAbandon(unpartitionedTopicSessionClient, unpartitionedSubscriptionMessageSession, true);
+  // });
 });
 
 describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
@@ -839,15 +897,14 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
   async function deadLetterMessage(
     senderClient: QueueClient | TopicClient,
     receiverClient: QueueClient | SubscriptionClient,
-    deadletterClient: QueueClient | SubscriptionClient,
-    testMessages: SendableMessageInfo[]
+    deadletterClient: QueueClient | SubscriptionClient
   ): Promise<ServiceBusMessage> {
-    await senderClient.send(testMessages[0]);
+    await senderClient.send(testSimpleMessages[0]);
     const receivedMsgs = await receiverClient.receiveBatch(1);
 
     should.equal(receivedMsgs.length, 1);
-    should.equal(receivedMsgs[0].body, testMessages[0].body);
-    should.equal(receivedMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(receivedMsgs[0].body, testSimpleMessages[0].body);
+    should.equal(receivedMsgs[0].messageId, testSimpleMessages[0].messageId);
     should.equal(receivedMsgs[0].deliveryCount, 0);
 
     await receivedMsgs[0].deadLetter();
@@ -857,8 +914,8 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
     const deadLetterMsgs = await deadletterClient.receiveBatch(1);
 
     should.equal(deadLetterMsgs.length, 1);
-    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(deadLetterMsgs[0].body, testSimpleMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testSimpleMessages[0].messageId);
     should.equal(deadLetterMsgs[0].deliveryCount, 0);
 
     return deadLetterMsgs[0];
@@ -866,14 +923,13 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
 
   async function completeDeadLetteredMessage(
     deadletterClient: QueueClient | SubscriptionClient,
-    expectedDeliverCount: number,
-    testMessages: SendableMessageInfo[]
+    expectedDeliverCount: number
   ): Promise<void> {
     const deadLetterMsgs = await deadletterClient.receiveBatch(1);
 
     should.equal(deadLetterMsgs.length, 1);
-    should.equal(deadLetterMsgs[0].body, testMessages[0].body);
-    should.equal(deadLetterMsgs[0].messageId, testMessages[0].messageId);
+    should.equal(deadLetterMsgs[0].body, testSimpleMessages[0].body);
+    should.equal(deadLetterMsgs[0].messageId, testSimpleMessages[0].messageId);
     should.equal(deadLetterMsgs[0].deliveryCount, expectedDeliverCount);
 
     await deadLetterMsgs[0].complete();
@@ -885,13 +941,7 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
     receiverClient: QueueClient | SubscriptionClient,
     deadletterClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    const testMessages = testSimpleMessages;
-    const deadLetterMsg = await deadLetterMessage(
-      senderClient,
-      receiverClient,
-      deadletterClient,
-      testMessages
-    );
+    const deadLetterMsg = await deadLetterMessage(senderClient, receiverClient, deadletterClient);
 
     await deadLetterMsg.deadLetter().catch((err) => {
       should.equal(err.name, "InvalidOperationError");
@@ -900,7 +950,7 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
 
     should.equal(errorWasThrown, true);
 
-    await completeDeadLetteredMessage(deadletterClient, 0, testMessages);
+    await completeDeadLetteredMessage(deadletterClient, 0);
   }
 
   it("Partitioned Queues: Throws error when dead lettering a dead lettered message", async function(): Promise<
@@ -948,17 +998,11 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
     receiverClient: QueueClient | SubscriptionClient,
     deadletterClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    const testMessages = testSimpleMessages;
-    const deadLetterMsg = await deadLetterMessage(
-      senderClient,
-      receiverClient,
-      deadletterClient,
-      testMessages
-    );
+    const deadLetterMsg = await deadLetterMessage(senderClient, receiverClient, deadletterClient);
 
     await deadLetterMsg.abandon();
 
-    await completeDeadLetteredMessage(deadletterClient, 0, testMessages);
+    await completeDeadLetteredMessage(deadletterClient, 0);
   }
 
   it("Partitioned Queues: Abandon a message received from dead letter queue", async function(): Promise<
@@ -1006,13 +1050,7 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
     receiverClient: QueueClient | SubscriptionClient,
     deadletterClient: QueueClient | SubscriptionClient
   ): Promise<void> {
-    const testMessages = testSimpleMessages;
-    const deadLetterMsg = await deadLetterMessage(
-      senderClient,
-      receiverClient,
-      deadletterClient,
-      testMessages
-    );
+    const deadLetterMsg = await deadLetterMessage(senderClient, receiverClient, deadletterClient);
 
     if (!deadLetterMsg.sequenceNumber) {
       throw "Sequence Number can not be null";
@@ -1025,8 +1063,8 @@ describe("Abandon/Defer/Deadletter deadlettered message", function(): void {
     if (!deferredMsgs) {
       throw "No message received for sequence number";
     }
-    should.equal(deferredMsgs.body, testMessages[0].body);
-    should.equal(deferredMsgs.messageId, testMessages[0].messageId);
+    should.equal(deferredMsgs.body, testSimpleMessages[0].body);
+    should.equal(deferredMsgs.messageId, testSimpleMessages[0].messageId);
 
     await deferredMsgs.complete();
 
@@ -1524,66 +1562,5 @@ describe("Batching Receiver Misc Tests", function(): void {
       unpartitionedSubscriptionMessageSession,
       true
     );
-  });
-
-  async function simulatenousReceiveBatch(
-    receiverClient: QueueClient | SubscriptionClient | MessageSession
-  ): Promise<void> {
-    const firstBatchPromise = receiverClient.receiveBatch(1, 10);
-    await delay(5000);
-    const secondBatchPromise = receiverClient.receiveBatch(1, 10).catch((err) => {
-      should.equal(err.name, "Error");
-      errorWasThrown = true;
-    });
-    await Promise.all([firstBatchPromise, secondBatchPromise]);
-    should.equal(errorWasThrown, true);
-  }
-
-  it("Partitioned Queues: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
-    void
-  > {
-    await simulatenousReceiveBatch(partitionedQueueClient);
-  });
-
-  it("Partitioned Topics and Subscription: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
-    void
-  > {
-    await simulatenousReceiveBatch(partitionedSubscriptionClient);
-  });
-
-  it("Unpartitioned Queues: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
-    void
-  > {
-    await simulatenousReceiveBatch(unpartitionedQueueClient);
-  });
-
-  it("Unpartitioned Topics and Subscription: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
-    void
-  > {
-    await simulatenousReceiveBatch(unpartitionedSubscriptionClient);
-  });
-
-  it("Partitioned Queues with Sessions: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
-    void
-  > {
-    await simulatenousReceiveBatch(partitionedQueueMessageSession);
-  });
-
-  it("Partitioned Topics and Subscription with Sessions: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
-    void
-  > {
-    await simulatenousReceiveBatch(partitionedSubscriptionMessageSession);
-  });
-
-  it("Unpartitioned Queues with Sessions: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
-    void
-  > {
-    await simulatenousReceiveBatch(unpartitionedQueueMessageSession);
-  });
-
-  it("Unpartitioned Topics and Subscription with Sessions: Throws error when call the second ReceiveBatch while the first one is not done", async function(): Promise<
-    void
-  > {
-    await simulatenousReceiveBatch(unpartitionedSubscriptionMessageSession);
   });
 });
