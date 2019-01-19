@@ -151,7 +151,11 @@ async function receiveOrders(client: SubscriptionClient): Promise<ServiceBusMess
 
   await delay(5000);
   await receiveListener.stop();
-  should.equal(errorFromErrorHandler, undefined, errorFromErrorHandler!.message);
+  should.equal(
+    errorFromErrorHandler,
+    undefined,
+    errorFromErrorHandler && errorFromErrorHandler.message
+  );
 
   return receivedMsgs;
 }
