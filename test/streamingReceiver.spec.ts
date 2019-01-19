@@ -811,33 +811,33 @@ describe("Settle an already Settled message throws error", () => {
   });
 
   it("UnPartitioned Queue: complete() throws error", async function(): Promise<void> {
-    await testSettlement(partitionedQueueClient, partitionedQueueClient, DispositionType.complete);
+    await testSettlement(
+      unpartitionedQueueClient,
+      unpartitionedQueueClient,
+      DispositionType.complete
+    );
   });
 
   it("UnPartitioned Topics and Subscription: complete() throws error", async function(): Promise<
     void
   > {
     await testSettlement(
-      partitionedTopicClient,
-      partitionedSubscriptionClient,
+      unpartitionedTopicClient,
+      unpartitionedSubscriptionClient,
       DispositionType.complete
     );
   });
 
   it("Partitioned Queues: abandon() throws error", async function(): Promise<void> {
-    await testSettlement(
-      unpartitionedQueueClient,
-      unpartitionedQueueClient,
-      DispositionType.abandon
-    );
+    await testSettlement(partitionedQueueClient, partitionedQueueClient, DispositionType.abandon);
   });
 
   it("Partitioned Topics and Subscription: abandon() throws error", async function(): Promise<
     void
   > {
     await testSettlement(
-      unpartitionedTopicClient,
-      unpartitionedSubscriptionClient,
+      partitionedTopicClient,
+      partitionedSubscriptionClient,
       DispositionType.abandon
     );
   });
@@ -873,31 +873,31 @@ describe("Settle an already Settled message throws error", () => {
   });
 
   it("UnPartitioned Queue: defer() throws error", async function(): Promise<void> {
-    await testSettlement(partitionedQueueClient, partitionedQueueClient, DispositionType.defer);
+    await testSettlement(unpartitionedQueueClient, unpartitionedQueueClient, DispositionType.defer);
   });
 
   it("UnPartitioned Topics and Subscription: defer() throws error", async function(): Promise<
     void
   > {
     await testSettlement(
-      partitionedTopicClient,
-      partitionedSubscriptionClient,
+      unpartitionedTopicClient,
+      unpartitionedSubscriptionClient,
       DispositionType.defer
     );
   });
 
   it("Partitioned Queues: deadLetter() throws error", async function(): Promise<void> {
     await testSettlement(
-      unpartitionedQueueClient,
-      unpartitionedQueueClient,
+      partitionedQueueClient,
+      partitionedQueueClient,
       DispositionType.deadletter
     );
   });
 
   it("Partitioned Topics and Subscription: deadLetter()", async function(): Promise<void> {
     await testSettlement(
-      unpartitionedTopicClient,
-      unpartitionedSubscriptionClient,
+      partitionedTopicClient,
+      partitionedSubscriptionClient,
       DispositionType.deadletter
     );
   });
