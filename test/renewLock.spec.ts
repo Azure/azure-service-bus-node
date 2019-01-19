@@ -89,16 +89,6 @@ async function beforeEachTest(): Promise<void> {
     process.env.SUBSCRIPTION_NAME_NO_PARTITION
   );
 
-  const peekedPartitionedQueueMsg = await partitionedQueueClient.peek();
-  if (peekedPartitionedQueueMsg.length) {
-    throw new Error("Please use an empty partitioned queue for integration testing");
-  }
-
-  const peekedPartitionedSubscriptionMsg = await partitionedSubscriptionClient.peek();
-  if (peekedPartitionedSubscriptionMsg.length) {
-    throw new Error("Please use an empty partitioned Subscription for integration testing");
-  }
-
   const peekedUnPartitionedQueueMsg = await unpartitionedQueueClient.peek();
   if (peekedUnPartitionedQueueMsg.length) {
     throw new Error("Please use an empty unpartitioned queue for integration testing");
@@ -809,7 +799,7 @@ describe("Partitioned Topics/Subscription - Lock Renewal - Peeklock Mode", funct
   });
 });
 
-describe("Unpartitioned Topics/Subscription - Lock Renewal - Peeklock Mode", function(): void {
+describe.only("Unpartitioned Topics/Subscription - Lock Renewal - Peeklock Mode", function(): void {
   let senderClient: QueueClient | TopicClient;
   let receiverClient: QueueClient | SubscriptionClient;
   beforeEach(async () => {
