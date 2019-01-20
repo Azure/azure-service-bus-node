@@ -278,7 +278,6 @@ describe("Streaming Receiver Misc Tests(with sessions)", function(): void {
     const receivedMsgs: ServiceBusMessage[] = [];
     receiverClient.receive((messageSession: MessageSession, msg: ServiceBusMessage) => {
       receivedMsgs.push(msg);
-      // console.log(msg);
       should.equal(
         testMessagesWithSessions.some((x) => msg.body === x.body && msg.messageId === x.messageId),
         true,
@@ -293,16 +292,12 @@ describe("Streaming Receiver Misc Tests(with sessions)", function(): void {
         break;
       }
     }
-    console.log(unexpectedError);
-    if (unexpectedError) {
-      console.log(unexpectedError.message);
-    }
-    // chai.assert.fail(unexpectedError && unexpectedError.message);
+    should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
 
     await testPeekMsgsLength(receiverClient, 0);
   }
 
-  it.only("AutoComplete removes the message from Partitioned Queues(with sessions)", async function(): Promise<
+  it("AutoComplete removes the message from Partitioned Queues(with sessions)", async function(): Promise<
     void
   > {
     await testAutoComplete(partitionedQueueSessionClient, partitionedQueueMessageSession);
@@ -364,7 +359,7 @@ describe("Streaming Receiver Misc Tests(with sessions)", function(): void {
     await receivedMsgs[0].complete();
     await receivedMsgs[1].complete();
 
-    chai.assert.fail(unexpectedError && unexpectedError.message);
+    should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
   }
 
   it("Disabled autoComplete, no manual complete retains the message in Partitioned Queues(with sessions)", async function(): Promise<
@@ -435,7 +430,7 @@ describe("Complete message(with sessions)", function(): void {
       }
     }
 
-    chai.assert.fail(unexpectedError && unexpectedError.message);
+    should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
 
     await testPeekMsgsLength(receiverClient, 0);
   }
@@ -520,7 +515,7 @@ describe("Abandon message(with sessions)", function(): void {
     );
     await delay(4000);
 
-    chai.assert.fail(unexpectedError && unexpectedError.message);
+    should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
 
     const receivedMsgs = await receiverClient.receiveBatch(1);
     should.equal(receivedMsgs.length, 1);
@@ -619,7 +614,7 @@ describe("Defer message(with sessions)", function(): void {
 
     await delay(4000);
 
-    chai.assert.fail(unexpectedError && unexpectedError.message);
+    should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
 
     const deferredMsg0 = await receiverClient.receiveDeferredMessage(seq0);
     const deferredMsg1 = await receiverClient.receiveDeferredMessage(seq1);
@@ -714,7 +709,7 @@ describe("Deadletter message(with sessions)", function(): void {
     );
 
     await delay(4000);
-    chai.assert.fail(unexpectedError && unexpectedError.message);
+    should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
 
     await testPeekMsgsLength(receiverClient, 0);
 
@@ -907,7 +902,7 @@ describe("Settle an already Settled message throws error(with sessions)", () => 
     }, unExpectedErrorHandler);
 
     await delay(5000);
-    chai.assert.fail(unexpectedError && unexpectedError.message);
+    should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
 
     should.equal(receivedMsgs.length, 1);
     should.equal(receivedMsgs[0].body, testMessagesWithSessions[0].body);
