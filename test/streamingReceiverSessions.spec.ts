@@ -516,7 +516,6 @@ describe("Abandon message(with sessions)", function(): void {
     await delay(4000);
 
     should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
-
     const receivedMsgs = await receiverClient.receiveBatch(1);
     should.equal(receivedMsgs.length, 1);
     should.equal(receivedMsgs[0].messageId, testMessagesWithSessions[0].messageId);
@@ -626,9 +625,12 @@ describe("Defer message(with sessions)", function(): void {
     }
     should.equal(deferredMsg0.body, testMessagesWithSessions[0].body);
     should.equal(deferredMsg0.messageId, testMessagesWithSessions[0].messageId);
+    should.equal(deferredMsg0.deliveryCount, 1);
 
     should.equal(deferredMsg1.body, testMessagesWithSessions[1].body);
     should.equal(deferredMsg1.messageId, testMessagesWithSessions[1].messageId);
+    should.equal(deferredMsg1.deliveryCount, 1);
+
     await deferredMsg0.complete();
     await deferredMsg1.complete();
 
@@ -695,7 +697,7 @@ describe("Deadletter message(with sessions)", function(): void {
   async function testDeadletter(
     senderClient: QueueClient | TopicClient,
     receiverClient: MessageSession,
-    deadletterClient: QueueClient | SubscriptionClient | MessageSession,
+    deadletterClient: QueueClient | SubscriptionClient,
     autoComplete: boolean
   ): Promise<void> {
     await senderClient.sendBatch(testMessagesWithSessions);
