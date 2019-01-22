@@ -67,11 +67,6 @@ async function beforeEachTest(): Promise<void> {
     );
   }
 
-  testMessage = {
-    body: "hello-world-1 : " + generateUuid(),
-    messageId: generateUuid()
-  };
-
   namespace = Namespace.createFromConnectionString(process.env.SERVICEBUS_CONNECTION_STRING);
 
   // Partitioned Queues and Subscriptions
@@ -85,7 +80,10 @@ async function afterEachTest(): Promise<void> {
   await namespace.close();
 }
 
-let testMessage: SendableMessageInfo;
+const testMessage = {
+  body: "hello-world-1 : " + generateUuid(),
+  messageId: generateUuid()
+};
 
 const lockDurationInMilliseconds = 30000;
 
