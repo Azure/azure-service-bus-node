@@ -13,16 +13,16 @@ const connectionString = "";
 const queueName = "";
 
 const listOfScientists = [
-  { name: "Einstein", firstName: "Albert" },
-  { name: "Heisenberg", firstName: "Werner" },
-  { name: "Curie", firstName: "Marie" },
-  { name: "Hawking", firstName: "Steven" },
-  { name: "Newton", firstName: "Isaac" },
-  { name: "Bohr", firstName: "Niels" },
-  { name: "Faraday", firstName: "Michael" },
-  { name: "Galilei", firstName: "Galileo" },
-  { name: "Kepler", firstName: "Johannes" },
-  { name: "Kopernikus", firstName: "Nikolaus" }
+  { lastName: "Einstein", firstName: "Albert" },
+  { lastName: "Heisenberg", firstName: "Werner" },
+  { lastName: "Curie", firstName: "Marie" },
+  { lastName: "Hawking", firstName: "Steven" },
+  { lastName: "Newton", firstName: "Isaac" },
+  { lastName: "Bohr", firstName: "Niels" },
+  { lastName: "Faraday", firstName: "Michael" },
+  { lastName: "Galilei", firstName: "Galileo" },
+  { lastName: "Kepler", firstName: "Johannes" },
+  { lastName: "Kopernikus", firstName: "Nikolaus" }
 ];
 
 async function main(): Promise<void> {
@@ -35,7 +35,7 @@ async function main(): Promise<void> {
     for (let index = 0; index < listOfScientists.length; index++) {
       const scientist = listOfScientists[index];
       const message: SendableMessageInfo = {
-        body: `${scientist.firstName} ${scientist.name}`,
+        body: `${scientist.firstName} ${scientist.lastName}`,
         label: "Scientist"
       };
 

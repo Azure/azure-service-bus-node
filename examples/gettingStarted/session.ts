@@ -15,8 +15,22 @@ import { OnSessionMessage, OnError, delay, Namespace } from "../../lib";
 const connectionString = "";
 const queueName = "";
 
+const listOfScientists = [
+  { lastName: "Einstein", firstName: "Albert" },
+  { lastName: "Heisenberg", firstName: "Werner" },
+  { lastName: "Curie", firstName: "Marie" },
+  { lastName: "Hawking", firstName: "Steven" },
+  { lastName: "Newton", firstName: "Isaac" },
+  { lastName: "Bohr", firstName: "Niels" },
+  { lastName: "Faraday", firstName: "Michael" },
+  { lastName: "Galilei", firstName: "Galileo" },
+  { lastName: "Kepler", firstName: "Johannes" },
+  { lastName: "Kopernikus", firstName: "Nikolaus" }
+];
+
 async function main(): Promise<void> {
   const ns = Namespace.createFromConnectionString(connectionString);
+
   try {
     await sendMessages(ns, "session-1");
     await sendMessages(ns, "session-2");
@@ -32,23 +46,15 @@ async function main(): Promise<void> {
 async function sendMessages(ns: Namespace, sessionId: string): Promise<void> {
   // If using Topics, use createTopicClient to send to a topic
   const client = ns.createQueueClient(queueName);
-  const data = [
-    { step: 1, title: "Shop" },
-    { step: 2, title: "Unpack" },
-    { step: 3, title: "Prepare" },
-    { step: 4, title: "Cook" },
-    { step: 5, title: "Eat" }
-  ];
 
-  for (let index = 0; index < data.length; index++) {
-    const element = data[index];
+  for (let index = 0; index < listOfScientists.length; index++) {
+    const scientist = listOfScientists[index];
     const message = {
-      sessionId: sessionId,
-      body: `${element.step} ${element.title}`,
-      label: "RecipeStep"
+      body: `${scientist.firstName} ${scientist.lastName}`,
+      label: "Scientist"
     };
 
-    console.log(`Message sent: ${message.body} SessionId : ${sessionId}`);
+    console.log(`Sending message: ${message.body} - ${message.label} to session: ${sessionId}`);
     await client.send(message);
   }
   await client.close();
