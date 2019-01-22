@@ -10,7 +10,6 @@ chai.use(chaiAsPromised);
 import {
   Namespace,
   QueueClient,
-  SendableMessageInfo,
   generateUuid,
   TopicClient,
   SubscriptionClient,
