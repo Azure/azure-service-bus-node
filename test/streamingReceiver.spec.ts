@@ -494,9 +494,12 @@ describe("Defer message", function(): void {
     }
     should.equal(deferredMsg0.body, testMessages[0].body);
     should.equal(deferredMsg0.messageId, testMessages[0].messageId);
+    should.equal(deferredMsg0.deliveryCount, 1);
 
     should.equal(deferredMsg1.body, testMessages[1].body);
     should.equal(deferredMsg1.messageId, testMessages[1].messageId);
+    should.equal(deferredMsg1.deliveryCount, 1);
+
     await deferredMsg0.complete();
     await deferredMsg1.complete();
 
