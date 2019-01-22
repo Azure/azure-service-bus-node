@@ -463,7 +463,6 @@ describe("Defer message", function(): void {
     autoComplete: boolean
   ): Promise<void> {
     await senderClient.sendBatch(testMessages);
-
     let seq0: any = 0;
     let seq1: any = 0;
     const receiveListener = await receiverClient.receive(
@@ -478,33 +477,26 @@ describe("Defer message", function(): void {
       unExpectedErrorHandler,
       { autoComplete }
     );
-
     await delay(4000);
-
     await receiveListener.stop();
     should.equal(unexpectedError, undefined, unexpectedError && unexpectedError.message);
-
-    const deferredMsg0 = await receiverClient.receiveDeferredMessage(seq0);
-    const deferredMsg1 = await receiverClient.receiveDeferredMessage(seq1);
-    if (!deferredMsg0) {
+    const deferredMsgs = await receiverClient.receiveDeferredMessages([seq0, seq1]);
+    if (!deferredMsgs) {
       throw "No message received for sequence number";
     }
-    if (!deferredMsg1) {
-      throw "No message received for sequence number";
-    }
-    should.equal(deferredMsg0.body, testMessages[0].body);
-    should.equal(deferredMsg0.messageId, testMessages[0].messageId);
-    should.equal(deferredMsg0.deliveryCount, 1);
-
-    should.equal(deferredMsg1.body, testMessages[1].body);
-    should.equal(deferredMsg1.messageId, testMessages[1].messageId);
-    should.equal(deferredMsg1.deliveryCount, 1);
-
-    await deferredMsg0.complete();
-    await deferredMsg1.complete();
-
+    deferredMsgs.forEach(async (element) => {
+      should.equal(
+        testMessages.some((x) => element.body === x.body && element.messageId === x.messageId),
+        true,
+        "Received Message doesnt match any of the test messages"
+      );
+      should.equal(element.deliveryCount, 1);
+      await element.complete();
+    });
+    await delay(10000);
     await testPeekMsgsLength(receiverClient, 0);
   }
+
   it("Partitioned Queues: defer() moves message to deferred queue", async function(): Promise<
     void
   > {
