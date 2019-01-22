@@ -503,7 +503,7 @@ async function testAutoLockRenewalConfigBehavior(
   }
 }
 
-describe.only("Partitioned Queues - Lock Renewal - Peeklock Mode", function(): void {
+describe("Partitioned Queues - Lock Renewal - Peeklock Mode", function(): void {
   let senderClient: QueueClient | TopicClient;
   let receiverClient: QueueClient | SubscriptionClient;
   beforeEach(async () => {
@@ -595,7 +595,7 @@ describe.only("Partitioned Queues - Lock Renewal - Peeklock Mode", function(): v
   });
 });
 
-describe.only("Unpartitioned Queues - Lock Renewal - Peeklock Mode", function(): void {
+describe("Unpartitioned Queues - Lock Renewal - Peeklock Mode", function(): void {
   let senderClient: QueueClient | TopicClient;
   let receiverClient: QueueClient | SubscriptionClient;
   beforeEach(async () => {
