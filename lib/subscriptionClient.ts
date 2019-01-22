@@ -266,6 +266,7 @@ export class SubscriptionClient extends Client {
     }
     return this._context.managementClient!.receiveDeferredMessage(sequenceNumber, this.receiveMode);
   }
+
   /**
    * Receives a list of deferred messages identified by `sequenceNumbers`.
    * @param sequenceNumbers A list containing the sequence numbers to receive.
