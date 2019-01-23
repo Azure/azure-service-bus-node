@@ -6,12 +6,10 @@
 */
 
 import { Namespace } from "../../lib";
-import Long from "long";
 
 // Define connection string and related Service Bus entity names here
-const connectionString =
-  "Endpoint=sb://premiumfruitsservicebus.servicebus.windows.net/;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=CYbvyj0TXdGMRMOHbYPMvfwOXJ4lD3jdR28rQnMlCC0=";
-const queueName = "fruitsqueue";
+const connectionString = "";
+const queueName = "";
 
 async function main(): Promise<void> {
   const ns = Namespace.createFromConnectionString(connectionString);
@@ -20,12 +18,10 @@ async function main(): Promise<void> {
   const client = ns.createQueueClient(queueName);
 
   try {
-    for (let i = 0; i < 1; i++) {
-      const messages = await client.receiveDeferredMessage(Long.fromNumber(768));
-      if (messages) {
-        console.log(`Received message #${i}: ${messages.body}`);
-        await messages.complete();
-      }
+    for (let i = 0; i < 10; i++) {
+      const messages = await client.receiveBatch(1);
+      console.log(`Received message #${i}: ${messages[0].body}`);
+      await messages[0].complete();
     }
     await client.close();
   } finally {
