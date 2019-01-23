@@ -32,10 +32,17 @@ async function main(): Promise<void> {
   const ns = Namespace.createFromConnectionString(connectionString);
 
   try {
-    await sendMessages(ns, "session-1");
-    await sendMessages(ns, "session-2");
-    await sendMessages(ns, "session-3");
-    await sendMessages(ns, "session-4");
+    await sendMessage(ns, listOfScientists[0], "session-1");
+    await sendMessage(ns, listOfScientists[1], "session-1");
+    await sendMessage(ns, listOfScientists[2], "session-1");
+    await sendMessage(ns, listOfScientists[3], "session-1");
+    await sendMessage(ns, listOfScientists[4], "session-1");
+
+    await sendMessage(ns, listOfScientists[5], "session-2");
+    await sendMessage(ns, listOfScientists[6], "session-2");
+    await sendMessage(ns, listOfScientists[7], "session-2");
+    await sendMessage(ns, listOfScientists[8], "session-2");
+    await sendMessage(ns, listOfScientists[9], "session-2");
 
     await receiveMessages(ns);
   } finally {
@@ -43,20 +50,19 @@ async function main(): Promise<void> {
   }
 }
 
-async function sendMessages(ns: Namespace, sessionId: string): Promise<void> {
+async function sendMessage(ns: Namespace, scientist: any, sessionId: string): Promise<void> {
   // If using Topics, use createTopicClient to send to a topic
   const client = ns.createQueueClient(queueName);
 
-  for (let index = 0; index < listOfScientists.length; index++) {
-    const scientist = listOfScientists[index];
-    const message = {
-      body: `${scientist.firstName} ${scientist.lastName}`,
-      label: "Scientist"
-    };
+  const message = {
+    body: `${scientist.firstName} ${scientist.lastName}`,
+    label: "Scientist",
+    sessionId: sessionId
+  };
 
-    console.log(`Sending message: ${message.body} - ${message.label} to session: ${sessionId}`);
-    await client.send(message);
-  }
+  console.log(`Sending message: "${message.body}" to "${sessionId}"`);
+  await client.send(message);
+
   await client.close();
 }
 
@@ -65,15 +71,13 @@ async function receiveMessages(ns: Namespace): Promise<void> {
   const client = ns.createQueueClient(queueName);
 
   const onMessage: OnSessionMessage = async (messageSession, brokeredMessage) => {
-    console.log(
-      `Message received: ${brokeredMessage.body} SessionId : ${brokeredMessage.sessionId}`
-    );
+    console.log(`Received: ${brokeredMessage.sessionId} - ${brokeredMessage.body} `);
   };
   const onError: OnError = (err) => {
     console.log(">>>>> Error occurred: ", err);
   };
   await client.receiveMessagesFromSessions(onMessage, onError);
-  await delay(10000);
+  await delay(5000);
 
   await client.close();
 }

@@ -55,9 +55,6 @@ async function sendScheduledMessages(ns: Namespace): Promise<void> {
   );
 
   await client.scheduleMessages(scheduledEnqueueTimeUtc, messages);
-  for (let index = 0; index < messages.length; index++) {
-    console.log(`Sent: ${messages[index].body} - ${messages[index].label}`);
-  }
 }
 
 async function receiveMessages(ns: Namespace): Promise<void> {
@@ -75,21 +72,19 @@ async function receiveMessages(ns: Namespace): Promise<void> {
   };
 
   let numOfMessagesReceived = 0;
+
   const receiveListenerFirst = client.receive(onMessageHandler, onErrorHandler);
   await delay(5000);
   await receiveListenerFirst.stop();
-  console.log(
-    `\nStarted looking up immediately while having receive listener wait for 5 seconds. Found ${numOfMessagesReceived} messages.\n`
-  );
+  console.log(`\nStarted looking up immediately, received ${numOfMessagesReceived} messages.`);
 
   await delay(5000);
+
+  console.log(`\nStarted looking up after 10 seconds:`);
 
   const receiveListenerSecond = client.receive(onMessageHandler, onErrorHandler);
   await delay(5000);
   await receiveListenerSecond.stop();
-  console.log(
-    `\nStarted looking up after 10 seconds while having receive listener wait, received ${numOfMessagesReceived} messages.`
-  );
 
   await client.close();
 }

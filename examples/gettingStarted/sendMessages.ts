@@ -6,7 +6,7 @@
   to learn about Queues, Topics and Subscriptions.
 */
 
-import { Namespace, SendableMessageInfo } from "../../lib";
+import { Namespace } from "../../lib";
 
 // Define connection string and related Service Bus entity names here
 const connectionString = "";
@@ -34,7 +34,7 @@ async function main(): Promise<void> {
   try {
     for (let index = 0; index < listOfScientists.length; index++) {
       const scientist = listOfScientists[index];
-      const message: SendableMessageInfo = {
+      const message = {
         body: `${scientist.firstName} ${scientist.lastName}`,
         label: "Scientist"
       };
