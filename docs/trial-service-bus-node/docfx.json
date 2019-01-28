@@ -48,6 +48,7 @@
     },
     "fileMetadata": {},
     "template": [],
-    "dest": "_site"
+    "dest": "_site",
+    "apiPlatform": "javascript"
   }
 }
